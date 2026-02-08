@@ -359,8 +359,13 @@ struct ExploreView: View {
                     .padding(.top, 28)
                 } else {
                     LazyVStack(spacing: 0) {
-                        ForEach(posts) { post in
+                        ForEach(Array(posts.enumerated()), id: \.element.id) { index, post in
                             PostCard(post: post, queryDate: selectedDate)
+                            if index < posts.count - 1 {
+                                Divider()
+                                    .foregroundStyle(.quaternary)
+                                    .padding(.vertical, 8)
+                            }
                         }
                     }
                     .padding(.bottom, 24)
@@ -528,6 +533,26 @@ struct PostCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // User header (above photo)
+            NavigationLink(destination: FriendProfileView(user: post.user)) {
+                HStack(spacing: 8) {
+                    AvatarView(user: post.user, size: 28)
+
+                    Text(post.user.displayName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+
             // Image — tappable to open post detail
             NavigationLink(destination: PostDetailView(post: post, queryDate: queryDate)) {
                 AsyncImage(url: post.imageURL) { phase in
@@ -566,46 +591,25 @@ struct PostCard: View {
             }
             .buttonStyle(.plain)
 
-            // Info
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    // Avatar + username — tappable to open user profile
-                    NavigationLink(destination: FriendProfileView(user: post.user)) {
-                        HStack(spacing: 8) {
-                            AvatarView(user: post.user, size: 32)
-
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(post.username)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                Text(post.timeAgoFormatted)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    Spacer()
-
-                    Label(post.distanceFormatted, systemImage: "location.fill")
+            // Info below photo
+            VStack(alignment: .leading, spacing: 12) {
+                // Metadata row (closest to photo)
+                HStack(spacing: 16) {
+                    Label(post.timeAgoFormatted, systemImage: "clock")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(.ultraThinMaterial, in: Capsule())
+                    Label(post.locationName, systemImage: "mappin")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
                 }
 
+                // Caption
                 Text(post.caption)
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundStyle(.primary)
-
-                // Offset from query time
-                Label(post.offsetFromQuery(queryDate), systemImage: "clock.arrow.2.circlepath")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-            .padding(12)
+            .padding(16)
         }
         .background(.background)
     }

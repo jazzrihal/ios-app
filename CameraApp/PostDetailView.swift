@@ -36,31 +36,26 @@ struct PostDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                // ── User header (above image) ──
+                userHeader
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+
                 // ── Image ──
                 postImage
 
-                // ── Content ──
-                VStack(alignment: .leading, spacing: 16) {
-                    // ── User header ──
-                    userHeader
-
-                    Divider()
-
-                    // ── Caption ──
-                    captionSection
-
-                    // ── Time info ──
-                    timeSection
-
-                    // ── Location info ──
-                    locationSection
-
-                    // ── Explore here button ──
+                // ── Info below image ──
+                VStack(alignment: .leading, spacing: 12) {
+                    metadataRow
+                    Text(post.caption)
+                        .font(.body)
+                        .foregroundStyle(.primary)
                     exploreHereButton
                 }
                 .padding(16)
             }
         }
+        .ignoresSafeArea(edges: .top)
         .navigationTitle("Post")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -76,13 +71,13 @@ struct PostDetailView: View {
                         .fill(Color(.systemGray5))
                     ProgressView()
                 }
-                .frame(minHeight: 320)
+                .frame(minHeight: 400)
             case .success(let image):
                 image
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 320)
+                    .frame(minHeight: 400)
                     .background(
                         GeometryReader { geo in
                             Color.clear
@@ -123,7 +118,7 @@ struct PostDetailView: View {
                     }
                     .foregroundStyle(.secondary)
                 }
-                .frame(minHeight: 320)
+                .frame(minHeight: 400)
             @unknown default:
                 EmptyView()
             }
@@ -183,96 +178,34 @@ struct PostDetailView: View {
 
     private var userHeader: some View {
         NavigationLink(destination: FriendProfileView(user: post.user)) {
-            HStack(spacing: 12) {
-                AvatarView(user: post.user, size: 44)
+            HStack(spacing: 8) {
+                AvatarView(user: post.user, size: 28)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(post.user.displayName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-
-                    Text("@\(post.user.username)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(post.user.displayName)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Caption
+    // MARK: - Metadata Row
 
-    private var captionSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label("Caption", systemImage: "text.bubble")
-                .font(.caption.weight(.semibold))
+    private var metadataRow: some View {
+        HStack(spacing: 16) {
+            Label(post.timeAgoFormatted, systemImage: "clock")
+                .font(.caption)
                 .foregroundStyle(.secondary)
-
-            Text(post.caption)
-                .font(.body)
-                .foregroundStyle(.primary)
-        }
-    }
-
-    // MARK: - Time Info
-
-    private var timeSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Time", systemImage: "clock.fill")
-                .font(.caption.weight(.semibold))
+            Label(post.locationName, systemImage: "mappin")
+                .font(.caption)
                 .foregroundStyle(.secondary)
-
-            HStack(spacing: 10) {
-                Image(systemName: "clock.fill")
-                    .foregroundStyle(.blue)
-                    .font(.title3)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(post.timeAgoFormatted)
-                        .font(.subheadline.weight(.medium))
-                    Text(post.timestamp.formatted(.dateTime.month(.wide).day().year().hour().minute()))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-            }
-            .padding(12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        }
-    }
-
-    // MARK: - Location Info
-
-    private var locationSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Location", systemImage: "location.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 10) {
-                Image(systemName: "mappin.circle.fill")
-                    .foregroundStyle(.red)
-                    .font(.title3)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(post.locationName)
-                        .font(.subheadline.weight(.medium))
-                    Text(post.distanceFormatted)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-            }
-            .padding(12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            Spacer()
         }
     }
 

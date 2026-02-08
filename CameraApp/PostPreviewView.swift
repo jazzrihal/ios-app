@@ -136,9 +136,9 @@ struct PostPreviewView: View {
                     scopeSection
                     postButton
                 }
-                .padding(.top, 16)
             }
             .scrollDismissesKeyboard(.interactively)
+            .ignoresSafeArea(edges: .top)
             .navigationTitle("New Post")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -161,9 +161,8 @@ struct PostPreviewView: View {
         Image(uiImage: image)
             .resizable()
             .scaledToFit()
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
-            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity)
+            .clipped()
     }
 
     private var captionSection: some View {
