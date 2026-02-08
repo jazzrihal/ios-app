@@ -42,7 +42,7 @@ struct MomentsView: View {
 
     private func navigateToExplore(_ moment: Moment) {
         store.pendingMoment = moment
-        store.selectedTab = 1 // Explore tab
+        store.selectedTab = 0 // Explore tab
     }
 }
 

@@ -3,20 +3,36 @@ import SwiftUI
 @main
 struct CameraAppApp: App {
     @State private var momentsStore = MomentsStore()
+    @State private var showCamera = false
+    @State private var previousTab: Int = 0
 
     var body: some Scene {
         WindowGroup {
             @Bindable var store = momentsStore
-            TabView(selection: $store.selectedTab) {
-                ContentView()
-                    .tabItem {
-                        Label("Camera", systemImage: "camera.fill")
+            TabView(
+                selection: Binding(
+                    get: { store.selectedTab },
+                    set: { newValue in
+                        if newValue == 1 {
+                            // Save current tab so we can return to it
+                            previousTab = store.selectedTab
+                            store.selectedTab = newValue
+                            showCamera = true
+                        } else {
+                            store.selectedTab = newValue
+                        }
                     }
-                    .tag(0)
-
+                )
+            ) {
                 ExploreView()
                     .tabItem {
                         Label("Explore", systemImage: "magnifyingglass")
+                    }
+                    .tag(0)
+
+                Color.clear
+                    .tabItem {
+                        Label("Camera", systemImage: "camera.fill")
                     }
                     .tag(1)
 
@@ -25,6 +41,12 @@ struct CameraAppApp: App {
                         Label("Moments", systemImage: "clock.arrow.circlepath")
                     }
                     .tag(2)
+            }
+            .fullScreenCover(isPresented: $showCamera, onDismiss: {
+                // Return to whichever tab was active before camera
+                store.selectedTab = previousTab
+            }) {
+                CameraFlowView()
             }
             .environment(momentsStore)
         }
