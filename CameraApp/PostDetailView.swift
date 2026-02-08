@@ -1,4 +1,38 @@
 import SwiftUI
+import UIKit
+
+// MARK: - Post Action
+
+enum PostAction: CaseIterable, Hashable {
+    case like, share, jump
+
+    var iconName: String {
+        switch self {
+        case .like: return "heart"
+        case .share: return "square.and.arrow.up"
+        case .jump: return "scope"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .like: return "Like"
+        case .share: return "Share"
+        case .jump: return "Jump"
+        }
+    }
+}
+
+// MARK: - Preference Key for Icon Frames
+
+private struct ActionFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [PostAction: CGRect] = [:]
+    static func reduce(value: inout [PostAction: CGRect], nextValue: () -> [PostAction: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+// MARK: - Post Detail View
 
 struct PostDetailView: View {
     let post: ImagePost
@@ -13,6 +47,15 @@ struct PostDetailView: View {
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
     @State private var imageSize: CGSize = .zero
+
+    // Long-press overlay state
+    @GestureState private var isInteracting: Bool = false
+    @State private var isPressing: Bool = false
+    @State private var dragLocation: CGPoint? = nil
+    @State private var hoveredAction: PostAction? = nil
+    @State private var isLiked: Bool = false
+    @State private var showShareSheet: Bool = false
+    @State private var actionFrames: [PostAction: CGRect] = [:]
 
     private var effectiveZoom: CGFloat {
         max(1, min(totalZoom + currentZoom, 5))
@@ -33,31 +76,42 @@ struct PostDetailView: View {
         )
     }
 
+    // MARK: - Body
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                // ── User header (above image) ──
-                userHeader
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-                // ── Image ──
-                postImage
+            // Image layer
+            postImage
 
-                // ── Info below image ──
-                VStack(alignment: .leading, spacing: 12) {
-                    metadataRow
-                    Text(post.caption)
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                    exploreHereButton
-                }
-                .padding(16)
+            // Overlay when pressing
+            if isPressing {
+                pressOverlay
+            }
+
+            // Persistent like indicator
+            if isLiked && !isPressing {
+                likeIndicator
             }
         }
-        .ignoresSafeArea(edges: .top)
-        .navigationTitle("Post")
-        .navigationBarTitleDisplayMode(.inline)
+        .coordinateSpace(name: "postDetail")
+        .toolbar(.hidden, for: .navigationBar)
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(items: [post.imageURL])
+        }
+        .onChange(of: isInteracting) { _, interacting in
+            if !interacting {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isPressing = false
+                }
+                dragLocation = nil
+                hoveredAction = nil
+            }
+        }
+        .onChange(of: dragLocation) { _, newLocation in
+            updateHoveredAction(at: newLocation)
+        }
     }
 
     // MARK: - Post Image
@@ -66,18 +120,13 @@ struct PostDetailView: View {
         AsyncImage(url: post.imageURL) { phase in
             switch phase {
             case .empty:
-                ZStack {
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                    ProgressView()
-                }
-                .frame(minHeight: 400)
+                ProgressView()
+                    .tint(.white)
             case .success(let image):
                 image
                     .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 400)
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(
                         GeometryReader { geo in
                             Color.clear
@@ -89,17 +138,19 @@ struct PostDetailView: View {
                     )
                     .scaleEffect(effectiveZoom)
                     .offset(offset)
+                    .blur(radius: isPressing ? 20 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: isPressing)
                     .gesture(zoomGestures)
+                    .simultaneousGesture(longPressGesture)
                     .onTapGesture(count: 2) {
+                        guard !isPressing else { return }
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                             if totalZoom > 1 {
-                                // Reset to default
                                 totalZoom = 1
                                 currentZoom = 0
                                 offset = .zero
                                 lastOffset = .zero
                             } else {
-                                // Zoom in to 3x
                                 totalZoom = 3
                                 currentZoom = 0
                             }
@@ -107,21 +158,101 @@ struct PostDetailView: View {
                     }
                     .clipped()
             case .failure:
-                ZStack {
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                    VStack(spacing: 6) {
-                        Image(systemName: "photo.badge.exclamationmark")
-                            .font(.title2)
-                        Text("Failed to load")
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    Image(systemName: "photo.badge.exclamationmark")
+                        .font(.title2)
+                    Text("Failed to load")
+                        .font(.caption)
                 }
-                .frame(minHeight: 400)
+                .foregroundStyle(.gray)
             @unknown default:
                 EmptyView()
             }
+        }
+    }
+
+    // MARK: - Press Overlay
+
+    private var pressOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.3)
+                .ignoresSafeArea()
+
+            VStack(spacing: 32) {
+                Text(post.caption)
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
+
+                HStack(spacing: 40) {
+                    ForEach(PostAction.allCases, id: \.self) { action in
+                        actionIcon(for: action)
+                    }
+                }
+                .onPreferenceChange(ActionFramePreferenceKey.self) { frames in
+                    actionFrames = frames
+                }
+            }
+        }
+        .transition(.opacity)
+        .allowsHitTesting(false)
+    }
+
+    private func actionIcon(for action: PostAction) -> some View {
+        let isHovered = hoveredAction == action
+        let iconName: String = {
+            if action == .like && isLiked {
+                return "heart.fill"
+            }
+            return action.iconName
+        }()
+
+        return VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 64, height: 64)
+
+                Image(systemName: iconName)
+                    .font(.title2)
+                    .foregroundStyle(action == .like && isLiked ? .red : .white)
+            }
+            .scaleEffect(isHovered ? 1.3 : 1.0)
+            .shadow(color: isHovered ? .white.opacity(0.4) : .clear, radius: 8)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
+
+            Text(action.label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(isHovered ? .white : .white.opacity(0.7))
+        }
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .preference(
+                        key: ActionFramePreferenceKey.self,
+                        value: [action: geo.frame(in: .named("postDetail"))]
+                    )
+            }
+        )
+    }
+
+    // MARK: - Like Indicator
+
+    private var likeIndicator: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Image(systemName: "heart.fill")
+                    .font(.body)
+                    .foregroundStyle(.red)
+                    .padding(10)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .padding(.trailing, 16)
+                    .padding(.top, 8)
+            }
+            Spacer()
         }
     }
 
@@ -130,15 +261,16 @@ struct PostDetailView: View {
     private var zoomGestures: some Gesture {
         let pinch = MagnifyGesture()
             .onChanged { value in
+                guard !isPressing else { return }
                 currentZoom = value.magnification - 1
             }
             .onEnded { value in
+                guard !isPressing else { return }
                 totalZoom = effectiveZoom
                 currentZoom = 0
                 if totalZoom <= 1.05 {
                     resetZoom()
                 } else {
-                    // Re-clamp offset for the new zoom level
                     let clamped = clampedOffset(offset, zoom: totalZoom)
                     if clamped != offset {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
@@ -151,7 +283,7 @@ struct PostDetailView: View {
 
         let drag = DragGesture()
             .onChanged { value in
-                guard effectiveZoom > 1 else { return }
+                guard !isPressing, effectiveZoom > 1 else { return }
                 let proposed = CGSize(
                     width: lastOffset.width + value.translation.width,
                     height: lastOffset.height + value.translation.height
@@ -159,6 +291,7 @@ struct PostDetailView: View {
                 offset = clampedOffset(proposed, zoom: effectiveZoom)
             }
             .onEnded { _ in
+                guard !isPressing else { return }
                 lastOffset = offset
             }
 
@@ -174,45 +307,83 @@ struct PostDetailView: View {
         }
     }
 
-    // MARK: - User Header
+    // MARK: - Long Press Gesture
 
-    private var userHeader: some View {
-        NavigationLink(destination: FriendProfileView(user: post.user)) {
-            HStack(spacing: 8) {
-                AvatarView(user: post.user, size: 28)
+    private var longPressGesture: some Gesture {
+        LongPressGesture(minimumDuration: 0.3)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("postDetail")))
+            .updating($isInteracting) { _, state, _ in
+                state = true
+            }
+            .onChanged { value in
+                switch value {
+                case .first(true):
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isPressing = true
+                    }
+                case .second(true, let drag):
+                    if !isPressing {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isPressing = true
+                        }
+                    }
+                    dragLocation = drag?.location
+                default:
+                    break
+                }
+            }
+            .onEnded { _ in
+                if let action = hoveredAction {
+                    performAction(action)
+                }
+            }
+    }
 
-                Text(post.user.displayName)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
+    // MARK: - Hover Detection
 
-                Spacer()
+    private func updateHoveredAction(at point: CGPoint?) {
+        guard let point = point else {
+            hoveredAction = nil
+            return
+        }
 
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+        var closest: PostAction? = nil
+        var closestDistance: CGFloat = .infinity
+        let threshold: CGFloat = 80
+
+        for (action, frame) in actionFrames {
+            let center = CGPoint(x: frame.midX, y: frame.midY)
+            let dx = point.x - center.x
+            let dy = point.y - center.y
+            let distance = sqrt(dx * dx + dy * dy)
+
+            if distance < threshold && distance < closestDistance {
+                closest = action
+                closestDistance = distance
             }
         }
-        .buttonStyle(.plain)
-    }
 
-    // MARK: - Metadata Row
-
-    private var metadataRow: some View {
-        HStack(spacing: 16) {
-            Label(post.timeAgoFormatted, systemImage: "clock")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Label(post.locationName, systemImage: "mappin")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
+        if hoveredAction != closest {
+            if closest != nil {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+            }
+            hoveredAction = closest
         }
     }
 
-    // MARK: - Explore Here Button
+    // MARK: - Action Handlers
 
-    private var exploreHereButton: some View {
-        Button {
+    private func performAction(_ action: PostAction) {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+
+        switch action {
+        case .like:
+            isLiked.toggle()
+        case .share:
+            showShareSheet = true
+        case .jump:
             store.pendingMoment = Moment(
                 date: post.timestamp,
                 locationName: post.locationName,
@@ -221,18 +392,20 @@ struct PostDetailView: View {
             )
             store.selectedTab = 0
             dismiss()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                Text("Explore this Time & Place")
-                    .fontWeight(.semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(.blue)
     }
+}
+
+// MARK: - Share Sheet
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Preview
