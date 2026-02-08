@@ -124,21 +124,27 @@ struct CameraPreviewRepresentable: UIViewRepresentable {
     }
 }
 
+// MARK: - Captured Photo Wrapper
+
+struct CapturedPhoto: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
 // MARK: - Camera Flow View (manages camera → preview transition)
 
 struct CameraFlowView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var capturedImage: UIImage?
-    @State private var showPostPreview = false
+    @State private var capturedPhoto: CapturedPhoto?
     @State private var camera = CameraModel()
 
     var body: some View {
         cameraView
-            .fullScreenCover(isPresented: $showPostPreview) {
+            .fullScreenCover(item: $capturedPhoto) { photo in
                 PostPreviewView(
-                    image: capturedImage ?? UIImage(),
+                    image: photo.image,
                     onDiscard: {
-                        showPostPreview = false
+                        capturedPhoto = nil
                         #if !targetEnvironment(simulator)
                         camera.startSession()
                         #endif
@@ -158,8 +164,7 @@ struct CameraFlowView: View {
         #if targetEnvironment(simulator)
         SimulatorCameraView(
             onCapture: { image in
-                capturedImage = image
-                showPostPreview = true
+                capturedPhoto = CapturedPhoto(image: image)
             },
             onCancel: { dismiss() }
         )
@@ -167,9 +172,8 @@ struct CameraFlowView: View {
         CameraViewfinderView(
             camera: camera,
             onCapture: { image in
-                capturedImage = image
                 camera.stopSession()
-                showPostPreview = true
+                capturedPhoto = CapturedPhoto(image: image)
             },
             onCancel: {
                 camera.stopSession()
