@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct CameraAppApp: App {
     @State private var momentsStore = MomentsStore()
+    @State private var friendsStore = FriendsStore()
     @State private var showCamera = false
     @State private var previousTab: Int = 0
 
@@ -41,6 +42,12 @@ struct CameraAppApp: App {
                         Label("Moments", systemImage: "clock.arrow.circlepath")
                     }
                     .tag(2)
+
+                FriendsView()
+                    .tabItem {
+                        Label("Friends", systemImage: "person.2.fill")
+                    }
+                    .tag(3)
             }
             .fullScreenCover(isPresented: $showCamera, onDismiss: {
                 // Return to whichever tab was active before camera
@@ -49,6 +56,7 @@ struct CameraAppApp: App {
                 CameraFlowView()
             }
             .environment(momentsStore)
+            .environment(friendsStore)
         }
     }
 }
