@@ -528,67 +528,63 @@ struct PostCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Image
-            AsyncImage(url: post.imageURL) { phase in
-                switch phase {
-                case .empty:
-                    ZStack {
-                        Rectangle()
-                            .fill(Color(.systemGray5))
-                        ProgressView()
-                    }
-                    .frame(height: 240)
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 240)
-                        .clipped()
-                case .failure:
-                    ZStack {
-                        Rectangle()
-                            .fill(Color(.systemGray5))
-                        VStack(spacing: 6) {
-                            Image(systemName: "photo.badge.exclamationmark")
-                                .font(.title2)
-                            Text("Failed to load")
-                                .font(.caption)
+            // Image — tappable to open post detail
+            NavigationLink(destination: PostDetailView(post: post, queryDate: queryDate)) {
+                AsyncImage(url: post.imageURL) { phase in
+                    switch phase {
+                    case .empty:
+                        ZStack {
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                            ProgressView()
                         }
-                        .foregroundStyle(.secondary)
+                        .frame(height: 240)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 240)
+                            .clipped()
+                    case .failure:
+                        ZStack {
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                            VStack(spacing: 6) {
+                                Image(systemName: "photo.badge.exclamationmark")
+                                    .font(.title2)
+                                Text("Failed to load")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                        .frame(height: 240)
+                    @unknown default:
+                        EmptyView()
                     }
-                    .frame(height: 240)
-                @unknown default:
-                    EmptyView()
                 }
             }
+            .buttonStyle(.plain)
 
             // Info
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    // Avatar placeholder
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 32, height: 32)
-                        .overlay {
-                            Text(String(post.username.prefix(1)).uppercased())
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.white)
-                        }
+                    // Avatar + username — tappable to open user profile
+                    NavigationLink(destination: FriendProfileView(user: post.user)) {
+                        HStack(spacing: 8) {
+                            AvatarView(user: post.user, size: 32)
 
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(post.username)
-                            .font(.subheadline.weight(.semibold))
-                        Text(post.timeAgoFormatted)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(post.username)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                Text(post.timeAgoFormatted)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
 
                     Spacer()
 
@@ -620,4 +616,5 @@ struct PostCard: View {
 #Preview {
     ExploreView()
         .environment(MomentsStore())
+        .environment(FriendsStore())
 }

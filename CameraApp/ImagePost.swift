@@ -1,14 +1,18 @@
 import Foundation
 import CoreLocation
+import SwiftUI
 
 struct ImagePost: Identifiable {
     let id = UUID()
     let imageURL: URL
-    let username: String
+    let user: User
     let caption: String
     let coordinate: CLLocationCoordinate2D
+    let locationName: String
     let timestamp: Date
     let distanceMeters: Double
+
+    var username: String { user.username }
 
     var distanceFormatted: String {
         if distanceMeters < 1000 {
@@ -52,9 +56,16 @@ struct ImagePost: Identifiable {
 // MARK: - Sample Data
 
 extension ImagePost {
+    /// Users that match the sample post usernames.
+    /// The first 5 correspond to `User.sampleFriends()`, the next 5 to `User.sampleSuggested()`.
+    private static func samplePostUsers() -> [User] {
+        let friends = User.sampleFriends()   // alex_photo, wanderlust99, cityshots, nature_lens, pixel_hunter
+        let suggested = User.sampleSuggested() // golden_hour, street_vibes, mountain_soul, ocean_dreamer, urban_eye, ...
+        return friends + Array(suggested.prefix(5))
+    }
+
     static func samplePosts(near coordinate: CLLocationCoordinate2D, around date: Date) -> [ImagePost] {
-        let usernames = ["alex_photo", "wanderlust99", "cityshots", "nature_lens", "pixel_hunter",
-                         "golden_hour", "street_vibes", "mountain_soul", "ocean_dreamer", "urban_eye"]
+        let users = samplePostUsers()
         let captions = [
             "Golden hour at its finest ✨",
             "Found this hidden gem today",
@@ -66,6 +77,18 @@ extension ImagePost {
             "Nature always wins",
             "Lost in the beauty of this spot",
             "Early bird gets the shot 📸"
+        ]
+        let locationNames = [
+            "Mission District, San Francisco",
+            "Haight-Ashbury, San Francisco",
+            "Marina District, San Francisco",
+            "Golden Gate Park, San Francisco",
+            "SoMa, San Francisco",
+            "North Beach, San Francisco",
+            "Castro, San Francisco",
+            "Noe Valley, San Francisco",
+            "Sunset District, San Francisco",
+            "Presidio, San Francisco"
         ]
 
         return (0..<10).map { i in
@@ -88,9 +111,10 @@ extension ImagePost {
 
             return ImagePost(
                 imageURL: url,
-                username: usernames[i],
+                user: users[i],
                 caption: captions[i],
                 coordinate: postCoord,
+                locationName: locationNames[i],
                 timestamp: postDate,
                 distanceMeters: distance
             )
