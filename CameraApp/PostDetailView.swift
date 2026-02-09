@@ -59,8 +59,8 @@ struct PostDetailView: View {
     @State private var isPressing: Bool = false
     @State private var dragLocation: CGPoint? = nil
     @State private var hoveredAction: PostAction? = nil
-    @State private var isLiked: Bool = false
-    @State private var isPinned: Bool = false
+    @State private var likedPostIDs: Set<UUID> = []
+    @State private var pinnedPostIDs: Set<UUID> = []
     @State private var showShareSheet: Bool = false
     @State private var actionFrames: [PostAction: CGRect] = [:]
 
@@ -75,6 +75,8 @@ struct PostDetailView: View {
     @State private var pinOpacity: Double = 0
 
     private var post: ImagePost { posts[currentIndex] }
+    private var isLiked: Bool { likedPostIDs.contains(post.id) }
+    private var isPinned: Bool { pinnedPostIDs.contains(post.id) }
 
     private var effectiveZoom: CGFloat {
         max(1, min(totalZoom + currentZoom, 5))
@@ -493,8 +495,10 @@ struct PostDetailView: View {
 
         switch action {
         case .like:
-            isLiked.toggle()
             if isLiked {
+                likedPostIDs.remove(post.id)
+            } else {
+                likedPostIDs.insert(post.id)
                 triggerHeartAnimation()
             }
         case .share:
@@ -509,8 +513,10 @@ struct PostDetailView: View {
             store.selectedTab = 0
             dismiss()
         case .pinToProfile:
-            isPinned.toggle()
             if isPinned {
+                pinnedPostIDs.remove(post.id)
+            } else {
+                pinnedPostIDs.insert(post.id)
                 triggerPinAnimation()
             }
         }
