@@ -314,22 +314,17 @@ struct PostDetailView: View {
         }()
 
         return VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(Color(.systemGray5))
-                    .frame(width: 64, height: 64)
-
-                Image(systemName: iconName)
-                    .font(.title2)
-                    .foregroundStyle(action == .like && isLiked ? .red : action == .pinToProfile && isPinned ? .orange : .black)
-            }
+            Image(systemName: iconName)
+                .font(.title.weight(.semibold))
+                .foregroundStyle(action == .like && isLiked ? .red : action == .pinToProfile && isPinned ? .orange : Color(.darkGray))
+                .frame(width: 64, height: 64)
             .scaleEffect(isHovered ? 1.3 : 1.0)
             .shadow(color: isHovered ? .black.opacity(0.15) : .clear, radius: 8)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
 
             Text(action.label)
                 .font(.caption.weight(.medium))
-                .foregroundStyle(isHovered ? .black : .black.opacity(0.6))
+                .foregroundStyle(isHovered ? Color(.darkGray) : Color(.darkGray).opacity(0.7))
         }
         .background(
             GeometryReader { geo in
