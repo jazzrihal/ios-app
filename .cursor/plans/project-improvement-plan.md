@@ -5,15 +5,15 @@
 | # | Task | Status |
 |---|------|--------|
 | 1 | Add unit tests (CameraAppTests target) | Pending |
-| 2 | Integrate SwiftLint | Pending |
+| 2 | Integrate SwiftLint | Done |
 | 3 | Add image caching (Kingfisher or Nuke) to replace bare AsyncImage | Pending |
 | 4 | Extract ViewModels from large views (e.g. PostDetailView at 545 lines) | Pending |
 | 5 | Enable strict Swift concurrency (`SWIFT_STRICT_CONCURRENCY = complete`) | Pending |
 | 6 | Add code coverage reporting to CI | Pending |
 | 7 | Add Fastlane for signing & deployment automation | Pending |
 | 8 | Add crash reporting (Firebase Crashlytics or Sentry) | Pending |
-| 9 | Add a Makefile / Justfile for common developer commands | Pending |
-| 10 | Add pre-commit hooks (SwiftLint + SwiftFormat) | Pending |
+| 9 | Add a Makefile / Justfile for common developer commands | Done |
+| 10 | Add pre-commit hooks (SwiftLint + SwiftFormat) | Done |
 
 ## Key Gaps Today
 
