@@ -35,6 +35,7 @@ struct PostPreviewView: View {
                     Button("Discard") {
                         onDiscard()
                     }
+                    .accessibilityIdentifier("DiscardButton")
                     .foregroundStyle(.red)
                 }
             }
@@ -61,6 +62,7 @@ struct PostPreviewView: View {
                 .foregroundStyle(.secondary)
 
             TextField("Write a caption…", text: $caption, axis: .vertical)
+                .accessibilityIdentifier("CaptionTextField")
                 .lineLimit(3...6)
                 .padding(12)
                 .background(
@@ -181,6 +183,7 @@ struct PostPreviewView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
         }
+        .accessibilityIdentifier("PostButton")
         .buttonStyle(.borderedProminent)
         .tint(.blue)
         .padding(.horizontal, 16)

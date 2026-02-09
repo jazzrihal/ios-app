@@ -10,44 +10,42 @@ struct CameraAppApp: App {
     var body: some Scene {
         WindowGroup {
             @Bindable var store = momentsStore
-            TabView(
-                selection: Binding(
-                    get: { store.selectedTab },
-                    set: { newValue in
-                        if newValue == 1 {
-                            // Save current tab so we can return to it
-                            previousTab = store.selectedTab
-                            store.selectedTab = newValue
-                            showCamera = true
-                        } else {
-                            store.selectedTab = newValue
-                        }
-                    }
-                )
-            ) {
+            TabView(selection: $store.selectedTab) {
                 ExploreView()
                     .tabItem {
                         Label("Explore", systemImage: "magnifyingglass")
                     }
                     .tag(0)
+                    .accessibilityIdentifier("ExploreTab")
 
                 Color.clear
                     .tabItem {
                         Label("Camera", systemImage: "camera.fill")
                     }
                     .tag(1)
+                    .accessibilityIdentifier("CameraTab")
+                    .onAppear {
+                        showCamera = true
+                    }
 
                 MomentsView()
                     .tabItem {
                         Label("Moments", systemImage: "clock.arrow.circlepath")
                     }
                     .tag(2)
+                    .accessibilityIdentifier("MomentsTab")
 
                 FriendsView()
                     .tabItem {
                         Label("Friends", systemImage: "person.2.fill")
                     }
                     .tag(3)
+                    .accessibilityIdentifier("FriendsTab")
+            }
+            .onChange(of: store.selectedTab) { oldValue, newValue in
+                if newValue == 1 {
+                    previousTab = oldValue
+                }
             }
             .fullScreenCover(isPresented: $showCamera, onDismiss: {
                 // Return to whichever tab was active before camera

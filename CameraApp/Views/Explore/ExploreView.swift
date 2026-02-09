@@ -340,6 +340,7 @@ struct ExploreView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
         }
+        .accessibilityIdentifier("FindNearbyPostsButton")
         .buttonStyle(.borderedProminent)
         .tint(.blue)
         .disabled(pinnedCoordinate == nil || isSearching)
@@ -360,6 +361,7 @@ struct ExploreView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
             }
+            .accessibilityIdentifier("SaveMomentButton")
             .buttonStyle(.bordered)
             .tint(momentSaved ? .green : .purple)
             .disabled(momentSaved)
@@ -383,8 +385,6 @@ struct ExploreView: View {
                             PostCard(
                                 post: post,
                                 queryDate: selectedDate,
-                                posts: posts,
-                                index: index,
                                 onTapProfile: {
                                     navigateToProfileUser = post.user
                                 },
@@ -466,32 +466,31 @@ struct ExploreView: View {
         isReverseGeocoding = true
         let geocoder = CLGeocoder()
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let coordinateFallback = String(
+            format: "%.4f, %.4f",
+            coordinate.latitude,
+            coordinate.longitude
+        )
 
         geocoder.reverseGeocodeLocation(location) { placemarks, _ in
             isReverseGeocoding = false
-            if let placemark = placemarks?.first {
-                let city = placemark.locality
-                let country = placemark.country
-                switch (city, country) {
-                case let (c?, co?):
-                    locationName = "\(c), \(co)"
-                case let (nil, co?):
-                    locationName = co
-                case let (c?, nil):
-                    locationName = c
-                default:
-                    locationName = String(
-                        format: "%.4f, %.4f",
-                        coordinate.latitude,
-                        coordinate.longitude
-                    )
-                }
-            } else {
-                locationName = String(
-                    format: "%.4f, %.4f",
-                    coordinate.latitude,
-                    coordinate.longitude
-                )
+
+            guard let placemark = placemarks?.first else {
+                locationName = coordinateFallback
+                return
+            }
+
+            let city = placemark.locality
+            let country = placemark.country
+            switch (city, country) {
+            case let (c?, co?):
+                locationName = "\(c), \(co)"
+            case let (nil, co?):
+                locationName = co
+            case let (c?, nil):
+                locationName = c
+            default:
+                locationName = coordinateFallback
             }
         }
     }

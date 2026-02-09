@@ -59,6 +59,7 @@ struct SimulatorCameraView: View {
                             .frame(width: 44, height: 44)
                             .background(.black.opacity(0.5), in: Circle())
                     }
+                    .accessibilityIdentifier("CameraCancelButton")
 
                     Spacer()
 
@@ -89,6 +90,8 @@ struct SimulatorCameraView: View {
                             .frame(width: 64, height: 64)
                     }
                 }
+                .accessibilityIdentifier("CameraShutterButton")
+                .accessibilityLabel("Take Photo")
                 .padding(.bottom, 50)
             }
         }

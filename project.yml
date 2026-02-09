@@ -8,6 +8,9 @@ targets:
   CameraApp:
     type: application
     platform: iOS
+    scheme:
+      testTargets:
+        - CameraAppUITests
     sources:
       - CameraApp
     info:
@@ -26,3 +29,15 @@ targets:
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: CameraApp/Info.plist
+  CameraAppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - CameraAppUITests
+    dependencies:
+      - target: CameraApp
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        TEST_TARGET_NAME: CameraApp
+        GENERATE_INFOPLIST_FILE: YES

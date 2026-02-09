@@ -63,6 +63,7 @@ struct FriendsView: View {
                     .foregroundStyle(selectedSection == section ? .primary : .secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(section == .friends ? "FriendsSectionButton" : "AddFriendSectionButton")
             }
         }
         .padding(.horizontal, 16)
