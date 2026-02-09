@@ -5,7 +5,6 @@ import SwiftUI
 enum FriendsSection: String, CaseIterable {
     case friends = "Friends"
     case discover = "Discover"
-    case chats = "Chats"
 }
 
 // MARK: - Friends View
@@ -27,8 +26,6 @@ struct FriendsView: View {
                     friendsListSection
                 case .discover:
                     discoverSection
-                case .chats:
-                    chatsSection
                 }
             }
             .navigationTitle("Friends")
@@ -56,9 +53,6 @@ struct FriendsView: View {
                                 badgeView(count: store.incomingRequests.count)
                             }
 
-                            if section == .chats && store.totalUnreadCount > 0 {
-                                badgeView(count: store.totalUnreadCount)
-                            }
                         }
 
                         Rectangle()
@@ -194,48 +188,6 @@ struct FriendsView: View {
                 }
             }
             .padding(.bottom, 24)
-        }
-    }
-
-    // MARK: - Chats Section
-
-    private var chatsSection: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                // ── Search ──
-                searchBar(placeholder: "Search conversations…")
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-
-                let conversations = filteredConversations
-                if conversations.isEmpty {
-                    emptyState(
-                        icon: searchText.isEmpty ? "bubble.left.and.bubble.right" : "magnifyingglass",
-                        title: searchText.isEmpty ? "No Conversations" : "No Results",
-                        subtitle: searchText.isEmpty
-                            ? "Start a chat from a friend's profile"
-                            : "No conversations match \"\(searchText)\""
-                    )
-                } else {
-                    ForEach(conversations) { conversation in
-                        NavigationLink(destination: ChatView(conversation: conversation)) {
-                            ConversationRow(conversation: conversation)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 16)
-                }
-            }
-            .padding(.bottom, 24)
-        }
-    }
-
-    private var filteredConversations: [Conversation] {
-        guard !searchText.isEmpty else { return store.conversations }
-        let lowered = searchText.lowercased()
-        return store.conversations.filter {
-            $0.user.username.lowercased().contains(lowered) ||
-            $0.user.displayName.lowercased().contains(lowered)
         }
     }
 
@@ -491,54 +443,6 @@ struct DiscoverUserRow: View {
             .padding(.vertical, 6)
             .foregroundStyle(.green)
         }
-    }
-}
-
-// MARK: - Conversation Row
-
-struct ConversationRow: View {
-    let conversation: Conversation
-
-    var body: some View {
-        HStack(spacing: 14) {
-            ZStack(alignment: .topTrailing) {
-                AvatarView(user: conversation.user, size: 52)
-
-                if conversation.unreadCount > 0 {
-                    Circle()
-                        .fill(.blue)
-                        .frame(width: 14, height: 14)
-                        .overlay {
-                            Text("\(conversation.unreadCount)")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        .offset(x: 2, y: -2)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(conversation.user.displayName)
-                        .font(.subheadline.weight(conversation.unreadCount > 0 ? .bold : .semibold))
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    Text(conversation.lastMessageTime)
-                        .font(.caption2)
-                        .foregroundColor(conversation.unreadCount > 0 ? .blue : .gray.opacity(0.5))
-                }
-
-                Text(conversation.lastMessagePreview)
-                    .font(.caption)
-                    .foregroundStyle(conversation.unreadCount > 0 ? .primary : .secondary)
-                    .lineLimit(2)
-            }
-        }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.top, 8)
     }
 }
 

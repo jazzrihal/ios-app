@@ -7,11 +7,6 @@ class FriendsStore {
     var suggestedUsers: [User] = User.sampleSuggested()
     var incomingRequests: [User] = User.sampleIncomingRequests()
     var pendingSentRequests: Set<UUID> = []
-    var conversations: [Conversation] = []
-
-    init() {
-        conversations = Conversation.sampleConversations(friends: friends)
-    }
 
     // MARK: - Friend Status
 
@@ -41,14 +36,6 @@ class FriendsStore {
         incomingRequests.removeAll { $0.id == user.id }
         friends.append(user)
         suggestedUsers.removeAll { $0.id == user.id }
-
-        // Create an empty conversation
-        if !conversations.contains(where: { $0.id == user.id }) {
-            conversations.insert(
-                Conversation(id: user.id, user: user, messages: [], unreadCount: 0),
-                at: 0
-            )
-        }
     }
 
     func declineRequest(from user: User) {
@@ -57,38 +44,6 @@ class FriendsStore {
 
     func removeFriend(_ user: User) {
         friends.removeAll { $0.id == user.id }
-        conversations.removeAll { $0.id == user.id }
-    }
-
-    // MARK: - Chat
-
-    func sendMessage(to userId: UUID, text: String) {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-
-        let message = ChatMessage(
-            id: UUID(),
-            senderId: User.currentUser.id,
-            text: text.trimmingCharacters(in: .whitespacesAndNewlines),
-            timestamp: Date(),
-            isFromCurrentUser: true
-        )
-
-        if let index = conversations.firstIndex(where: { $0.id == userId }) {
-            conversations[index].messages.append(message)
-            // Move conversation to top
-            let conversation = conversations.remove(at: index)
-            conversations.insert(conversation, at: 0)
-        }
-    }
-
-    func markAsRead(userId: UUID) {
-        if let index = conversations.firstIndex(where: { $0.id == userId }) {
-            conversations[index].unreadCount = 0
-        }
-    }
-
-    var totalUnreadCount: Int {
-        conversations.reduce(0) { $0 + $1.unreadCount }
     }
 
     // MARK: - Search

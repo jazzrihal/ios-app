@@ -203,20 +203,6 @@ struct FriendProfileView: View {
                 .padding(.horizontal, 16)
 
             case .friends:
-                // Message Button
-                NavigationLink(destination: chatDestination) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "bubble.left.fill")
-                        Text("Message")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(.blue, in: RoundedRectangle(cornerRadius: 12))
-                    .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 16)
-
                 // Remove Friend
                 Button {
                     showRemoveConfirmation = true
@@ -236,19 +222,6 @@ struct FriendProfileView: View {
         }
     }
 
-    @ViewBuilder
-    private var chatDestination: some View {
-        if let conversation = store.conversations.first(where: { $0.id == user.id }) {
-            ChatView(conversation: conversation)
-        } else {
-            ChatView(conversation: Conversation(
-                id: user.id,
-                user: user,
-                messages: [],
-                unreadCount: 0
-            ))
-        }
-    }
 }
 
 // MARK: - Preview
