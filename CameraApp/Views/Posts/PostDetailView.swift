@@ -1,30 +1,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Post Action
-
-enum PostAction: CaseIterable, Hashable {
-    case like, share, jump, pinToProfile
-
-    var iconName: String {
-        switch self {
-        case .like: return "heart"
-        case .share: return "square.and.arrow.up"
-        case .jump: return "scope"
-        case .pinToProfile: return "pin"
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .like: return "Like"
-        case .share: return "Share"
-        case .jump: return "Jump"
-        case .pinToProfile: return "Pin"
-        }
-    }
-}
-
 // MARK: - Preference Key for Icon Frames
 
 private struct ActionFramePreferenceKey: PreferenceKey {
@@ -591,18 +567,6 @@ struct PostDetailView: View {
             showPinAnimation = false
         }
     }
-}
-
-// MARK: - Share Sheet
-
-private struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Preview
