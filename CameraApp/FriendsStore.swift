@@ -49,7 +49,7 @@ class FriendsStore {
     // MARK: - Search
 
     func searchUsers(query: String) -> [User] {
-        guard !query.isEmpty else { return suggestedUsers }
+        guard !query.isEmpty else { return [] }
         let lowered = query.lowercased()
         let allSearchable = suggestedUsers + friends + incomingRequests
         let unique = Dictionary(grouping: allSearchable, by: \.id).compactMap(\.value.first)

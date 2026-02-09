@@ -4,7 +4,7 @@ import SwiftUI
 
 enum FriendsSection: String, CaseIterable {
     case friends = "Friends"
-    case discover = "Discover"
+    case addFriend = "Add Friend"
 }
 
 // MARK: - Friends View
@@ -24,8 +24,8 @@ struct FriendsView: View {
                 switch selectedSection {
                 case .friends:
                     friendsListSection
-                case .discover:
-                    discoverSection
+                case .addFriend:
+                    addFriendSection
                 }
             }
             .navigationTitle("Friends")
@@ -100,7 +100,7 @@ struct FriendsView: View {
                         icon: searchText.isEmpty ? "person.2" : "magnifyingglass",
                         title: searchText.isEmpty ? "No Friends Yet" : "No Results",
                         subtitle: searchText.isEmpty
-                            ? "Discover people in the Discover tab"
+                            ? "Use the Add Friend tab to find people"
                             : "No friends match \"\(searchText)\""
                     )
                 } else {
@@ -146,45 +146,50 @@ struct FriendsView: View {
         }
     }
 
-    // MARK: - Discover Section
+    // MARK: - Add Friend Section
 
-    private var discoverSection: some View {
+    private var addFriendSection: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 // ── Search ──
-                searchBar(placeholder: "Search people…")
+                searchBar(placeholder: "Search by username or name…")
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
-                // ── Results ──
-                let results = store.searchUsers(query: searchText)
-                if results.isEmpty {
-                    emptyState(
-                        icon: "magnifyingglass",
-                        title: "No People Found",
-                        subtitle: "Try a different search term"
-                    )
+                if searchText.isEmpty {
+                    // ── Prompt ──
+                    VStack(spacing: 12) {
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 36))
+                            .foregroundStyle(.tertiary)
+                        Text("Add a Friend")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Text("Search by username or display name\nto find and add friends")
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 60)
+                    .padding(.horizontal, 32)
                 } else {
-                    if searchText.isEmpty {
-                        HStack {
-                            Image(systemName: "sparkles")
-                                .foregroundStyle(.orange)
-                            Text("Suggested for You")
-                                .font(.subheadline.weight(.semibold))
-                            Spacer()
+                    // ── Results ──
+                    let results = store.searchUsers(query: searchText)
+                    if results.isEmpty {
+                        emptyState(
+                            icon: "magnifyingglass",
+                            title: "No People Found",
+                            subtitle: "Try a different username or name"
+                        )
+                    } else {
+                        ForEach(results) { user in
+                            NavigationLink(destination: FriendProfileView(user: user)) {
+                                DiscoverUserRow(user: user)
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .padding(.bottom, 4)
                     }
-
-                    ForEach(results) { user in
-                        NavigationLink(destination: FriendProfileView(user: user)) {
-                            DiscoverUserRow(user: user)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 16)
                 }
             }
             .padding(.bottom, 24)
