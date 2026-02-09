@@ -26,6 +26,19 @@ struct FriendProfileView: View {
 
                 // ── Posts Grid ──
                 postsSection
+
+                // ── Remove Friend (subtle) ──
+                if store.status(for: user) == .friends {
+                    Button {
+                        showRemoveConfirmation = true
+                    } label: {
+                        Text("Remove Friend")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
+                }
             }
             .padding(.top, 20)
         }
@@ -214,20 +227,16 @@ struct FriendProfileView: View {
                 .padding(.horizontal, 16)
 
             case .friends:
-                // Remove Friend
-                Button {
-                    showRemoveConfirmation = true
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "person.badge.minus")
-                        Text("Remove Friend")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                // Friends status indicator
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Friends")
+                        .fontWeight(.semibold)
                 }
-                .buttonStyle(.bordered)
-                .tint(.red)
+                .foregroundStyle(.green)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(.green.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal, 16)
             }
         }
