@@ -105,7 +105,7 @@ struct PostDetailView: View {
                 pressOverlay
             }
 
-            // Close button & like indicator
+            // Close button, like indicator & metadata
             if !isPressing {
                 VStack {
                     HStack {
@@ -141,7 +141,11 @@ struct PostDetailView: View {
                         .padding(.trailing, 16)
                         .padding(.top, 8)
                     }
+
                     Spacer()
+
+                    // Post metadata
+                    postMetadata
                 }
             }
         }
@@ -258,6 +262,43 @@ struct PostDetailView: View {
             }
         }
         .allowsHitTesting(false)
+    }
+
+    // MARK: - Post Metadata
+
+    private var postMetadata: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(post.user.displayName)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.white)
+
+            HStack(spacing: 4) {
+                Image(systemName: "clock")
+                    .font(.caption2)
+                Text(post.timestamp.formatted(.dateTime.month(.abbreviated).day().year().hour().minute()))
+                    .font(.caption)
+            }
+            .foregroundStyle(.white.opacity(0.7))
+
+            HStack(spacing: 4) {
+                Image(systemName: "location")
+                    .font(.caption2)
+                Text(post.locationName)
+                    .font(.caption)
+            }
+            .foregroundStyle(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.4)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+        )
     }
 
     private func actionIcon(for action: PostAction) -> some View {
