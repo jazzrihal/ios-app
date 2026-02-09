@@ -134,6 +134,7 @@ struct PostDetailView: View {
         }
         .coordinateSpace(name: "postDetail")
         .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
         .onAppear { currentIndex = initialIndex }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: [post.imageURL])
