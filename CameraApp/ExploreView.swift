@@ -53,7 +53,7 @@ struct ExploreView: View {
                 }
             }
             .navigationTitle("Explore")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: Binding(
                 get: { navigateToProfileUser != nil },
                 set: { if !$0 { navigateToProfileUser = nil } }
