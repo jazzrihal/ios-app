@@ -1,6 +1,5 @@
 import Foundation
 import CoreLocation
-import SwiftUI
 
 struct ImagePost: Identifiable {
     let id = UUID()
@@ -33,11 +32,12 @@ struct ImagePost: Identifiable {
         let diff = timestamp.timeIntervalSince(queryDate)
         let absDiff = abs(diff)
 
-        let label: String
         if absDiff < 60 {
-            label = "at query time"
-            return label
-        } else if absDiff < 3600 {
+            return "at query time"
+        }
+
+        let label: String
+        if absDiff < 3600 {
             let mins = Int(absDiff / 60)
             label = "\(mins) min"
         } else if absDiff < 86400 {

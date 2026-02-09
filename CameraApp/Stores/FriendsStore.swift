@@ -52,10 +52,12 @@ class FriendsStore {
         guard !query.isEmpty else { return [] }
         let lowered = query.lowercased()
         let allSearchable = suggestedUsers + friends + incomingRequests
-        let unique = Dictionary(grouping: allSearchable, by: \.id).compactMap(\.value.first)
-        return unique.filter {
-            $0.username.lowercased().contains(lowered) ||
-            $0.displayName.lowercased().contains(lowered)
+
+        var seen = Set<UUID>()
+        return allSearchable.filter { user in
+            seen.insert(user.id).inserted &&
+            (user.username.lowercased().contains(lowered) ||
+             user.displayName.lowercased().contains(lowered))
         }
     }
 

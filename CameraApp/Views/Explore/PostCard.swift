@@ -5,8 +5,6 @@ import SwiftUI
 struct PostCard: View {
     let post: ImagePost
     let queryDate: Date
-    let posts: [ImagePost]
-    let index: Int
     var onTapProfile: () -> Void
     var onTapPost: () -> Void
 

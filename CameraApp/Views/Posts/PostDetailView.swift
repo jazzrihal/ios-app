@@ -40,15 +40,11 @@ struct PostDetailView: View {
     @State private var showShareSheet: Bool = false
     @State private var actionFrames: [PostAction: CGRect] = [:]
 
-    // Heart animation state
-    @State private var showHeartAnimation: Bool = false
-    @State private var heartScale: CGFloat = 0
-    @State private var heartOpacity: Double = 0
-
-    // Pin animation state
-    @State private var showPinAnimation: Bool = false
-    @State private var pinScale: CGFloat = 0
-    @State private var pinOpacity: Double = 0
+    // Overlay icon animation state (shared by like & pin feedback)
+    @State private var overlayIcon: String? = nil
+    @State private var overlayColor: Color = .clear
+    @State private var overlayScale: CGFloat = 0
+    @State private var overlayOpacity: Double = 0
 
     private var post: ImagePost { posts[currentIndex] }
     private var isLiked: Bool { likedPostIDs.contains(post.id) }
@@ -88,25 +84,14 @@ struct PostDetailView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            // Heart like animation overlay
-            if showHeartAnimation {
-                Image(systemName: "heart.fill")
+            // Action feedback animation overlay (like / pin)
+            if let icon = overlayIcon {
+                Image(systemName: icon)
                     .font(.system(size: 100))
-                    .foregroundStyle(.red)
-                    .scaleEffect(heartScale)
-                    .opacity(heartOpacity)
-                    .shadow(color: .red.opacity(0.4), radius: 12, x: 0, y: 4)
-                    .allowsHitTesting(false)
-            }
-
-            // Pin animation overlay
-            if showPinAnimation {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 100))
-                    .foregroundStyle(.orange)
-                    .scaleEffect(pinScale)
-                    .opacity(pinOpacity)
-                    .shadow(color: .orange.opacity(0.4), radius: 12, x: 0, y: 4)
+                    .foregroundStyle(overlayColor)
+                    .scaleEffect(overlayScale)
+                    .opacity(overlayOpacity)
+                    .shadow(color: overlayColor.opacity(0.4), radius: 12, x: 0, y: 4)
                     .allowsHitTesting(false)
             }
 
@@ -313,24 +298,29 @@ struct PostDetailView: View {
 
     private func actionIcon(for action: PostAction) -> some View {
         let isHovered = hoveredAction == action
-        let iconName: String = {
-            if action == .like && isLiked {
-                return "heart.fill"
-            }
-            if action == .pinToProfile && isPinned {
-                return "pin.fill"
-            }
-            return action.iconName
-        }()
+
+        let iconName: String
+        let iconColor: Color
+        switch action {
+        case .like where isLiked:
+            iconName = "heart.fill"
+            iconColor = .red
+        case .pinToProfile where isPinned:
+            iconName = "pin.fill"
+            iconColor = .orange
+        default:
+            iconName = action.iconName
+            iconColor = Color(.darkGray)
+        }
 
         return VStack(spacing: 8) {
             Image(systemName: iconName)
                 .font(.title.weight(.semibold))
-                .foregroundStyle(action == .like && isLiked ? .red : action == .pinToProfile && isPinned ? .orange : Color(.darkGray))
+                .foregroundStyle(iconColor)
                 .frame(width: 64, height: 64)
-            .scaleEffect(isHovered ? 1.3 : 1.0)
-            .shadow(color: isHovered ? .black.opacity(0.15) : .clear, radius: 8)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
+                .scaleEffect(isHovered ? 1.3 : 1.0)
+                .shadow(color: isHovered ? .black.opacity(0.15) : .clear, radius: 8)
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
 
             Text(action.label)
                 .font(.caption.weight(.medium))
@@ -475,7 +465,7 @@ struct PostDetailView: View {
                 likedPostIDs.remove(post.id)
             } else {
                 likedPostIDs.insert(post.id)
-                triggerHeartAnimation()
+                triggerOverlayAnimation(icon: "heart.fill", color: .red)
             }
         case .share:
             showShareSheet = true
@@ -493,78 +483,43 @@ struct PostDetailView: View {
                 pinnedPostIDs.remove(post.id)
             } else {
                 pinnedPostIDs.insert(post.id)
-                triggerPinAnimation()
+                triggerOverlayAnimation(icon: "pin.fill", color: .orange)
             }
         }
     }
 
-    // MARK: - Heart Animation
+    // MARK: - Overlay Animation
 
-    private func triggerHeartAnimation() {
-        // Reset state
-        heartScale = 0
-        heartOpacity = 0
-        showHeartAnimation = true
+    private func triggerOverlayAnimation(icon: String, color: Color) {
+        overlayIcon = icon
+        overlayColor = color
+        overlayScale = 0
+        overlayOpacity = 0
 
         // Phase 1: Scale up and fade in
         withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
-            heartScale = 1.2
-            heartOpacity = 1
+            overlayScale = 1.2
+            overlayOpacity = 1
         }
 
         // Phase 2: Settle to normal size
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             withAnimation(.easeInOut(duration: 0.15)) {
-                heartScale = 1.0
+                overlayScale = 1.0
             }
         }
 
         // Phase 3: Fade out and hide
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             withAnimation(.easeOut(duration: 0.4)) {
-                heartOpacity = 0
-                heartScale = 0.8
+                overlayOpacity = 0
+                overlayScale = 0.8
             }
         }
 
         // Clean up
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-            showHeartAnimation = false
-        }
-    }
-
-    // MARK: - Pin Animation
-
-    private func triggerPinAnimation() {
-        // Reset state
-        pinScale = 0
-        pinOpacity = 0
-        showPinAnimation = true
-
-        // Phase 1: Scale up and fade in
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
-            pinScale = 1.2
-            pinOpacity = 1
-        }
-
-        // Phase 2: Settle to normal size
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                pinScale = 1.0
-            }
-        }
-
-        // Phase 3: Fade out and hide
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            withAnimation(.easeOut(duration: 0.4)) {
-                pinOpacity = 0
-                pinScale = 0.8
-            }
-        }
-
-        // Clean up
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-            showPinAnimation = false
+            overlayIcon = nil
         }
     }
 }
