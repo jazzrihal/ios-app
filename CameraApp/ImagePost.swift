@@ -11,6 +11,7 @@ struct ImagePost: Identifiable {
     let locationName: String
     let timestamp: Date
     let distanceMeters: Double
+    let scope: PostScope
 
     var username: String { user.username }
 
@@ -109,6 +110,8 @@ extension ImagePost {
             let imageId = (i + 1) * 10 + Int.random(in: 0...9)
             let url = URL(string: "https://picsum.photos/id/\(imageId)/400/400")!
 
+            let scope: PostScope = Bool.random() ? .public : .friends
+
             return ImagePost(
                 imageURL: url,
                 user: users[i],
@@ -116,9 +119,75 @@ extension ImagePost {
                 coordinate: postCoord,
                 locationName: locationNames[i],
                 timestamp: postDate,
-                distanceMeters: distance
+                distanceMeters: distance,
+                scope: scope
             )
         }
         .sorted { $0.distanceMeters < $1.distanceMeters }
+    }
+
+    /// Simulates a server response that returns only the posts the viewer is allowed to see.
+    /// - Parameters:
+    ///   - user: The profile owner whose posts to fetch.
+    ///   - isFriend: Whether the viewer is friends with the profile owner.
+    /// - Returns: Posts filtered server-side by scope (public only for non-friends, public + friends for friends).
+    static func sampleUserPosts(for user: User, isFriend: Bool) -> [ImagePost] {
+        let captions = [
+            "Golden hour at its finest ✨",
+            "Found this hidden gem today",
+            "The light was perfect this morning",
+            "Can't believe this place exists",
+            "Weekend adventures 🌿",
+            "Chasing sunsets again",
+            "A quiet moment in the city",
+            "Nature always wins",
+            "Lost in the beauty of this spot",
+        ]
+        let locationNames = [
+            "Mission District, San Francisco",
+            "Haight-Ashbury, San Francisco",
+            "Marina District, San Francisco",
+            "Golden Gate Park, San Francisco",
+            "SoMa, San Francisco",
+            "North Beach, San Francisco",
+            "Castro, San Francisco",
+            "Noe Valley, San Francisco",
+            "Sunset District, San Francisco",
+        ]
+
+        // Generate all posts for this user (server knows all of them)
+        let allPosts: [ImagePost] = (0..<9).map { i in
+            let baseLat = 37.7749 + Double(i) * 0.003
+            let baseLon = -122.4194 + Double(i) * 0.002
+            let coord = CLLocationCoordinate2D(latitude: baseLat, longitude: baseLon)
+
+            let daysAgo = Double(i * 3 + 1)
+            let postDate = Date().addingTimeInterval(-daysAgo * 86400)
+
+            let imageId = 100 + (user.username.hashValue & 0xFF) + i * 7
+            let absId = abs(imageId) % 300 + 10
+            let url = URL(string: "https://picsum.photos/id/\(absId)/400/400")!
+
+            // Alternate scopes: roughly 1/3 public, 2/3 friends-only
+            let scope: PostScope = (i % 3 == 0) ? .public : .friends
+
+            return ImagePost(
+                imageURL: url,
+                user: user,
+                caption: captions[i],
+                coordinate: coord,
+                locationName: locationNames[i],
+                timestamp: postDate,
+                distanceMeters: Double(i) * 250 + 100,
+                scope: scope
+            )
+        }
+
+        // Server-side filtering: only return posts the viewer is authorized to see
+        if isFriend {
+            return allPosts.filter { $0.scope == .public || $0.scope == .friends }
+        } else {
+            return allPosts.filter { $0.scope == .public }
+        }
     }
 }

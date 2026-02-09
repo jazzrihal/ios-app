@@ -5,6 +5,9 @@ struct FriendProfileView: View {
     @Environment(FriendsStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var showRemoveConfirmation = false
+    @State private var userPosts: [ImagePost] = []
+
+    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
 
     var body: some View {
         ScrollView {
@@ -21,12 +24,15 @@ struct FriendProfileView: View {
                 // ── Actions ──
                 actionButtons
 
-                Spacer()
+                // ── Posts Grid ──
+                postsSection
             }
             .padding(.top, 20)
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { loadPosts() }
+        .onChange(of: store.status(for: user)) { _, _ in loadPosts() }
         .alert("Remove Friend", isPresented: $showRemoveConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Remove", role: .destructive) {
@@ -38,6 +44,11 @@ struct FriendProfileView: View {
         } message: {
             Text("Are you sure you want to remove \(user.displayName) from your friends? This cannot be undone.")
         }
+    }
+
+    private func loadPosts() {
+        let isFriend = store.status(for: user) == .friends
+        userPosts = ImagePost.sampleUserPosts(for: user, isFriend: isFriend)
     }
 
     // MARK: - Profile Header
@@ -222,6 +233,87 @@ struct FriendProfileView: View {
         }
     }
 
+    // MARK: - Posts Section
+
+    private var postsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section header
+            HStack {
+                Label("Posts", systemImage: "photo.on.rectangle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Text("\(userPosts.count)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+
+            if userPosts.isEmpty {
+                postsEmptyState
+            } else {
+                postsGrid
+            }
+        }
+    }
+
+    private var postsGrid: some View {
+        LazyVGrid(columns: gridColumns, spacing: 2) {
+            ForEach(Array(userPosts.enumerated()), id: \.element.id) { index, post in
+                NavigationLink(destination: PostDetailView(posts: userPosts, initialIndex: index, queryDate: Date())) {
+                    AsyncImage(url: post.imageURL) { phase in
+                        switch phase {
+                        case .empty:
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                                .overlay { ProgressView() }
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        case .failure:
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                                .overlay {
+                                    Image(systemName: "photo.badge.exclamationmark")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    .aspectRatio(1, contentMode: .fill)
+                    .clipped()
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var postsEmptyState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 32))
+                .foregroundStyle(.tertiary)
+
+            Text(store.status(for: user) == .friends ? "No posts yet" : "No public posts")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if store.status(for: user) != .friends {
+                Text("Add \(user.displayName) as a friend to see more.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+    }
+
 }
 
 // MARK: - Preview
@@ -231,4 +323,5 @@ struct FriendProfileView: View {
         FriendProfileView(user: User.sampleFriends().first!)
     }
     .environment(FriendsStore())
+    .environment(MomentsStore())
 }
