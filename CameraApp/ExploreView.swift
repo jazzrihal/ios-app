@@ -26,6 +26,10 @@ struct ExploreView: View {
     @State private var isResolvingPlace = false
     @FocusState private var isSearchFieldFocused: Bool
 
+    // Navigation state (outside lazy container)
+    @State private var navigateToProfileUser: User? = nil
+    @State private var navigateToPostIndex: Int? = nil
+
     // MARK: - Body
 
     var body: some View {
@@ -50,6 +54,22 @@ struct ExploreView: View {
             }
             .navigationTitle("Explore")
             .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(isPresented: Binding(
+                get: { navigateToProfileUser != nil },
+                set: { if !$0 { navigateToProfileUser = nil } }
+            )) {
+                if let user = navigateToProfileUser {
+                    FriendProfileView(user: user)
+                }
+            }
+            .navigationDestination(isPresented: Binding(
+                get: { navigateToPostIndex != nil },
+                set: { if !$0 { navigateToPostIndex = nil } }
+            )) {
+                if let index = navigateToPostIndex {
+                    PostDetailView(posts: posts, initialIndex: index, queryDate: selectedDate)
+                }
+            }
             .onAppear {
                 loadPendingMoment()
             }
@@ -360,7 +380,18 @@ struct ExploreView: View {
                 } else {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(posts.enumerated()), id: \.element.id) { index, post in
-                            PostCard(post: post, queryDate: selectedDate, posts: posts, index: index)
+                            PostCard(
+                                post: post,
+                                queryDate: selectedDate,
+                                posts: posts,
+                                index: index,
+                                onTapProfile: {
+                                    navigateToProfileUser = post.user
+                                },
+                                onTapPost: {
+                                    navigateToPostIndex = index
+                                }
+                            )
                             if index < posts.count - 1 {
                                 Divider()
                                     .foregroundStyle(.quaternary)
@@ -532,11 +563,15 @@ struct PostCard: View {
     let queryDate: Date
     let posts: [ImagePost]
     let index: Int
+    var onTapProfile: () -> Void
+    var onTapPost: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // User header (above photo)
-            NavigationLink(destination: FriendProfileView(user: post.user)) {
+            // User header (above photo) — navigates to profile
+            Button {
+                onTapProfile()
+            } label: {
                 HStack(spacing: 8) {
                     AvatarView(user: post.user, size: 28)
 
@@ -550,13 +585,16 @@ struct PostCard: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
 
             // Image — tappable to open post detail
-            NavigationLink(destination: PostDetailView(posts: posts, initialIndex: index, queryDate: queryDate)) {
+            Button {
+                onTapPost()
+            } label: {
                 AsyncImage(url: post.imageURL) { phase in
                     switch phase {
                     case .empty:
@@ -565,14 +603,10 @@ struct PostCard: View {
                                 .fill(Color(.systemGray5))
                             ProgressView()
                         }
-                        .frame(height: 240)
                     case .success(let image):
                         image
                             .resizable()
                             .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 240)
-                            .clipped()
                     case .failure:
                         ZStack {
                             Rectangle()
@@ -585,11 +619,14 @@ struct PostCard: View {
                             }
                             .foregroundStyle(.secondary)
                         }
-                        .frame(height: 240)
                     @unknown default:
                         EmptyView()
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .frame(height: 240)
+                .clipped()
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
