@@ -35,11 +35,15 @@ private struct ActionFramePreferenceKey: PreferenceKey {
 // MARK: - Post Detail View
 
 struct PostDetailView: View {
-    let post: ImagePost
+    let posts: [ImagePost]
+    let initialIndex: Int
     let queryDate: Date
 
     @Environment(MomentsStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+
+    // Paging state
+    @State private var currentIndex: Int = 0
 
     // Zoom state
     @State private var currentZoom: CGFloat = 0
@@ -56,6 +60,8 @@ struct PostDetailView: View {
     @State private var isLiked: Bool = false
     @State private var showShareSheet: Bool = false
     @State private var actionFrames: [PostAction: CGRect] = [:]
+
+    private var post: ImagePost { posts[currentIndex] }
 
     private var effectiveZoom: CGFloat {
         max(1, min(totalZoom + currentZoom, 5))
@@ -82,23 +88,58 @@ struct PostDetailView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Image layer
-            postImage
+            // Paged image layer
+            TabView(selection: $currentIndex) {
+                ForEach(Array(posts.enumerated()), id: \.element.id) { index, _ in
+                    postImage(for: posts[index])
+                        .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
 
             // Overlay when pressing
             if isPressing {
                 pressOverlay
             }
 
-            // Persistent like indicator
-            if isLiked && !isPressing {
-                likeIndicator
+            // Close button & like indicator
+            if !isPressing {
+                VStack {
+                    HStack {
+                        Button { dismiss() } label: {
+                            Image(systemName: "xmark")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(10)
+                                .background(.ultraThinMaterial, in: Circle())
+                        }
+                        .padding(.leading, 16)
+                        .padding(.top, 12)
+
+                        Spacer()
+
+                        if isLiked {
+                            Image(systemName: "heart.fill")
+                                .font(.body)
+                                .foregroundStyle(.red)
+                                .padding(10)
+                                .background(.ultraThinMaterial, in: Circle())
+                                .padding(.trailing, 16)
+                                .padding(.top, 8)
+                        }
+                    }
+                    Spacer()
+                }
             }
         }
         .coordinateSpace(name: "postDetail")
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear { currentIndex = initialIndex }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: [post.imageURL])
+        }
+        .onChange(of: currentIndex) { _, _ in
+            resetZoom()
         }
         .onChange(of: isInteracting) { _, interacting in
             if !interacting {
@@ -116,8 +157,8 @@ struct PostDetailView: View {
 
     // MARK: - Post Image
 
-    private var postImage: some View {
-        AsyncImage(url: post.imageURL) { phase in
+    private func postImage(for displayPost: ImagePost) -> some View {
+        AsyncImage(url: displayPost.imageURL) { phase in
             switch phase {
             case .empty:
                 ProgressView()
@@ -138,8 +179,6 @@ struct PostDetailView: View {
                     )
                     .scaleEffect(effectiveZoom)
                     .offset(offset)
-                    .blur(radius: isPressing ? 20 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: isPressing)
                     .gesture(zoomGestures)
                     .simultaneousGesture(longPressGesture)
                     .onTapGesture(count: 2) {
@@ -174,29 +213,31 @@ struct PostDetailView: View {
     // MARK: - Press Overlay
 
     private var pressOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.3)
-                .ignoresSafeArea()
+        VStack {
+            // Caption at the top
+            Text(post.caption)
+                .font(.title3.weight(.medium))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
+                .padding(.top, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
 
-            VStack(spacing: 32) {
-                Text(post.caption)
-                    .font(.title3.weight(.medium))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                    .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
+            Spacer()
 
-                HStack(spacing: 40) {
-                    ForEach(PostAction.allCases, id: \.self) { action in
-                        actionIcon(for: action)
-                    }
-                }
-                .onPreferenceChange(ActionFramePreferenceKey.self) { frames in
-                    actionFrames = frames
+            // Action buttons at the bottom
+            HStack(spacing: 40) {
+                ForEach(PostAction.allCases, id: \.self) { action in
+                    actionIcon(for: action)
                 }
             }
+            .onPreferenceChange(ActionFramePreferenceKey.self) { frames in
+                actionFrames = frames
+            }
+            .padding(.bottom, 12)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
-        .transition(.opacity)
         .allowsHitTesting(false)
     }
 
@@ -236,24 +277,6 @@ struct PostDetailView: View {
                     )
             }
         )
-    }
-
-    // MARK: - Like Indicator
-
-    private var likeIndicator: some View {
-        VStack {
-            HStack {
-                Spacer()
-                Image(systemName: "heart.fill")
-                    .font(.body)
-                    .foregroundStyle(.red)
-                    .padding(10)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .padding(.trailing, 16)
-                    .padding(.top, 8)
-            }
-            Spacer()
-        }
     }
 
     // MARK: - Zoom Gestures
@@ -310,7 +333,7 @@ struct PostDetailView: View {
     // MARK: - Long Press Gesture
 
     private var longPressGesture: some Gesture {
-        LongPressGesture(minimumDuration: 0.3)
+        LongPressGesture(minimumDuration: 0.01)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("postDetail")))
             .updating($isInteracting) { _, state, _ in
                 state = true
@@ -415,10 +438,11 @@ import CoreLocation
 #Preview {
     NavigationStack {
         PostDetailView(
-            post: ImagePost.samplePosts(
+            posts: ImagePost.samplePosts(
                 near: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
                 around: Date()
-            ).first!,
+            ),
+            initialIndex: 0,
             queryDate: Date()
         )
     }

@@ -360,7 +360,7 @@ struct ExploreView: View {
                 } else {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(posts.enumerated()), id: \.element.id) { index, post in
-                            PostCard(post: post, queryDate: selectedDate)
+                            PostCard(post: post, queryDate: selectedDate, posts: posts, index: index)
                             if index < posts.count - 1 {
                                 Divider()
                                     .foregroundStyle(.quaternary)
@@ -530,6 +530,8 @@ struct ExploreView: View {
 struct PostCard: View {
     let post: ImagePost
     let queryDate: Date
+    let posts: [ImagePost]
+    let index: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -554,7 +556,7 @@ struct PostCard: View {
             .padding(.vertical, 10)
 
             // Image — tappable to open post detail
-            NavigationLink(destination: PostDetailView(post: post, queryDate: queryDate)) {
+            NavigationLink(destination: PostDetailView(posts: posts, initialIndex: index, queryDate: queryDate)) {
                 AsyncImage(url: post.imageURL) { phase in
                     switch phase {
                     case .empty:
