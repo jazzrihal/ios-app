@@ -64,6 +64,16 @@ struct PostDetailView: View {
     @State private var showShareSheet: Bool = false
     @State private var actionFrames: [PostAction: CGRect] = [:]
 
+    // Heart animation state
+    @State private var showHeartAnimation: Bool = false
+    @State private var heartScale: CGFloat = 0
+    @State private var heartOpacity: Double = 0
+
+    // Pin animation state
+    @State private var showPinAnimation: Bool = false
+    @State private var pinScale: CGFloat = 0
+    @State private var pinOpacity: Double = 0
+
     private var post: ImagePost { posts[currentIndex] }
 
     private var effectiveZoom: CGFloat {
@@ -99,6 +109,28 @@ struct PostDetailView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+
+            // Heart like animation overlay
+            if showHeartAnimation {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 100))
+                    .foregroundStyle(.red)
+                    .scaleEffect(heartScale)
+                    .opacity(heartOpacity)
+                    .shadow(color: .red.opacity(0.4), radius: 12, x: 0, y: 4)
+                    .allowsHitTesting(false)
+            }
+
+            // Pin animation overlay
+            if showPinAnimation {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 100))
+                    .foregroundStyle(.orange)
+                    .scaleEffect(pinScale)
+                    .opacity(pinOpacity)
+                    .shadow(color: .orange.opacity(0.4), radius: 12, x: 0, y: 4)
+                    .allowsHitTesting(false)
+            }
 
             // Caption + action overlay when pressing
             if isPressing {
@@ -462,6 +494,9 @@ struct PostDetailView: View {
         switch action {
         case .like:
             isLiked.toggle()
+            if isLiked {
+                triggerHeartAnimation()
+            }
         case .share:
             showShareSheet = true
         case .jump:
@@ -475,6 +510,79 @@ struct PostDetailView: View {
             dismiss()
         case .pinToProfile:
             isPinned.toggle()
+            if isPinned {
+                triggerPinAnimation()
+            }
+        }
+    }
+
+    // MARK: - Heart Animation
+
+    private func triggerHeartAnimation() {
+        // Reset state
+        heartScale = 0
+        heartOpacity = 0
+        showHeartAnimation = true
+
+        // Phase 1: Scale up and fade in
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
+            heartScale = 1.2
+            heartOpacity = 1
+        }
+
+        // Phase 2: Settle to normal size
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                heartScale = 1.0
+            }
+        }
+
+        // Phase 3: Fade out and hide
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            withAnimation(.easeOut(duration: 0.4)) {
+                heartOpacity = 0
+                heartScale = 0.8
+            }
+        }
+
+        // Clean up
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            showHeartAnimation = false
+        }
+    }
+
+    // MARK: - Pin Animation
+
+    private func triggerPinAnimation() {
+        // Reset state
+        pinScale = 0
+        pinOpacity = 0
+        showPinAnimation = true
+
+        // Phase 1: Scale up and fade in
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
+            pinScale = 1.2
+            pinOpacity = 1
+        }
+
+        // Phase 2: Settle to normal size
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                pinScale = 1.0
+            }
+        }
+
+        // Phase 3: Fade out and hide
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            withAnimation(.easeOut(duration: 0.4)) {
+                pinOpacity = 0
+                pinScale = 0.8
+            }
+        }
+
+        // Clean up
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            showPinAnimation = false
         }
     }
 }
