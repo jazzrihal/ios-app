@@ -4,13 +4,14 @@ import UIKit
 // MARK: - Post Action
 
 enum PostAction: CaseIterable, Hashable {
-    case like, share, jump
+    case like, share, jump, pinToProfile
 
     var iconName: String {
         switch self {
         case .like: return "heart"
         case .share: return "square.and.arrow.up"
         case .jump: return "scope"
+        case .pinToProfile: return "pin"
         }
     }
 
@@ -19,6 +20,7 @@ enum PostAction: CaseIterable, Hashable {
         case .like: return "Like"
         case .share: return "Share"
         case .jump: return "Jump"
+        case .pinToProfile: return "Pin"
         }
     }
 }
@@ -58,6 +60,7 @@ struct PostDetailView: View {
     @State private var dragLocation: CGPoint? = nil
     @State private var hoveredAction: PostAction? = nil
     @State private var isLiked: Bool = false
+    @State private var isPinned: Bool = false
     @State private var showShareSheet: Bool = false
     @State private var actionFrames: [PostAction: CGRect] = [:]
 
@@ -97,7 +100,7 @@ struct PostDetailView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            // Overlay when pressing
+            // Caption + action overlay when pressing
             if isPressing {
                 pressOverlay
             }
@@ -118,15 +121,25 @@ struct PostDetailView: View {
 
                         Spacer()
 
-                        if isLiked {
-                            Image(systemName: "heart.fill")
-                                .font(.body)
-                                .foregroundStyle(.red)
-                                .padding(10)
-                                .background(.ultraThinMaterial, in: Circle())
-                                .padding(.trailing, 16)
-                                .padding(.top, 8)
+                        HStack(spacing: 8) {
+                            if isPinned {
+                                Image(systemName: "pin.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.orange)
+                                    .padding(10)
+                                    .background(.ultraThinMaterial, in: Circle())
+                            }
+
+                            if isLiked {
+                                Image(systemName: "heart.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.red)
+                                    .padding(10)
+                                    .background(.ultraThinMaterial, in: Circle())
+                            }
                         }
+                        .padding(.trailing, 16)
+                        .padding(.top, 8)
                     }
                     Spacer()
                 }
@@ -168,6 +181,11 @@ struct PostDetailView: View {
                 image
                     .resizable()
                     .scaledToFit()
+                    .overlay(
+                        Color.white
+                            .opacity(isPressing ? 1 : 0)
+                            .animation(.easeInOut(duration: 0.2), value: isPressing)
+                    )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(
                         GeometryReader { geo in
@@ -214,30 +232,30 @@ struct PostDetailView: View {
     // MARK: - Press Overlay
 
     private var pressOverlay: some View {
-        VStack {
-            // Caption at the top
+        ZStack {
+            // Caption centered on screen
             Text(post.caption)
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.white)
+                .font(.title3.bold())
+                .foregroundStyle(.black)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-                .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
-                .padding(.top, 12)
-                .transition(.move(edge: .top).combined(with: .opacity))
-
-            Spacer()
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
 
             // Action buttons at the bottom
-            HStack(spacing: 40) {
-                ForEach(PostAction.allCases, id: \.self) { action in
-                    actionIcon(for: action)
+            VStack {
+                Spacer()
+
+                HStack(spacing: 40) {
+                    ForEach(PostAction.allCases, id: \.self) { action in
+                        actionIcon(for: action)
+                    }
                 }
+                .onPreferenceChange(ActionFramePreferenceKey.self) { frames in
+                    actionFrames = frames
+                }
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .onPreferenceChange(ActionFramePreferenceKey.self) { frames in
-                actionFrames = frames
-            }
-            .padding(.bottom, 12)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
         .allowsHitTesting(false)
     }
@@ -248,26 +266,29 @@ struct PostDetailView: View {
             if action == .like && isLiked {
                 return "heart.fill"
             }
+            if action == .pinToProfile && isPinned {
+                return "pin.fill"
+            }
             return action.iconName
         }()
 
         return VStack(spacing: 8) {
             ZStack {
                 Circle()
-                    .fill(.ultraThinMaterial)
+                    .fill(Color(.systemGray5))
                     .frame(width: 64, height: 64)
 
                 Image(systemName: iconName)
                     .font(.title2)
-                    .foregroundStyle(action == .like && isLiked ? .red : .white)
+                    .foregroundStyle(action == .like && isLiked ? .red : action == .pinToProfile && isPinned ? .orange : .black)
             }
             .scaleEffect(isHovered ? 1.3 : 1.0)
-            .shadow(color: isHovered ? .white.opacity(0.4) : .clear, radius: 8)
+            .shadow(color: isHovered ? .black.opacity(0.15) : .clear, radius: 8)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
 
             Text(action.label)
                 .font(.caption.weight(.medium))
-                .foregroundStyle(isHovered ? .white : .white.opacity(0.7))
+                .foregroundStyle(isHovered ? .black : .black.opacity(0.6))
         }
         .background(
             GeometryReader { geo in
@@ -416,6 +437,8 @@ struct PostDetailView: View {
             )
             store.selectedTab = 0
             dismiss()
+        case .pinToProfile:
+            isPinned.toggle()
         }
     }
 }
