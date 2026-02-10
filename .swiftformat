@@ -1,13 +1,8 @@
-# SwiftFormat configuration for CameraApp
-# Docs: https://github.com/nicklockwood/SwiftFormat/blob/main/Rules.md
-
-# ───────────────────────────── General ───────────────────────────
+# SwiftFormat — https://github.com/nicklockwood/SwiftFormat/blob/main/Rules.md
 
 --swiftversion 5.9
 --indent 4
---indentcase false
---trimwhitespace always
---voidtype void
+--maxwidth 150
 --wraparguments before-first
 --wrapparameters before-first
 --wrapcollections before-first
@@ -16,25 +11,13 @@
 --funcattributes prev-line
 --typeattributes prev-line
 --varattributes same-line
---maxwidth 150
---self remove
 --importgrouping alpha
---semicolons never
---commas always
 --stripunusedargs closure-only
---header ignore
---ifdef no-indent
---xcodeindentation disabled
 --emptybraces no-space
-
-# ───────────────────────────── Disabled Rules ────────────────────
-# Keep in sync with what SwiftLint handles or what conflicts with project style
 
 --disable acronyms
 --disable blankLinesBetweenScopes
 --disable wrapMultilineStatementBraces
 --disable sortSwitchCases
 
-# ───────────────────────────── Paths ─────────────────────────────
-
---exclude DerivedData,build,.build,Pods,Carthage
+--exclude DerivedData,build

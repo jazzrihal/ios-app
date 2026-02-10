@@ -31,10 +31,11 @@ targets:
         INFOPLIST_FILE: CameraApp/Info.plist
     postCompileScripts:
       - script: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
           if command -v swiftlint >/dev/null 2>&1; then
             swiftlint lint --config "${SRCROOT}/.swiftlint.yml" --quiet
           else
-            echo "warning: SwiftLint not installed. Install with: brew install swiftlint"
+            echo "warning: SwiftLint not installed — run: brew install swiftlint"
           fi
         name: SwiftLint
         basedOnDependencyAnalysis: false

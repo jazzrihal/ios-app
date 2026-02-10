@@ -1,47 +1,32 @@
 #!/usr/bin/env bash
-# Pre-commit hook: runs SwiftFormat (auto-fix) and SwiftLint (lint) on staged .swift files.
-# Install with: ./scripts/install-hooks.sh
+# Runs SwiftFormat + SwiftLint on staged .swift files before each commit.
+# Install: ./scripts/install-hooks.sh
 
-# Ensure Homebrew tools are in PATH (GUI clients like Cursor/Xcode don't load shell profiles)
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-# Collect staged Swift files (Added, Copied, Modified, Renamed) into an array
+# Collect staged Swift files
 FILES=()
 while IFS= read -r file; do
-  if [ -n "$file" ] && [ -f "$file" ]; then
-    FILES+=("$file")
-  fi
+  [ -f "$file" ] && FILES+=("$file")
 done < <(git diff --cached --name-only --diff-filter=ACMR -- '*.swift')
 
-if [ ${#FILES[@]} -eq 0 ]; then
-  exit 0
-fi
+[ ${#FILES[@]} -eq 0 ] && exit 0
 
-# ─────────────────────────── SwiftFormat ─────────────────────────
-if ! command -v swiftformat >/dev/null 2>&1; then
-  echo "error: SwiftFormat not installed. Install with: brew install swiftformat"
-  exit 1
-fi
-
-echo "Running SwiftFormat on ${#FILES[@]} staged Swift files..."
-for file in "${FILES[@]}"; do
-  swiftformat "$file" --config .swiftformat --quiet
-  git add "$file"  # re-stage after formatting
+# Require both tools
+for tool in swiftformat swiftlint; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "error: $tool not installed. Run: brew install $tool"
+    exit 1
+  fi
 done
 
-# ──────────────────────────── SwiftLint ──────────────────────────
-if ! command -v swiftlint >/dev/null 2>&1; then
-  echo "error: SwiftLint not installed. Install with: brew install swiftlint"
-  exit 1
-fi
+# Auto-format staged files then re-stage them
+swiftformat "${FILES[@]}" --config .swiftformat --quiet
+git add "${FILES[@]}"
 
-# Pass ALL files in a single invocation so every violation is reported at once
-echo "Running SwiftLint on ${#FILES[@]} staged Swift files..."
+# Lint — block the commit if there are violations
 if ! swiftlint lint --config .swiftlint.yml --strict -- "${FILES[@]}"; then
   echo ""
-  echo "SwiftLint found violations. Fix them before committing."
-  echo "Run 'make lint' to see all issues, or 'make lint-fix' to auto-correct."
+  echo "Fix violations before committing. Run: make lint-fix"
   exit 1
 fi
-
-exit 0
