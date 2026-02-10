@@ -132,6 +132,10 @@ extension User {
     }
 
     static func sampleSuggested() -> [User] {
+        sampleSuggestedFirstBatch() + sampleSuggestedSecondBatch()
+    }
+
+    private static func sampleSuggestedFirstBatch() -> [User] {
         let now = Date()
         return [
             User(
@@ -178,6 +182,12 @@ extension User {
                 friendCount: 38,
                 mutualFriendCount: 3
             ),
+        ]
+    }
+
+    private static func sampleSuggestedSecondBatch() -> [User] {
+        let now = Date()
+        return [
             User(
                 id: UUID(uuidString: "00000000-0000-0000-0000-000000000024")!,
                 username: "urban_eye",

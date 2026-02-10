@@ -425,10 +425,12 @@ struct PostDetailView: View {
                 }
             }
     }
+}
 
-    // MARK: - Hover Detection
+// MARK: - Hover Detection & Action Handlers
 
-    private func updateHoveredAction(at point: CGPoint?) {
+private extension PostDetailView {
+    func updateHoveredAction(at point: CGPoint?) {
         guard let point else {
             hoveredAction = nil
             return
@@ -459,9 +461,7 @@ struct PostDetailView: View {
         }
     }
 
-    // MARK: - Action Handlers
-
-    private func performAction(_ action: PostAction) {
+    func performAction(_ action: PostAction) {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
 
@@ -494,9 +494,7 @@ struct PostDetailView: View {
         }
     }
 
-    // MARK: - Overlay Animation
-
-    private func triggerOverlayAnimation(icon: String, color: Color) {
+    func triggerOverlayAnimation(icon: String, color: Color) {
         overlayIcon = icon
         overlayColor = color
         overlayScale = 0
@@ -509,22 +507,21 @@ struct PostDetailView: View {
         }
 
         // Phase 2: Settle to normal size
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        Task {
+            try? await Task.sleep(for: .milliseconds(300))
             withAnimation(.easeInOut(duration: 0.15)) {
                 overlayScale = 1.0
             }
-        }
 
-        // Phase 3: Fade out and hide
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            // Phase 3: Fade out and hide
+            try? await Task.sleep(for: .milliseconds(500))
             withAnimation(.easeOut(duration: 0.4)) {
                 overlayOpacity = 0
                 overlayScale = 0.8
             }
-        }
 
-        // Clean up
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            // Clean up
+            try? await Task.sleep(for: .milliseconds(500))
             overlayIcon = nil
         }
     }

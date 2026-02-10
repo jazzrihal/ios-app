@@ -413,10 +413,12 @@ struct ExploreView: View {
             }
         }
     }
+}
 
-    // MARK: - Actions
+// MARK: - Actions
 
-    private func selectPlace(_ completion: MKLocalSearchCompletion) {
+private extension ExploreView {
+    func selectPlace(_ completion: MKLocalSearchCompletion) {
         isSearchFieldFocused = false
         isResolvingPlace = true
 
@@ -456,12 +458,12 @@ struct ExploreView: View {
         }
     }
 
-    private func dismissPlaceSearch() {
+    func dismissPlaceSearch() {
         searchCompleter.queryFragment = ""
         isSearchFieldFocused = false
     }
 
-    private func reverseGeocode(_ coordinate: CLLocationCoordinate2D) {
+    func reverseGeocode(_ coordinate: CLLocationCoordinate2D) {
         isReverseGeocoding = true
         let geocoder = CLGeocoder()
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
@@ -482,19 +484,19 @@ struct ExploreView: View {
             let city = placemark.locality
             let country = placemark.country
             switch (city, country) {
-            case let (c?, co?):
-                locationName = "\(c), \(co)"
-            case let (nil, co?):
-                locationName = co
-            case let (c?, nil):
-                locationName = c
+            case let (city?, country?):
+                locationName = "\(city), \(country)"
+            case let (nil, country?):
+                locationName = country
+            case let (city?, nil):
+                locationName = city
             default:
                 locationName = coordinateFallback
             }
         }
     }
 
-    private func saveMoment() {
+    func saveMoment() {
         guard let coord = pinnedCoordinate, let name = locationName else { return }
         store.addMoment(date: selectedDate, locationName: name, coordinate: coord)
 
@@ -502,14 +504,15 @@ struct ExploreView: View {
             momentSaved = true
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        Task {
+            try? await Task.sleep(for: .seconds(2))
             withAnimation {
                 momentSaved = false
             }
         }
     }
 
-    private func loadPendingMoment() {
+    func loadPendingMoment() {
         guard let moment = store.pendingMoment else { return }
         selectedDate = moment.date
         pinnedCoordinate = moment.coordinate
@@ -530,7 +533,7 @@ struct ExploreView: View {
         performSearch()
     }
 
-    private func performSearch() {
+    func performSearch() {
         guard let coord = pinnedCoordinate else { return }
         isSearching = true
         hasSearched = false
@@ -544,7 +547,8 @@ struct ExploreView: View {
         dismissPlaceSearch()
 
         // Simulate network delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+        Task {
+            try? await Task.sleep(for: .milliseconds(1200))
             withAnimation(.spring(duration: 0.4)) {
                 posts = ImagePost.samplePosts(near: coord, around: selectedDate)
                 hasSearched = true

@@ -213,10 +213,11 @@ struct MomentsMapView: View {
         let latitudes = moments.map(\.coordinate.latitude)
         let longitudes = moments.map(\.coordinate.longitude)
 
-        let minLat = latitudes.min()!
-        let maxLat = latitudes.max()!
-        let minLon = longitudes.min()!
-        let maxLon = longitudes.max()!
+        guard let minLat = latitudes.min(),
+              let maxLat = latitudes.max(),
+              let minLon = longitudes.min(),
+              let maxLon = longitudes.max()
+        else { return }
 
         let centerLat = (minLat + maxLat) / 2
         let centerLon = (minLon + maxLon) / 2

@@ -100,20 +100,20 @@ struct SimulatorCameraView: View {
 
     private var simulatorGrid: some View {
         GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
+            let width = geo.size.width
+            let height = geo.size.height
 
             Path { path in
                 // Vertical lines (thirds)
-                path.move(to: CGPoint(x: w / 3, y: 0))
-                path.addLine(to: CGPoint(x: w / 3, y: h))
-                path.move(to: CGPoint(x: 2 * w / 3, y: 0))
-                path.addLine(to: CGPoint(x: 2 * w / 3, y: h))
+                path.move(to: CGPoint(x: width / 3, y: 0))
+                path.addLine(to: CGPoint(x: width / 3, y: height))
+                path.move(to: CGPoint(x: 2 * width / 3, y: 0))
+                path.addLine(to: CGPoint(x: 2 * width / 3, y: height))
                 // Horizontal lines (thirds)
-                path.move(to: CGPoint(x: 0, y: h / 3))
-                path.addLine(to: CGPoint(x: w, y: h / 3))
-                path.move(to: CGPoint(x: 0, y: 2 * h / 3))
-                path.addLine(to: CGPoint(x: w, y: 2 * h / 3))
+                path.move(to: CGPoint(x: 0, y: height / 3))
+                path.addLine(to: CGPoint(x: width, y: height / 3))
+                path.move(to: CGPoint(x: 0, y: 2 * height / 3))
+                path.addLine(to: CGPoint(x: width, y: 2 * height / 3))
             }
             .stroke(.white.opacity(0.1), lineWidth: 0.5)
         }
@@ -125,14 +125,15 @@ struct SimulatorCameraView: View {
         withAnimation(.easeIn(duration: 0.05)) {
             isFlashing = true
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+
+        Task {
+            try? await Task.sleep(for: .milliseconds(100))
             withAnimation(.easeOut(duration: 0.15)) {
                 isFlashing = false
             }
-        }
 
-        // Generate a placeholder image after the flash
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            // Generate a placeholder image after the flash
+            try? await Task.sleep(for: .milliseconds(150))
             let image = generatePlaceholderImage()
             onCapture(image)
         }
@@ -148,11 +149,11 @@ struct SimulatorCameraView: View {
                 UIColor.systemPurple.withAlphaComponent(0.6).cgColor,
                 UIColor.systemTeal.withAlphaComponent(0.4).cgColor,
             ]
-            let gradient = CGGradient(
+            guard let gradient = CGGradient(
                 colorsSpace: CGColorSpaceCreateDeviceRGB(),
                 colors: colors as CFArray,
                 locations: [0, 0.5, 1]
-            )!
+            ) else { return }
             ctx.cgContext.drawLinearGradient(
                 gradient,
                 start: .zero,

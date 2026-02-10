@@ -47,12 +47,16 @@ struct CameraAppApp: App {
                     previousTab = oldValue
                 }
             }
-            .fullScreenCover(isPresented: $showCamera, onDismiss: {
-                // Return to whichever tab was active before camera
-                store.selectedTab = previousTab
-            }) {
-                CameraFlowView()
-            }
+            .fullScreenCover(
+                isPresented: $showCamera,
+                onDismiss: {
+                    // Return to whichever tab was active before camera
+                    store.selectedTab = previousTab
+                },
+                content: {
+                    CameraFlowView()
+                }
+            )
             .environment(momentsStore)
             .environment(friendsStore)
         }
