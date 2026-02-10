@@ -56,8 +56,8 @@ class FriendsStore {
         var seen = Set<UUID>()
         return allSearchable.filter { user in
             seen.insert(user.id).inserted &&
-            (user.username.lowercased().contains(lowered) ||
-             user.displayName.lowercased().contains(lowered))
+                (user.username.lowercased().contains(lowered) ||
+                    user.displayName.lowercased().contains(lowered))
         }
     }
 
@@ -66,7 +66,7 @@ class FriendsStore {
         let lowered = query.lowercased()
         return friends.filter {
             $0.username.lowercased().contains(lowered) ||
-            $0.displayName.lowercased().contains(lowered)
+                $0.displayName.lowercased().contains(lowered)
         }
     }
 }

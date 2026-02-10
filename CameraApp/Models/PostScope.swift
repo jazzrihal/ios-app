@@ -7,21 +7,23 @@ enum PostScope: String, CaseIterable, Identifiable {
     case friends = "Friends"
     case `public` = "Public"
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var icon: String {
         switch self {
-        case .private: return "lock.fill"
-        case .friends: return "person.2.fill"
-        case .public: return "globe"
+        case .private: "lock.fill"
+        case .friends: "person.2.fill"
+        case .public: "globe"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .private: return "Only you"
-        case .friends: return "Your friends"
-        case .public: return "Everyone"
+        case .private: "Only you"
+        case .friends: "Your friends"
+        case .public: "Everyone"
         }
     }
 }

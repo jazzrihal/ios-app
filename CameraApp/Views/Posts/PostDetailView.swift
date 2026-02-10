@@ -20,7 +20,7 @@ struct PostDetailView: View {
     @Environment(MomentsStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
-    // Paging state
+    /// Paging state
     @State private var currentIndex: Int = 0
 
     // Zoom state
@@ -33,22 +33,28 @@ struct PostDetailView: View {
     // Long-press overlay state
     @GestureState private var isInteracting: Bool = false
     @State private var isPressing: Bool = false
-    @State private var dragLocation: CGPoint? = nil
-    @State private var hoveredAction: PostAction? = nil
+    @State private var dragLocation: CGPoint?
+    @State private var hoveredAction: PostAction?
     @State private var likedPostIDs: Set<UUID> = []
     @State private var pinnedPostIDs: Set<UUID> = []
     @State private var showShareSheet: Bool = false
     @State private var actionFrames: [PostAction: CGRect] = [:]
 
     // Overlay icon animation state (shared by like & pin feedback)
-    @State private var overlayIcon: String? = nil
+    @State private var overlayIcon: String?
     @State private var overlayColor: Color = .clear
     @State private var overlayScale: CGFloat = 0
     @State private var overlayOpacity: Double = 0
 
-    private var post: ImagePost { posts[currentIndex] }
-    private var isLiked: Bool { likedPostIDs.contains(post.id) }
-    private var isPinned: Bool { pinnedPostIDs.contains(post.id) }
+    private var post: ImagePost {
+        posts[currentIndex]
+    }
+    private var isLiked: Bool {
+        likedPostIDs.contains(post.id)
+    }
+    private var isPinned: Bool {
+        pinnedPostIDs.contains(post.id)
+    }
 
     private var effectiveZoom: CGFloat {
         max(1, min(totalZoom + currentZoom, 5))
@@ -176,7 +182,7 @@ struct PostDetailView: View {
             case .empty:
                 ProgressView()
                     .tint(.white)
-            case .success(let image):
+            case let .success(image):
                 image
                     .resizable()
                     .scaledToFit()
@@ -345,7 +351,7 @@ struct PostDetailView: View {
                 guard !isPressing else { return }
                 currentZoom = value.magnification - 1
             }
-            .onEnded { value in
+            .onEnded { _ in
                 guard !isPressing else { return }
                 totalZoom = effectiveZoom
                 currentZoom = 0
@@ -423,12 +429,12 @@ struct PostDetailView: View {
     // MARK: - Hover Detection
 
     private func updateHoveredAction(at point: CGPoint?) {
-        guard let point = point else {
+        guard let point else {
             hoveredAction = nil
             return
         }
 
-        var closest: PostAction? = nil
+        var closest: PostAction?
         var closestDistance: CGFloat = .infinity
         let threshold: CGFloat = 80
 
@@ -438,7 +444,7 @@ struct PostDetailView: View {
             let dy = point.y - center.y
             let distance = sqrt(dx * dx + dy * dy)
 
-            if distance < threshold && distance < closestDistance {
+            if distance < threshold, distance < closestDistance {
                 closest = action
                 closestDistance = distance
             }

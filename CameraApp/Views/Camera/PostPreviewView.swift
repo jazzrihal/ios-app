@@ -63,7 +63,7 @@ struct PostPreviewView: View {
 
             TextField("Write a caption…", text: $caption, axis: .vertical)
                 .accessibilityIdentifier("CaptionTextField")
-                .lineLimit(3...6)
+                .lineLimit(3 ... 6)
                 .padding(12)
                 .background(
                     .ultraThinMaterial,
@@ -123,8 +123,7 @@ struct PostPreviewView: View {
         .padding(.horizontal, 16)
     }
 
-    @ViewBuilder
-    private var locationContent: some View {
+    @ViewBuilder private var locationContent: some View {
         if locationManager.isLoading {
             ProgressView()
                 .controlSize(.small)

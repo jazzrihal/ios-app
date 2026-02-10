@@ -27,8 +27,8 @@ struct ExploreView: View {
     @FocusState private var isSearchFieldFocused: Bool
 
     // Navigation state (outside lazy container)
-    @State private var navigateToProfileUser: User? = nil
-    @State private var navigateToPostIndex: Int? = nil
+    @State private var navigateToProfileUser: User?
+    @State private var navigateToPostIndex: Int?
 
     // MARK: - Body
 
@@ -187,7 +187,7 @@ struct ExploreView: View {
                     placeSearchBar
 
                     // ── Search results overlay ──
-                    if !searchCompleter.results.isEmpty && !searchCompleter.queryFragment.isEmpty {
+                    if !searchCompleter.results.isEmpty, !searchCompleter.queryFragment.isEmpty {
                         placeSearchResults
                     }
 
@@ -347,9 +347,8 @@ struct ExploreView: View {
         .padding(.horizontal, 16)
     }
 
-    @ViewBuilder
-    private var saveMomentButton: some View {
-        if hasSearched && !posts.isEmpty {
+    @ViewBuilder private var saveMomentButton: some View {
+        if hasSearched, !posts.isEmpty {
             Button {
                 saveMoment()
             } label: {

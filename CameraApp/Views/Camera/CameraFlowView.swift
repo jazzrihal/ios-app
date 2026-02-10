@@ -28,8 +28,7 @@ struct CameraFlowView: View {
             }
     }
 
-    @ViewBuilder
-    private var cameraView: some View {
+    @ViewBuilder private var cameraView: some View {
         #if targetEnvironment(simulator)
         SimulatorCameraView(
             onCapture: { image in

@@ -36,9 +36,9 @@ class CameraModel: NSObject {
         session.beginConfiguration()
         session.sessionPreset = .photo
 
-        guard
-            let device = AVCaptureDevice.default(
-                .builtInWideAngleCamera, for: .video, position: .back),
+        guard let device = AVCaptureDevice.default(
+            .builtInWideAngleCamera, for: .video, position: .back
+        ),
             let input = try? AVCaptureDeviceInput(device: device)
         else {
             isCameraUnavailable = true
@@ -87,7 +87,7 @@ extension CameraModel: AVCapturePhotoCaptureDelegate {
         error: Error?
     ) {
         guard let data = photo.fileDataRepresentation(),
-            let image = UIImage(data: data)
+              let image = UIImage(data: data)
         else {
             continuation?.resume(returning: nil)
             continuation = nil

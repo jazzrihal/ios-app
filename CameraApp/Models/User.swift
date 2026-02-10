@@ -5,8 +5,8 @@ import SwiftUI
 
 enum FriendStatus: Equatable {
     case none
-    case pendingSent      // You sent them a request
-    case pendingReceived  // They sent you a request
+    case pendingSent // You sent them a request
+    case pendingReceived // They sent you a request
     case friends
 }
 
@@ -35,7 +35,7 @@ struct User: Identifiable, Equatable {
         joinDate.formatted(.dateTime.month(.wide).year())
     }
 
-    static func == (lhs: User, rhs: User) -> Bool {
+    static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id
     }
 }

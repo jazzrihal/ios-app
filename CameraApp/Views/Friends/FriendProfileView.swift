@@ -278,7 +278,7 @@ struct FriendProfileView: View {
                             Rectangle()
                                 .fill(Color(.systemGray5))
                                 .overlay { ProgressView() }
-                        case .success(let image):
+                        case let .success(image):
                             image
                                 .resizable()
                                 .scaledToFill()
@@ -322,7 +322,6 @@ struct FriendProfileView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
     }
-
 }
 
 // MARK: - Preview
