@@ -30,7 +30,7 @@ if command -v swiftlint >/dev/null 2>&1; then
   LINT_FAILED=false
   while IFS= read -r file; do
     if [ -f "$file" ]; then
-      if ! swiftlint lint --config .swiftlint.yml --path "$file" --quiet; then
+      if ! swiftlint lint --config .swiftlint.yml --strict --quiet "$file"; then
         LINT_FAILED=true
       fi
     fi
