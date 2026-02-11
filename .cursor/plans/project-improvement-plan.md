@@ -7,7 +7,7 @@
 | 1 | Add unit tests (CameraAppTests target) | Pending |
 | 2 | Integrate SwiftLint | Done |
 | 3 | Add image caching (Kingfisher or Nuke) to replace bare AsyncImage | Pending |
-| 4 | Extract ViewModels from large views (e.g. PostDetailView at 545 lines) | Pending |
+| 4 | Extract ViewModels from large views (e.g. PostDetailView at 545 lines) | Done |
 | 5 | Enable strict Swift concurrency (`SWIFT_STRICT_CONCURRENCY = complete`) | Pending |
 | 6 | Add code coverage reporting to CI | Pending |
 | 7 | Add Fastlane for signing & deployment automation | Pending |
