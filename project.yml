@@ -4,6 +4,10 @@ options:
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "16.0"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.0.0"
 targets:
   CameraApp:
     type: application
@@ -13,6 +17,8 @@ targets:
         - CameraAppUITests
     sources:
       - CameraApp
+    dependencies:
+      - package: Supabase
     info:
       path: CameraApp/Info.plist
       properties:
