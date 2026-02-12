@@ -407,7 +407,7 @@ struct ExploreView: View {
                             if index < viewModel.posts.count - 1 {
                                 Divider()
                                     .foregroundStyle(.quaternary)
-                                    .padding(.vertical, 4)
+                                    .padding(.vertical, 8)
                             }
                         }
                     }

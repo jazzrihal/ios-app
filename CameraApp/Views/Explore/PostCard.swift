@@ -14,17 +14,17 @@ struct PostCard: View {
             Button {
                 onTapProfile()
             } label: {
-                HStack(spacing: 8) {
-                    AvatarView(user: post.user, size: 28)
+                HStack(spacing: 10) {
+                    AvatarView(user: post.user, size: 32)
 
                     Text(post.user.displayName)
-                        .font(.subheadline.weight(.medium))
+                        .font(.callout.weight(.medium))
                         .foregroundStyle(.primary)
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
                 .contentShape(Rectangle())
@@ -70,7 +70,7 @@ struct PostCard: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 200)
+                .frame(height: 260)
                 .clipped()
                 .contentShape(Rectangle())
             }
@@ -81,21 +81,16 @@ struct PostCard: View {
                 // Metadata row (closest to photo)
                 HStack(spacing: 16) {
                     Label(post.timeAgoFormatted, systemImage: "clock")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                     Label(post.locationName, systemImage: "mappin")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                     Spacer()
                 }
-
-                // Caption
-                Text(post.caption)
-                    .font(.body)
-                    .foregroundStyle(.primary)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
         }
         .background(.background)
     }
