@@ -95,48 +95,73 @@ struct ProfileBioView: View {
 
 // MARK: - Photo Grid
 
-/// Instagram-style 3-column photo grid with navigation to post detail.
+/// Instagram-style photo grid with navigation to post detail.
+/// Rows with fewer than `columnCount` items expand to fill the full width,
+/// keeping every cell square.
 struct ProfilePhotoGrid: View {
     let posts: [ImagePost]
 
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
+    private let columnCount = 3
+    private let spacing: CGFloat = 2
+
+    /// Posts split into rows of `columnCount`, preserving original indices.
+    private var rows: [[(offset: Int, element: ImagePost)]] {
+        let enumerated = Array(posts.enumerated())
+        return stride(from: 0, to: enumerated.count, by: columnCount).map {
+            Array(enumerated[$0 ..< min($0 + columnCount, enumerated.count)])
+        }
+    }
 
     var body: some View {
-        LazyVGrid(columns: gridColumns, spacing: 2) {
-            ForEach(Array(posts.enumerated()), id: \.element.id) { index, post in
-                NavigationLink(destination: PostDetailView(posts: posts, initialIndex: index, queryDate: Date())) {
-                    AsyncImage(url: post.imageURL) { phase in
-                        switch phase {
-                        case .empty:
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .overlay { ProgressView() }
-                        case let .success(image):
-                            Color.clear
-                                .overlay {
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                }
-                                .clipped()
-                        case .failure:
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .overlay {
-                                    Image(systemName: "photo.badge.exclamationmark")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                        @unknown default:
-                            EmptyView()
+        VStack(spacing: spacing) {
+            ForEach(rows.indices, id: \.self) { rowIndex in
+                HStack(spacing: spacing) {
+                    ForEach(rows[rowIndex], id: \.element.id) { item in
+                        NavigationLink(
+                            destination: PostDetailView(
+                                posts: posts,
+                                initialIndex: item.offset,
+                                queryDate: Date()
+                            )
+                        ) {
+                            gridCell(for: item.element)
                         }
+                        .buttonStyle(.plain)
                     }
-                    .aspectRatio(1, contentMode: .fill)
-                    .clipped()
                 }
-                .buttonStyle(.plain)
             }
         }
+    }
+
+    private func gridCell(for post: ImagePost) -> some View {
+        AsyncImage(url: post.imageURL) { phase in
+            switch phase {
+            case .empty:
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .overlay { ProgressView() }
+            case let .success(image):
+                Color.clear
+                    .overlay {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    }
+                    .clipped()
+            case .failure:
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .overlay {
+                        Image(systemName: "photo.badge.exclamationmark")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+            @unknown default:
+                EmptyView()
+            }
+        }
+        .aspectRatio(1, contentMode: .fill)
+        .clipped()
     }
 }
 
