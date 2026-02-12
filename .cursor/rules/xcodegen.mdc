@@ -1,0 +1,29 @@
+---
+description: Run xcodegen after adding, removing, or renaming Swift source files
+globs: 
+alwaysApply: true
+---
+
+# Run XcodeGen when project structure changes
+
+This project uses [XcodeGen](https://github.com/yonaskolb/xcodegen) to generate `CameraApp.xcodeproj` from `project.yml`. The Xcode project file is not manually maintained.
+
+## When to run
+
+Run `make generate` (or `xcodegen generate`) from the `ios-app/` directory **after any change that affects which files are in the project**, including:
+
+- Adding a new `.swift` file
+- Deleting a `.swift` file
+- Moving or renaming a `.swift` file
+- Changing `project.yml`
+
+## How to run
+
+```bash
+cd ios-app && make generate
+```
+
+## Important
+
+- Do **not** skip this step — the Xcode project will be out of sync and the build will fail if new or removed files aren't reflected.
+- Do **not** manually edit `CameraApp.xcodeproj`. All project configuration lives in `project.yml`.
