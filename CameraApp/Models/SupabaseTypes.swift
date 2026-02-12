@@ -1,15 +1,8 @@
-// Auto-generated Supabase types — do not edit manually.
-// Regenerate with: supabase gen types swift
-
 import Foundation
 import Supabase
 
-// MARK: - Schema Enums
-
 enum GraphqlPublicSchema {}
 enum PublicSchema {
-    // MARK: - Device Tokens
-
     struct DeviceTokensSelect: Codable, Hashable, Sendable {
         let createdAt: String?
         let id: UUID
@@ -24,7 +17,6 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
     struct DeviceTokensInsert: Codable, Hashable, Sendable {
         let createdAt: String?
         let id: UUID?
@@ -39,7 +31,6 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
     struct DeviceTokensUpdate: Codable, Hashable, Sendable {
         let createdAt: String?
         let id: UUID?
@@ -54,9 +45,6 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
-    // MARK: - Friendships
-
     struct FriendshipsSelect: Codable, Hashable, Sendable {
         let addresseeId: UUID
         let createdAt: String?
@@ -69,7 +57,6 @@ enum PublicSchema {
             case status
         }
     }
-
     struct FriendshipsInsert: Codable, Hashable, Sendable {
         let addresseeId: UUID
         let createdAt: String?
@@ -82,7 +69,6 @@ enum PublicSchema {
             case status
         }
     }
-
     struct FriendshipsUpdate: Codable, Hashable, Sendable {
         let addresseeId: UUID?
         let createdAt: String?
@@ -95,9 +81,6 @@ enum PublicSchema {
             case status
         }
     }
-
-    // MARK: - Likes
-
     struct LikesSelect: Codable, Hashable, Sendable {
         let createdAt: String?
         let postId: UUID
@@ -108,7 +91,6 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
     struct LikesInsert: Codable, Hashable, Sendable {
         let createdAt: String?
         let postId: UUID
@@ -119,7 +101,6 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
     struct LikesUpdate: Codable, Hashable, Sendable {
         let createdAt: String?
         let postId: UUID?
@@ -130,62 +111,66 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
-    // MARK: - Moments
-
     struct MomentsSelect: Codable, Hashable, Sendable {
         let createdAt: String?
         let id: UUID
-        let location: GeographySelect
+        let latitude: Double
+        let location: GeographySelect?
         let locationName: String?
+        let longitude: Double
         let momentDate: String
         let userId: UUID
         enum CodingKeys: String, CodingKey {
             case createdAt = "created_at"
             case id
+            case latitude
             case location
             case locationName = "location_name"
+            case longitude
             case momentDate = "moment_date"
             case userId = "user_id"
         }
     }
-
     struct MomentsInsert: Codable, Hashable, Sendable {
         let createdAt: String?
         let id: UUID?
-        let location: GeographySelect
+        let latitude: Double
+        let location: GeographySelect?
         let locationName: String?
+        let longitude: Double
         let momentDate: String
         let userId: UUID
         enum CodingKeys: String, CodingKey {
             case createdAt = "created_at"
             case id
+            case latitude
             case location
             case locationName = "location_name"
+            case longitude
             case momentDate = "moment_date"
             case userId = "user_id"
         }
     }
-
     struct MomentsUpdate: Codable, Hashable, Sendable {
         let createdAt: String?
         let id: UUID?
+        let latitude: Double?
         let location: GeographySelect?
         let locationName: String?
+        let longitude: Double?
         let momentDate: String?
         let userId: UUID?
         enum CodingKeys: String, CodingKey {
             case createdAt = "created_at"
             case id
+            case latitude
             case location
             case locationName = "location_name"
+            case longitude
             case momentDate = "moment_date"
             case userId = "user_id"
         }
     }
-
-    // MARK: - Pins
-
     struct PinsSelect: Codable, Hashable, Sendable {
         let createdAt: String?
         let postId: UUID
@@ -196,7 +181,6 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
     struct PinsInsert: Codable, Hashable, Sendable {
         let createdAt: String?
         let postId: UUID
@@ -207,7 +191,6 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
     struct PinsUpdate: Codable, Hashable, Sendable {
         let createdAt: String?
         let postId: UUID?
@@ -218,16 +201,15 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
-
-    // MARK: - Posts
-
     struct PostsSelect: Codable, Hashable, Sendable {
         let caption: String?
         let createdAt: String?
         let id: UUID
         let imagePath: String
-        let location: GeographySelect
+        let latitude: Double
+        let location: GeographySelect?
         let locationName: String?
+        let longitude: Double
         let scope: String
         let userId: UUID
         enum CodingKeys: String, CodingKey {
@@ -235,20 +217,23 @@ enum PublicSchema {
             case createdAt = "created_at"
             case id
             case imagePath = "image_path"
+            case latitude
             case location
             case locationName = "location_name"
+            case longitude
             case scope
             case userId = "user_id"
         }
     }
-
     struct PostsInsert: Codable, Hashable, Sendable {
         let caption: String?
         let createdAt: String?
         let id: UUID?
         let imagePath: String
-        let location: GeographySelect
+        let latitude: Double
+        let location: GeographySelect?
         let locationName: String?
+        let longitude: Double
         let scope: String?
         let userId: UUID
         enum CodingKeys: String, CodingKey {
@@ -256,20 +241,23 @@ enum PublicSchema {
             case createdAt = "created_at"
             case id
             case imagePath = "image_path"
+            case latitude
             case location
             case locationName = "location_name"
+            case longitude
             case scope
             case userId = "user_id"
         }
     }
-
     struct PostsUpdate: Codable, Hashable, Sendable {
         let caption: String?
         let createdAt: String?
         let id: UUID?
         let imagePath: String?
+        let latitude: Double?
         let location: GeographySelect?
         let locationName: String?
+        let longitude: Double?
         let scope: String?
         let userId: UUID?
         enum CodingKeys: String, CodingKey {
@@ -277,15 +265,14 @@ enum PublicSchema {
             case createdAt = "created_at"
             case id
             case imagePath = "image_path"
+            case latitude
             case location
             case locationName = "location_name"
+            case longitude
             case scope
             case userId = "user_id"
         }
     }
-
-    // MARK: - Profiles
-
     struct ProfilesSelect: Codable, Hashable, Sendable {
         let bio: String?
         let createdAt: String?
@@ -306,7 +293,6 @@ enum PublicSchema {
             case username
         }
     }
-
     struct ProfilesInsert: Codable, Hashable, Sendable {
         let bio: String?
         let createdAt: String?
@@ -327,7 +313,6 @@ enum PublicSchema {
             case username
         }
     }
-
     struct ProfilesUpdate: Codable, Hashable, Sendable {
         let bio: String?
         let createdAt: String?

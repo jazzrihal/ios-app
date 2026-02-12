@@ -49,8 +49,8 @@ extension Moment {
         date = Self.parseISO8601(row.momentDate) ?? Date()
         locationName = row.locationName ?? ""
         coordinate = CLLocationCoordinate2D(
-            latitude: row.location.latitude,
-            longitude: row.location.longitude
+            latitude: row.latitude,
+            longitude: row.longitude
         )
         addedAt = Self.parseISO8601(row.createdAt) ?? Date()
     }

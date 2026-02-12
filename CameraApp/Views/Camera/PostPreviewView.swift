@@ -232,22 +232,21 @@ struct PostPreviewView: View {
                     .from("post-images")
                     .upload(storagePath, data: imageData, options: .init(contentType: "image/jpeg"))
 
-                // 2. Insert post row via RPC (handles GeoJSON → geography conversion)
+                // 2. Insert post row directly
                 let coord = locationManager.coordinate
-                let location = GeographySelect.point(
-                    latitude: coord?.latitude ?? 0,
-                    longitude: coord?.longitude ?? 0
-                )
-
-                let params = CreatePostParams(
-                    imagePath: storagePath,
-                    location: location,
+                let insert = PublicSchema.PostsInsert(
                     caption: caption.isEmpty ? nil : caption,
+                    createdAt: nil,
+                    id: postId,
+                    imagePath: storagePath,
+                    latitude: coord?.latitude ?? 0,
+                    location: nil,
                     locationName: locationManager.locationName,
+                    longitude: coord?.longitude ?? 0,
                     scope: scope.databaseValue,
-                    id: postId
+                    userId: userId
                 )
-                try await SupabaseManager.client.rpc("create_post", params: params).execute()
+                try await SupabaseManager.client.from("posts").insert(insert).execute()
 
                 // Success — dismiss
                 await MainActor.run { onPost() }
@@ -270,29 +269,6 @@ struct PostPreviewView: View {
         captureDate.formatted(
             .dateTime.hour().minute().second()
         )
-    }
-}
-
-// MARK: - RPC Params
-
-/// Parameters for the `create_post` RPC function.
-/// Kept separate from the auto-generated `PostsInsert` because the server-side
-/// function accepts location as JSONB and converts it to geography.
-private struct CreatePostParams: Encodable {
-    let imagePath: String
-    let location: GeographySelect
-    let caption: String?
-    let locationName: String?
-    let scope: String?
-    let id: UUID
-
-    enum CodingKeys: String, CodingKey {
-        case imagePath = "image_path"
-        case location
-        case caption
-        case locationName = "location_name"
-        case scope
-        case id
     }
 }
 

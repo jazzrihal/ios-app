@@ -132,8 +132,8 @@ extension ImagePost {
         self.user = user
         caption = post.caption ?? ""
         coordinate = CLLocationCoordinate2D(
-            latitude: post.location.latitude,
-            longitude: post.location.longitude
+            latitude: post.latitude,
+            longitude: post.longitude
         )
         locationName = post.locationName ?? ""
         timestamp = Self.parseISO8601(post.createdAt) ?? Date()
@@ -142,6 +142,15 @@ extension ImagePost {
     }
 
     private static func parseISO8601(_ string: String?) -> Date? {
+        ISO8601DateFormatter.flexibleParse(string)
+    }
+}
+
+// MARK: - Shared ISO 8601 Helper
+
+extension ISO8601DateFormatter {
+    /// Parses an ISO 8601 string, trying fractional-seconds first, then plain.
+    static func flexibleParse(_ string: String?) -> Date? {
         guard let string else { return nil }
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]

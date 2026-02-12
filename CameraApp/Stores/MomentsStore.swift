@@ -56,11 +56,10 @@ class MomentsStore {
                 let insert = PublicSchema.MomentsInsert(
                     createdAt: nil,
                     id: moment.id,
-                    location: GeographySelect.point(
-                        latitude: coordinate.latitude,
-                        longitude: coordinate.longitude
-                    ),
+                    latitude: coordinate.latitude,
+                    location: nil,
                     locationName: locationName,
+                    longitude: coordinate.longitude,
                     momentDate: formatter.string(from: date),
                     userId: userId
                 )
