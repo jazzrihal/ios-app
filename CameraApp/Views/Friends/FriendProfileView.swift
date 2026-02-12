@@ -33,7 +33,6 @@ struct FriendProfileView: View {
                     .padding(.top, 16)
             }
         }
-        .navigationTitle(viewModel.user.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if store.status(for: viewModel.user) == .friends {
