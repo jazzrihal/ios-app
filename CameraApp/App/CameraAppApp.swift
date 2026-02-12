@@ -45,6 +45,13 @@ struct CameraAppApp: App {
                 .tag(0)
                 .accessibilityIdentifier("ExploreTab")
 
+            MomentsView()
+                .tabItem {
+                    Label("Moments", systemImage: "clock.arrow.circlepath")
+                }
+                .tag(2)
+                .accessibilityIdentifier("MomentsTab")
+
             Color.clear
                 .tabItem {
                     Label("Camera", systemImage: "camera.fill")
@@ -54,13 +61,6 @@ struct CameraAppApp: App {
                 .onAppear {
                     showCamera = true
                 }
-
-            MomentsView()
-                .tabItem {
-                    Label("Moments", systemImage: "clock.arrow.circlepath")
-                }
-                .tag(2)
-                .accessibilityIdentifier("MomentsTab")
 
             FriendsView()
                 .tabItem {
