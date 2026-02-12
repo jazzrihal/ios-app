@@ -72,6 +72,46 @@ final class AuthManager {
         authStateTask?.cancel()
     }
 
+    // MARK: - Initial Session Validation
+
+    /// Validates a restored session by refreshing with the server.
+    /// - Network errors are tolerated (offline users keep their session).
+    /// - Auth errors (deleted user, revoked token) clear the session.
+    private func handleInitialSession(_ session: Session?) async {
+        if let session, !session.isExpired {
+            do {
+                let refreshed = try await SupabaseManager.client
+                    .auth.refreshSession()
+                currentSession = refreshed
+                currentUser = refreshed.user
+                await loadProfile(for: refreshed.user.id)
+            } catch is URLError {
+                // Network error — keep cached session for offline use.
+                currentSession = session
+                currentUser = session.user
+                await loadProfile(for: session.user.id)
+            } catch {
+                // Auth error — user deleted or token revoked.
+                print("[AuthManager] Session invalid: \(error)")
+                try? await SupabaseManager.client.auth
+                    .signOut(scope: .local)
+                currentSession = nil
+                currentUser = nil
+                currentProfile = nil
+            }
+        } else {
+            // No cached session or it's expired — clear state.
+            if session != nil {
+                try? await SupabaseManager.client.auth
+                    .signOut(scope: .local)
+            }
+            currentSession = nil
+            currentUser = nil
+            currentProfile = nil
+        }
+        isInitializing = false
+    }
+
     // MARK: - Auth State Listener
 
     /// Subscribes to Supabase auth state changes.
@@ -83,18 +123,7 @@ final class AuthManager {
                 guard let self else { return }
                 switch event {
                 case .initialSession:
-                    if let session, session.isExpired {
-                        currentSession = nil
-                        currentUser = nil
-                        currentProfile = nil
-                    } else {
-                        currentSession = session
-                        currentUser = session?.user
-                        if let uid = session?.user.id {
-                            await loadProfile(for: uid)
-                        }
-                    }
-                    isInitializing = false
+                    await handleInitialSession(session)
                 case .signedIn, .tokenRefreshed:
                     currentSession = session
                     currentUser = session?.user
