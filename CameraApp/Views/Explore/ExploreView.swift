@@ -13,7 +13,7 @@ struct ExploreView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 12) {
+                VStack(spacing: 8) {
                     dateSelector
                     locationSelector
                     searchButton
@@ -76,7 +76,7 @@ struct ExploreView: View {
                         .rotationEffect(.degrees(viewModel.showDatePicker ? 180 : 0))
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.vertical, 10)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
@@ -140,7 +140,7 @@ struct ExploreView: View {
                         .rotationEffect(.degrees(viewModel.showMap ? 180 : 0))
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.vertical, 10)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
@@ -194,7 +194,7 @@ struct ExploreView: View {
                             }
                         }
                     }
-                    .frame(height: 220)
+                    .frame(height: 180)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .padding(.horizontal, 16)
@@ -306,7 +306,7 @@ struct ExploreView: View {
                     .fontWeight(.semibold)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
         }
         .accessibilityIdentifier("FindNearbyPostsButton")
         .buttonStyle(.borderedProminent)
@@ -328,7 +328,7 @@ struct ExploreView: View {
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, 12)
             }
             .accessibilityIdentifier("SaveMomentButton")
             .buttonStyle(.bordered)
@@ -366,7 +366,7 @@ struct ExploreView: View {
                             if index < viewModel.posts.count - 1 {
                                 Divider()
                                     .foregroundStyle(.quaternary)
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 4)
                             }
                         }
                     }

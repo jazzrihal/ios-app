@@ -31,7 +31,7 @@ struct PostCard: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
 
             // Image — tappable to open post detail
             Button {
@@ -66,14 +66,14 @@ struct PostCard: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 240)
+                .frame(height: 200)
                 .clipped()
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             // Info below photo
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
                 // Metadata row (closest to photo)
                 HStack(spacing: 16) {
                     Label(post.timeAgoFormatted, systemImage: "clock")
@@ -90,7 +90,8 @@ struct PostCard: View {
                     .font(.body)
                     .foregroundStyle(.primary)
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
         .background(.background)
     }
