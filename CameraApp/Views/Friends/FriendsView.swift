@@ -13,6 +13,7 @@ struct FriendsView: View {
     @Environment(FriendsStore.self) private var store
     @State private var selectedSection: FriendsSection = .friends
     @State private var searchText = ""
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -42,6 +43,8 @@ struct FriendsView: View {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedSection = section
                         searchText = ""
+                        searchTask?.cancel()
+                        store.clearSearchResults()
                     }
                 } label: {
                     VStack(spacing: 6) {
@@ -172,27 +175,55 @@ struct FriendsView: View {
                     }
                     .padding(.top, 60)
                     .padding(.horizontal, 32)
+                } else if searchText.count < 2 {
+                    // ── Too short ──
+                    emptyState(
+                        icon: "magnifyingglass",
+                        title: "Keep Typing…",
+                        subtitle: "Enter at least 2 characters to search"
+                    )
+                } else if store.isSearching {
+                    // ── Loading ──
+                    ProgressView()
+                        .padding(.top, 60)
+                } else if store.searchResults.isEmpty {
+                    // ── No Results ──
+                    emptyState(
+                        icon: "magnifyingglass",
+                        title: "No People Found",
+                        subtitle: "Try a different username or name"
+                    )
                 } else {
                     // ── Results ──
-                    let results = store.searchUsers(query: searchText)
-                    if results.isEmpty {
-                        emptyState(
-                            icon: "magnifyingglass",
-                            title: "No People Found",
-                            subtitle: "Try a different username or name"
-                        )
-                    } else {
-                        ForEach(results) { user in
-                            NavigationLink(destination: FriendProfileView(user: user)) {
-                                DiscoverUserRow(user: user)
-                            }
-                            .buttonStyle(.plain)
+                    ForEach(store.searchResults) { user in
+                        NavigationLink(destination: FriendProfileView(user: user)) {
+                            DiscoverUserRow(user: user)
                         }
-                        .padding(.horizontal, 16)
+                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 16)
                 }
             }
             .padding(.bottom, 24)
+        }
+        .onChange(of: searchText) { _, newValue in
+            guard selectedSection == .addFriend else { return }
+
+            // Cancel any previous debounced search
+            searchTask?.cancel()
+
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.count >= 2 else {
+                store.clearSearchResults()
+                return
+            }
+
+            // Debounce: wait 400ms before firing the remote search
+            searchTask = Task {
+                try? await Task.sleep(for: .milliseconds(400))
+                guard !Task.isCancelled else { return }
+                await store.remoteSearchUsers(query: newValue)
+            }
         }
     }
 

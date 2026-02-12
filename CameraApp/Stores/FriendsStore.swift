@@ -10,6 +10,10 @@ class FriendsStore {
     var isLoading = false
     var errorMessage: String?
 
+    // Search state
+    var searchResults: [User] = []
+    var isSearching = false
+
     /// The authenticated user's UUID. Must be set before calling any methods.
     var currentUserId: UUID?
 
@@ -174,17 +178,43 @@ class FriendsStore {
 
     // MARK: - Search
 
-    func searchUsers(query: String) -> [User] {
-        guard !query.isEmpty else { return [] }
-        let lowered = query.lowercased()
-        let allSearchable = suggestedUsers + friends + incomingRequests
-
-        var seen = Set<UUID>()
-        return allSearchable.filter { user in
-            seen.insert(user.id).inserted &&
-                (user.username.lowercased().contains(lowered) ||
-                    user.displayName.lowercased().contains(lowered))
+    /// Searches for users via the `search_users` Supabase RPC.
+    func remoteSearchUsers(query: String) async {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            searchResults = []
+            return
         }
+
+        isSearching = true
+
+        do {
+            let params = SearchUsersParams(query: trimmed, maxResults: 20)
+            let rows: [SearchUserRow] = try await SupabaseManager.client
+                .rpc("search_users", params: params)
+                .execute()
+                .value
+
+            // Exclude the current user from results
+            searchResults = rows
+                .map { User(from: $0) }
+                .filter { $0.id != currentUserId }
+        } catch {
+            // On cancellation, don't overwrite results or show errors
+            if Task.isCancelled { return }
+            searchResults = []
+            errorMessage = error.localizedDescription
+        }
+
+        if !Task.isCancelled {
+            isSearching = false
+        }
+    }
+
+    /// Clears remote search results.
+    func clearSearchResults() {
+        searchResults = []
+        isSearching = false
     }
 
     func searchFriends(query: String) -> [User] {
