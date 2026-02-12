@@ -22,6 +22,8 @@ targets:
     info:
       path: CameraApp/Info.plist
       properties:
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         NSCameraUsageDescription: "This app needs access to the camera to take pictures."
         NSPhotoLibraryAddUsageDescription: "This app saves captured photos to your photo library."
         NSLocationWhenInUseUsageDescription: "This app uses your location to find nearby image posts on the Explore map."

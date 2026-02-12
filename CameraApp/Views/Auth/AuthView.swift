@@ -83,6 +83,7 @@ struct AuthView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(authDisabled)
+                .accessibilityIdentifier("AuthActionButton")
 
                 // Toggle mode
                 Button {
