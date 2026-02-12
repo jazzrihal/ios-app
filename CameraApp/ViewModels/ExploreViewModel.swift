@@ -43,6 +43,43 @@ final class ExploreViewModel {
     var navigateToProfileUser: User?
     var navigateToPostIndex: Int?
 
+    // MARK: - Date Shortcuts
+
+    enum DateShortcut: String, CaseIterable, Identifiable {
+        case today = "Today"
+        case yesterday = "Yesterday"
+        case oneWeekAgo = "1 week ago"
+        case oneMonthAgo = "1 month ago"
+        case oneYearAgo = "1 year ago"
+
+        var id: String {
+            rawValue
+        }
+
+        var date: Date {
+            let calendar = Calendar.current
+            let now = Date()
+            switch self {
+            case .today:
+                return now
+            case .yesterday:
+                return calendar.date(byAdding: .day, value: -1, to: now)!
+            case .oneWeekAgo:
+                return calendar.date(byAdding: .weekOfYear, value: -1, to: now)!
+            case .oneMonthAgo:
+                return calendar.date(byAdding: .month, value: -1, to: now)!
+            case .oneYearAgo:
+                return calendar.date(byAdding: .year, value: -1, to: now)!
+            }
+        }
+    }
+
+    func applyDateShortcut(_ shortcut: DateShortcut) {
+        withAnimation(.spring(duration: 0.3)) {
+            selectedDate = shortcut.date
+        }
+    }
+
     // MARK: - Date/Map Toggle Actions
 
     func toggleDatePicker() {

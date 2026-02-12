@@ -83,6 +83,8 @@ struct ExploreView: View {
             .padding(.horizontal, 16)
 
             if viewModel.showDatePicker {
+                dateShortcuts
+
                 DatePicker(
                     "Select date & time",
                     selection: $viewModel.selectedDate,
@@ -91,10 +93,38 @@ struct ExploreView: View {
                 )
                 .datePickerStyle(.graphical)
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+    }
+
+    // MARK: - Date Shortcuts
+
+    private var dateShortcuts: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ExploreViewModel.DateShortcut.allCases) { shortcut in
+                    Button {
+                        viewModel.applyDateShortcut(shortcut)
+                    } label: {
+                        Text(shortcut.rawValue)
+                            .font(.caption.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .foregroundStyle(.primary)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(Color.primary.opacity(0.15))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding(.top, 8)
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // MARK: - Location Selector
