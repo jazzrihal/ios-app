@@ -21,7 +21,7 @@ class MomentsStore {
         do {
             let rows: [PublicSchema.MomentsSelect] = try await SupabaseManager.client
                 .from("moments")
-                .select()
+                .select("id, created_at, latitude, longitude, location_name, moment_date, user_id")
                 .eq("user_id", value: userId)
                 .order("created_at", ascending: false)
                 .execute()

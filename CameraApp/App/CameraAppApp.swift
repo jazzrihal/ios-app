@@ -22,7 +22,7 @@ struct CameraAppApp: App {
             .environment(authManager)
             .environment(momentsStore)
             .environment(friendsStore)
-            .onChange(of: authManager.isAuthenticated) {
+            .onChange(of: authManager.isAuthenticated, initial: true) {
                 if authManager.isAuthenticated, let uid = authManager.userId {
                     friendsStore.currentUserId = uid
                     momentsStore.currentUserId = uid
