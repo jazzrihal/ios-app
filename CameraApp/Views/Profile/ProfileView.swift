@@ -2,6 +2,10 @@ import SwiftUI
 
 struct ProfileView: View {
     @Environment(AuthManager.self) private var authManager
+    @Environment(FriendsStore.self) private var friendsStore
+
+    /// Post count loaded from the `posts` table (profiles.post_count is not maintained).
+    @State private var postCount: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -14,6 +18,7 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Profile")
+            .task { await loadPostCount() }
         }
     }
 
@@ -29,6 +34,23 @@ struct ProfileView: View {
             }
             .padding(.top, 20)
             .padding(.bottom, 32)
+        }
+    }
+
+    // MARK: - Data Loading
+
+    /// Queries the actual post count from the `posts` table.
+    private func loadPostCount() async {
+        guard let userId = authManager.userId else { return }
+        do {
+            let response = try await SupabaseManager.client
+                .from("posts")
+                .select("id", head: true, count: .exact)
+                .eq("user_id", value: userId)
+                .execute()
+            postCount = response.count ?? 0
+        } catch {
+            print("[ProfileView] Failed to load post count: \(error)")
         }
     }
 
@@ -62,10 +84,10 @@ struct ProfileView: View {
 
     private func statsSection(user: User) -> some View {
         HStack(spacing: 0) {
-            statItem(value: "\(user.postCount)", label: "Posts")
+            statItem(value: "\(postCount)", label: "Posts")
             Divider()
                 .frame(height: 36)
-            statItem(value: "\(user.friendCount)", label: "Friends")
+            statItem(value: "\(friendsStore.friends.count)", label: "Friends")
         }
         .padding(.vertical, 16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -120,4 +142,5 @@ struct ProfileView: View {
 #Preview {
     ProfileView()
         .environment(AuthManager())
+        .environment(FriendsStore())
 }

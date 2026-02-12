@@ -38,7 +38,10 @@ struct FriendProfileView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { viewModel.loadPosts() }
+        .onAppear {
+            viewModel.loadFullProfile()
+            viewModel.loadPosts()
+        }
         .onChange(of: store.status(for: viewModel.user)) { _, _ in viewModel.loadPosts() }
         .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
@@ -83,7 +86,7 @@ struct FriendProfileView: View {
 
     private var statsSection: some View {
         HStack(spacing: 0) {
-            statItem(value: "\(viewModel.user.postCount)", label: "Posts")
+            statItem(value: "\(viewModel.userPosts.count)", label: "Posts")
             Divider()
                 .frame(height: 36)
             statItem(value: "\(viewModel.user.friendCount)", label: "Friends")
