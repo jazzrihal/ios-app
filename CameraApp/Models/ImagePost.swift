@@ -1,5 +1,5 @@
-import Foundation
 import CoreLocation
+import Foundation
 
 struct ImagePost: Identifiable {
     let id = UUID()
@@ -12,13 +12,15 @@ struct ImagePost: Identifiable {
     let distanceMeters: Double
     let scope: PostScope
 
-    var username: String { user.username }
+    var username: String {
+        user.username
+    }
 
     var distanceFormatted: String {
         if distanceMeters < 1000 {
-            return String(format: "%.0f m away", distanceMeters)
+            String(format: "%.0f m away", distanceMeters)
         } else {
-            return String(format: "%.1f km away", distanceMeters / 1000)
+            String(format: "%.1f km away", distanceMeters / 1000)
         }
     }
 
@@ -60,7 +62,7 @@ extension ImagePost {
     /// Users that match the sample post usernames.
     /// The first 5 correspond to `User.sampleFriends()`, the next 5 to `User.sampleSuggested()`.
     private static func samplePostUsers() -> [User] {
-        let friends = User.sampleFriends()   // alex_photo, wanderlust99, cityshots, nature_lens, pixel_hunter
+        let friends = User.sampleFriends() // alex_photo, wanderlust99, cityshots, nature_lens, pixel_hunter
         let suggested = User.sampleSuggested() // golden_hour, street_vibes, mountain_soul, ocean_dreamer, urban_eye, ...
         return friends + Array(suggested.prefix(5))
     }
@@ -77,7 +79,7 @@ extension ImagePost {
             "A quiet moment in the city",
             "Nature always wins",
             "Lost in the beauty of this spot",
-            "Early bird gets the shot 📸"
+            "Early bird gets the shot 📸",
         ]
         let locationNames = [
             "Mission District, San Francisco",
@@ -89,12 +91,12 @@ extension ImagePost {
             "Castro, San Francisco",
             "Noe Valley, San Francisco",
             "Sunset District, San Francisco",
-            "Presidio, San Francisco"
+            "Presidio, San Francisco",
         ]
 
-        return (0..<10).map { i in
-            let latOffset = Double.random(in: -0.02...0.02)
-            let lonOffset = Double.random(in: -0.02...0.02)
+        return (0 ..< 10).map { i in
+            let latOffset = Double.random(in: -0.02 ... 0.02)
+            let lonOffset = Double.random(in: -0.02 ... 0.02)
             let postCoord = CLLocationCoordinate2D(
                 latitude: coordinate.latitude + latOffset,
                 longitude: coordinate.longitude + lonOffset
@@ -104,10 +106,10 @@ extension ImagePost {
             let loc2 = CLLocation(latitude: postCoord.latitude, longitude: postCoord.longitude)
             let distance = loc1.distance(from: loc2)
 
-            let hoursOffset = Double.random(in: -12...0)
+            let hoursOffset = Double.random(in: -12 ... 0)
             let postDate = date.addingTimeInterval(hoursOffset * 3600)
 
-            let imageId = (i + 1) * 10 + Int.random(in: 0...9)
+            let imageId = (i + 1) * 10 + Int.random(in: 0 ... 9)
             let url = URL(string: "https://picsum.photos/id/\(imageId)/400/400")!
 
             let scope: PostScope = Bool.random() ? .public : .friends
@@ -156,7 +158,7 @@ extension ImagePost {
         ]
 
         // Generate all posts for this user (server knows all of them)
-        let allPosts: [ImagePost] = (0..<9).map { i in
+        let allPosts: [ImagePost] = (0 ..< 9).map { i in
             let baseLat = 37.7749 + Double(i) * 0.003
             let baseLon = -122.4194 + Double(i) * 0.002
             let coord = CLLocationCoordinate2D(latitude: baseLat, longitude: baseLon)

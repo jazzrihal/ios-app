@@ -15,12 +15,12 @@ struct CameraFlowView: View {
                     onDiscard: {
                         capturedPhoto = nil
                         #if !targetEnvironment(simulator)
-                        camera.startSession()
+                            camera.startSession()
                         #endif
                     },
                     onPost: {
                         #if !targetEnvironment(simulator)
-                        camera.stopSession()
+                            camera.stopSession()
                         #endif
                         dismiss()
                     }
@@ -28,31 +28,30 @@ struct CameraFlowView: View {
             }
     }
 
-    @ViewBuilder
-    private var cameraView: some View {
+    @ViewBuilder private var cameraView: some View {
         #if targetEnvironment(simulator)
-        SimulatorCameraView(
-            onCapture: { image in
-                capturedPhoto = CapturedPhoto(image: image)
-            },
-            onCancel: { dismiss() }
-        )
+            SimulatorCameraView(
+                onCapture: { image in
+                    capturedPhoto = CapturedPhoto(image: image)
+                },
+                onCancel: { dismiss() }
+            )
         #else
-        CameraViewfinderView(
-            camera: camera,
-            onCapture: { image in
-                camera.stopSession()
-                capturedPhoto = CapturedPhoto(image: image)
-            },
-            onCancel: {
-                camera.stopSession()
-                dismiss()
+            CameraViewfinderView(
+                camera: camera,
+                onCapture: { image in
+                    camera.stopSession()
+                    capturedPhoto = CapturedPhoto(image: image)
+                },
+                onCancel: {
+                    camera.stopSession()
+                    dismiss()
+                }
+            )
+            .onAppear {
+                camera.configure()
+                camera.startSession()
             }
-        )
-        .onAppear {
-            camera.configure()
-            camera.startSession()
-        }
         #endif
     }
 }

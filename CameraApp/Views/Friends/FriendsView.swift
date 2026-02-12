@@ -49,10 +49,9 @@ struct FriendsView: View {
                             Text(section.rawValue)
                                 .font(.subheadline.weight(.semibold))
 
-                            if section == .friends && !store.incomingRequests.isEmpty {
+                            if section == .friends, !store.incomingRequests.isEmpty {
                                 badgeView(count: store.incomingRequests.count)
                             }
-
                         }
 
                         Rectangle()
@@ -90,7 +89,7 @@ struct FriendsView: View {
                     .padding(.top, 12)
 
                 // ── Incoming Requests ──
-                if !store.incomingRequests.isEmpty && searchText.isEmpty {
+                if !store.incomingRequests.isEmpty, searchText.isEmpty {
                     incomingRequestsSection
                 }
 
@@ -376,8 +375,7 @@ struct DiscoverUserRow: View {
         .padding(.top, 8)
     }
 
-    @ViewBuilder
-    private var statusButton: some View {
+    @ViewBuilder private var statusButton: some View {
         let friendStatus = store.status(for: user)
 
         switch friendStatus {

@@ -72,10 +72,9 @@ struct ContentView: View {
                         .padding(.vertical, 10)
                         .background(.thinMaterial, in: Capsule())
                         .transition(.move(edge: .top).combined(with: .opacity))
-                        .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                withAnimation { savedNotice = false }
-                            }
+                        .task {
+                            try? await Task.sleep(for: .seconds(2))
+                            withAnimation { savedNotice = false }
                         }
                 }
             }

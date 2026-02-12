@@ -1,7 +1,6 @@
 import XCTest
 
 final class CameraAppUITests: XCTestCase {
-
     private var app: XCUIApplication!
 
     // MARK: - Setup / Teardown
@@ -18,20 +17,20 @@ final class CameraAppUITests: XCTestCase {
 
     // MARK: - Tab Navigation Tests
 
-    func testExploreTabIsSelectedOnLaunch() throws {
+    func testExploreTabIsSelectedOnLaunch() {
         let exploreTab = app.tabBars.buttons["Explore"]
         XCTAssertTrue(exploreTab.exists, "Explore tab should exist")
         XCTAssertTrue(exploreTab.isSelected, "Explore tab should be selected on launch")
     }
 
-    func testAllTabsExist() throws {
+    func testAllTabsExist() {
         XCTAssertTrue(app.tabBars.buttons["Explore"].exists)
         XCTAssertTrue(app.tabBars.buttons["Camera"].exists)
         XCTAssertTrue(app.tabBars.buttons["Moments"].exists)
         XCTAssertTrue(app.tabBars.buttons["Friends"].exists)
     }
 
-    func testNavigateToMomentsTab() throws {
+    func testNavigateToMomentsTab() {
         app.tabBars.buttons["Moments"].tap()
 
         let navTitle = app.navigationBars["Moments"]
@@ -41,7 +40,7 @@ final class CameraAppUITests: XCTestCase {
         )
     }
 
-    func testNavigateToFriendsTab() throws {
+    func testNavigateToFriendsTab() {
         app.tabBars.buttons["Friends"].tap()
 
         let navTitle = app.navigationBars["Friends"]
@@ -51,7 +50,7 @@ final class CameraAppUITests: XCTestCase {
         )
     }
 
-    func testNavigateBetweenTabsPreservesState() throws {
+    func testNavigateBetweenTabsPreservesState() {
         // Go to Friends
         app.tabBars.buttons["Friends"].tap()
         XCTAssertTrue(app.navigationBars["Friends"].waitForExistence(timeout: 3))
@@ -67,7 +66,7 @@ final class CameraAppUITests: XCTestCase {
 
     // MARK: - Camera Flow Tests
 
-    func testCameraTabOpensFullScreenCover() throws {
+    func testCameraTabOpensFullScreenCover() {
         app.tabBars.buttons["Camera"].tap()
 
         // The simulator camera view should appear with identifiable elements
@@ -84,7 +83,7 @@ final class CameraAppUITests: XCTestCase {
         )
     }
 
-    func testCameraDismissReturnsToPreviousTab() throws {
+    func testCameraDismissReturnsToPreviousTab() {
         // Start on Explore
         XCTAssertTrue(app.tabBars.buttons["Explore"].isSelected)
 
@@ -104,7 +103,7 @@ final class CameraAppUITests: XCTestCase {
         )
     }
 
-    func testCameraShutterOpensPostPreview() throws {
+    func testCameraShutterOpensPostPreview() {
         // Open camera
         app.tabBars.buttons["Camera"].tap()
         let shutterButton = app.buttons["CameraShutterButton"]
@@ -128,7 +127,7 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertTrue(postButton.exists, "Post button should exist")
     }
 
-    func testPostPreviewDiscardReturnsToCameraView() throws {
+    func testPostPreviewDiscardReturnsToCameraView() {
         // Open camera and capture
         app.tabBars.buttons["Camera"].tap()
         let shutterButton = app.buttons["CameraShutterButton"]
@@ -151,7 +150,7 @@ final class CameraAppUITests: XCTestCase {
         )
     }
 
-    func testPostPreviewPostDismissesCameraFlow() throws {
+    func testPostPreviewPostDismissesCameraFlow() {
         // Open camera and capture
         app.tabBars.buttons["Camera"].tap()
         let shutterButton = app.buttons["CameraShutterButton"]
@@ -177,7 +176,7 @@ final class CameraAppUITests: XCTestCase {
 
     // MARK: - Explore View Tests
 
-    func testExploreViewHasKeyElements() throws {
+    func testExploreViewHasKeyElements() {
         // Verify the Explore navigation bar
         XCTAssertTrue(app.navigationBars["Explore"].exists)
 
@@ -192,7 +191,7 @@ final class CameraAppUITests: XCTestCase {
         )
     }
 
-    func testExploreDateSelectorExpandsAndCollapses() throws {
+    func testExploreDateSelectorExpandsAndCollapses() {
         // Tap the date selector to expand
         let searchAroundText = app.staticTexts["Search around"]
         XCTAssertTrue(searchAroundText.exists, "Date selector label should exist")
@@ -208,7 +207,7 @@ final class CameraAppUITests: XCTestCase {
 
     // MARK: - Moments View Tests
 
-    func testMomentsViewShowsSampleData() throws {
+    func testMomentsViewShowsSampleData() {
         app.tabBars.buttons["Moments"].tap()
         XCTAssertTrue(app.navigationBars["Moments"].waitForExistence(timeout: 3))
 
@@ -221,7 +220,7 @@ final class CameraAppUITests: XCTestCase {
 
     // MARK: - Friends View Tests
 
-    func testFriendsViewShowsSectionPicker() throws {
+    func testFriendsViewShowsSectionPicker() {
         app.tabBars.buttons["Friends"].tap()
         XCTAssertTrue(app.navigationBars["Friends"].waitForExistence(timeout: 3))
 
@@ -237,7 +236,7 @@ final class CameraAppUITests: XCTestCase {
         )
     }
 
-    func testFriendsViewSwitchToAddFriendSection() throws {
+    func testFriendsViewSwitchToAddFriendSection() {
         app.tabBars.buttons["Friends"].tap()
         XCTAssertTrue(app.navigationBars["Friends"].waitForExistence(timeout: 3))
 

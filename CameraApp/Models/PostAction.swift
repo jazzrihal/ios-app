@@ -7,19 +7,19 @@ enum PostAction: CaseIterable, Hashable {
 
     var iconName: String {
         switch self {
-        case .like: return "heart"
-        case .share: return "square.and.arrow.up"
-        case .jump: return "scope"
-        case .pinToProfile: return "pin"
+        case .like: "heart"
+        case .share: "square.and.arrow.up"
+        case .jump: "scope"
+        case .pinToProfile: "pin"
         }
     }
 
     var label: String {
         switch self {
-        case .like: return "Like"
-        case .share: return "Share"
-        case .jump: return "Jump"
-        case .pinToProfile: return "Pin"
+        case .like: "Like"
+        case .share: "Share"
+        case .jump: "Jump"
+        case .pinToProfile: "Pin"
         }
     }
 }

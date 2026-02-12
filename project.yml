@@ -29,6 +29,16 @@ targets:
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: CameraApp/Info.plist
+    postCompileScripts:
+      - script: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if command -v swiftlint >/dev/null 2>&1; then
+            swiftlint lint --config "${SRCROOT}/.swiftlint.yml" --quiet
+          else
+            echo "warning: SwiftLint not installed — run: brew install swiftlint"
+          fi
+        name: SwiftLint
+        basedOnDependencyAnalysis: false
   CameraAppUITests:
     type: bundle.ui-testing
     platform: iOS

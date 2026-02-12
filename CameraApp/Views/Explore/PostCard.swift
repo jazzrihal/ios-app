@@ -45,7 +45,7 @@ struct PostCard: View {
                                 .fill(Color(.systemGray5))
                             ProgressView()
                         }
-                    case .success(let image):
+                    case let .success(image):
                         image
                             .resizable()
                             .scaledToFill()

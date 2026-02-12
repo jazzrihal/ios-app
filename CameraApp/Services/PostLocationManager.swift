@@ -55,11 +55,12 @@ class PostLocationManager: NSObject, CLLocationManagerDelegate {
             location.coordinate.longitude
         )
 
-        geocoder.reverseGeocodeLocation(location) { placemarks, _ in
-            self.isLoading = false
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            guard let self else { return }
+            isLoading = false
 
             guard let placemark = placemarks?.first else {
-                self.locationName = coordinateFallback
+                locationName = coordinateFallback
                 return
             }
 
@@ -68,15 +69,15 @@ class PostLocationManager: NSObject, CLLocationManagerDelegate {
             let country = placemark.country
 
             if let city, let area {
-                self.locationName = "\(city), \(area)"
+                locationName = "\(city), \(area)"
             } else if let city, let country {
-                self.locationName = "\(city), \(country)"
+                locationName = "\(city), \(country)"
             } else if let area, let country {
-                self.locationName = "\(area), \(country)"
+                locationName = "\(area), \(country)"
             } else if let country {
-                self.locationName = country
+                locationName = country
             } else {
-                self.locationName = coordinateFallback
+                locationName = coordinateFallback
             }
         }
     }

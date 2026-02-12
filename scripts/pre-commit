@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Runs SwiftFormat + SwiftLint on staged .swift files before each commit.
+# Install: ./scripts/install-hooks.sh
+
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Collect staged Swift files
+FILES=()
+while IFS= read -r file; do
+  [ -f "$file" ] && FILES+=("$file")
+done < <(git diff --cached --name-only --diff-filter=ACMR -- '*.swift')
+
+[ ${#FILES[@]} -eq 0 ] && exit 0
+
+# Require both tools
+for tool in swiftformat swiftlint; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "error: $tool not installed. Run: brew install $tool"
+    exit 1
+  fi
+done
+
+# Auto-format staged files then re-stage them
+swiftformat "${FILES[@]}" --config .swiftformat --quiet
+git add "${FILES[@]}"
+
+# Lint — block the commit if there are violations
+if ! swiftlint lint --config .swiftlint.yml --strict -- "${FILES[@]}"; then
+  echo ""
+  echo "Fix violations before committing. Run: make lint-fix"
+  exit 1
+fi

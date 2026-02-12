@@ -5,8 +5,8 @@ import SwiftUI
 
 enum FriendStatus: Equatable {
     case none
-    case pendingSent      // You sent them a request
-    case pendingReceived  // They sent you a request
+    case pendingSent // You sent them a request
+    case pendingReceived // They sent you a request
     case friends
 }
 
@@ -35,7 +35,7 @@ struct User: Identifiable, Equatable {
         joinDate.formatted(.dateTime.month(.wide).year())
     }
 
-    static func == (lhs: User, rhs: User) -> Bool {
+    static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id
     }
 }
@@ -132,6 +132,10 @@ extension User {
     }
 
     static func sampleSuggested() -> [User] {
+        sampleSuggestedFirstBatch() + sampleSuggestedSecondBatch()
+    }
+
+    private static func sampleSuggestedFirstBatch() -> [User] {
         let now = Date()
         return [
             User(
@@ -178,6 +182,12 @@ extension User {
                 friendCount: 38,
                 mutualFriendCount: 3
             ),
+        ]
+    }
+
+    private static func sampleSuggestedSecondBatch() -> [User] {
+        let now = Date()
+        return [
             User(
                 id: UUID(uuidString: "00000000-0000-0000-0000-000000000024")!,
                 username: "urban_eye",

@@ -1,0 +1,23 @@
+# SwiftFormat — https://github.com/nicklockwood/SwiftFormat/blob/main/Rules.md
+
+--swiftversion 5.9
+--indent 4
+--maxwidth 150
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapconditions after-first
+--closingparen balanced
+--funcattributes prev-line
+--typeattributes prev-line
+--varattributes same-line
+--importgrouping alpha
+--stripunusedargs closure-only
+--emptybraces no-space
+
+--disable acronyms
+--disable blankLinesBetweenScopes
+--disable wrapMultilineStatementBraces
+--disable sortSwitchCases
+
+--exclude DerivedData,build

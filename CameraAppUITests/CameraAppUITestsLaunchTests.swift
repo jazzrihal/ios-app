@@ -1,8 +1,7 @@
 import XCTest
 
 final class CameraAppUITestsLaunchTests: XCTestCase {
-
-    override class var runsForEachTargetApplicationUIConfiguration: Bool {
+    override static var runsForEachTargetApplicationUIConfiguration: Bool {
         true
     }
 
@@ -10,7 +9,7 @@ final class CameraAppUITestsLaunchTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testLaunch() throws {
+    func testLaunch() {
         let app = XCUIApplication()
         app.launch()
 
@@ -24,7 +23,7 @@ final class CameraAppUITestsLaunchTests: XCTestCase {
         add(attachment)
     }
 
-    func testLaunchDarkMode() throws {
+    func testLaunchDarkMode() {
         let app = XCUIApplication()
         app.launch()
 

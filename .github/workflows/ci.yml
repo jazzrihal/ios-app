@@ -1,18 +1,34 @@
-name: CI Tests
+name: CI
 
 on:
   pull_request:
     branches: [main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Lint & Format
+    runs-on: macos-15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: brew install swiftlint swiftformat
+
+      - name: Check formatting
+        run: make format-check
+
+      - name: Run SwiftLint (strict)
+        run: make lint
+
   test:
     name: Build & Test
+    needs: [lint]
     runs-on: macos-15
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
