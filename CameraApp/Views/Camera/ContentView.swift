@@ -26,7 +26,7 @@ struct ContentView: View {
                             .font(.headline)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 12)
-                            .background(.ultraThinMaterial, in: Capsule())
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                     }
                 } else {
                     Image(systemName: "camera.fill")
@@ -46,10 +46,10 @@ struct ContentView: View {
                         .font(.title3.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
+                        .foregroundStyle(Color(.systemBackground))
+                        .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(.blue)
+                .buttonStyle(.plain)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 24)
             }
@@ -70,7 +70,7 @@ struct ContentView: View {
                         .font(.subheadline.weight(.medium))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(.thinMaterial, in: Capsule())
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .task {
                             try? await Task.sleep(for: .seconds(2))

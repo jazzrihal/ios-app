@@ -9,23 +9,23 @@ final class CameraAppUITestsLaunchTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testLaunch() {
+    func testLaunch() throws {
         let app = XCUIApplication()
         app.launch()
+        try ensureSignedIn(app: app)
 
-        // Verify the app launched successfully by checking for the tab bar
         XCTAssertTrue(app.tabBars.firstMatch.exists, "Tab bar should be visible after launch")
 
-        // Take a screenshot of the launch state
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"
         attachment.lifetime = .keepAlways
         add(attachment)
     }
 
-    func testLaunchDarkMode() {
+    func testLaunchDarkMode() throws {
         let app = XCUIApplication()
         app.launch()
+        try ensureSignedIn(app: app)
 
         XCTAssertTrue(app.tabBars.firstMatch.exists)
 

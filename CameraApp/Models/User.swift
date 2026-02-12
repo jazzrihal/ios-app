@@ -1,6 +1,25 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Color Hex Init
+
+extension Color {
+    /// Creates a `Color` from a hex string (e.g. `"#3B82F6"` or `"3B82F6"`).
+    init(hex: String) {
+        let cleaned = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "#", with: "")
+
+        var rgb: UInt64 = 0
+        Scanner(string: cleaned).scanHexInt64(&rgb)
+
+        let red = Double((rgb >> 16) & 0xFF) / 255
+        let green = Double((rgb >> 8) & 0xFF) / 255
+        let blue = Double(rgb & 0xFF) / 255
+
+        self.init(red: red, green: green, blue: blue)
+    }
+}
+
 // MARK: - Friend Status
 
 enum FriendStatus: Equatable {
@@ -40,6 +59,39 @@ struct User: Identifiable, Equatable {
     }
 }
 
+// MARK: - Init from Supabase Profile
+
+extension User {
+    /// Maps a Supabase `ProfilesSelect` row to the app's `User` model.
+    init(from profile: PublicSchema.ProfilesSelect) {
+        id = profile.id
+        username = profile.username
+        displayName = profile.displayName
+        bio = profile.bio ?? ""
+        gradientColors = Self.parseGradientColors(profile.gradientColors)
+        joinDate = Self.parseDate(profile.createdAt) ?? Date()
+        postCount = Int(profile.postCount ?? 0)
+        friendCount = Int(profile.friendCount ?? 0)
+        mutualFriendCount = 0 // Not available from profiles table
+    }
+
+    /// Converts hex color strings (e.g. `["#3B82F6", "#8B5CF6"]`) to SwiftUI `Color` values.
+    /// Falls back to a default gradient when the input is nil or empty.
+    static func parseGradientColors(_ strings: [String]?) -> [Color] {
+        guard let strings, !strings.isEmpty else {
+            return [.gray, Color(.systemGray3)]
+        }
+        return strings.map { Color(hex: $0) }
+    }
+
+    private static func parseDate(_ iso: String?) -> Date? {
+        guard let iso else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+    }
+}
+
 // MARK: - Sample Data
 
 extension User {
@@ -48,7 +100,7 @@ extension User {
         username: "me",
         displayName: "You",
         bio: "This is you!",
-        gradientColors: [.blue, .purple],
+        gradientColors: [.gray, Color(.systemGray3)],
         joinDate: Calendar.current.date(byAdding: .month, value: -8, to: Date())!,
         postCount: 24,
         friendCount: 12,
@@ -56,18 +108,18 @@ extension User {
     )
 
     private static let allGradients: [[Color]] = [
-        [.blue, .cyan],
-        [.purple, .pink],
-        [.orange, .red],
-        [.green, .mint],
-        [.indigo, .blue],
-        [.pink, .orange],
-        [.teal, .green],
-        [.red, .purple],
-        [.cyan, .indigo],
-        [.mint, .teal],
-        [.yellow, .orange],
-        [.brown, .orange],
+        [Color(.systemGray), Color(.systemGray3)],
+        [Color(.systemGray2), Color(.systemGray4)],
+        [Color(.systemGray3), Color(.systemGray5)],
+        [Color(.systemGray), Color(.systemGray4)],
+        [Color(.systemGray2), Color(.systemGray5)],
+        [Color(.systemGray3), Color(.systemGray)],
+        [Color(.systemGray4), Color(.systemGray2)],
+        [Color(.systemGray5), Color(.systemGray3)],
+        [Color(.systemGray), Color(.systemGray2)],
+        [Color(.systemGray3), Color(.systemGray4)],
+        [Color(.systemGray2), Color(.systemGray)],
+        [Color(.systemGray4), Color(.systemGray3)],
     ]
 
     static func sampleFriends() -> [User] {

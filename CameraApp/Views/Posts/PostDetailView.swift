@@ -15,6 +15,7 @@ private struct ActionFramePreferenceKey: PreferenceKey {
 
 struct PostDetailView: View {
     @Environment(MomentsStore.self) private var store
+    @Environment(AuthManager.self) private var authManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var viewModel: PostDetailViewModel
@@ -90,6 +91,10 @@ struct PostDetailView: View {
         .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }
+        .onAppear {
+            viewModel.userId = authManager.userId
+            viewModel.loadLikesAndPins()
+        }
     }
 
     // MARK: - Top Bar
@@ -112,7 +117,7 @@ struct PostDetailView: View {
                 if viewModel.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.body)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.white)
                         .padding(10)
                         .background(.ultraThinMaterial, in: Circle())
                 }
@@ -120,7 +125,7 @@ struct PostDetailView: View {
                 if viewModel.isLiked {
                     Image(systemName: "heart.fill")
                         .font(.body)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.white)
                         .padding(10)
                         .background(.ultraThinMaterial, in: Circle())
                 }
@@ -255,10 +260,10 @@ struct PostDetailView: View {
         switch action {
         case .like where viewModel.isLiked:
             iconName = "heart.fill"
-            iconColor = .red
+            iconColor = Color(.darkGray)
         case .pinToProfile where viewModel.isPinned:
             iconName = "pin.fill"
-            iconColor = .orange
+            iconColor = Color(.darkGray)
         default:
             iconName = action.iconName
             iconColor = Color(.darkGray)
@@ -374,4 +379,5 @@ struct PostDetailView: View {
     }
     .environment(FriendsStore())
     .environment(MomentsStore())
+    .environment(AuthManager())
 }

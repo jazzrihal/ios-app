@@ -14,24 +14,24 @@ struct PostCard: View {
             Button {
                 onTapProfile()
             } label: {
-                HStack(spacing: 8) {
-                    AvatarView(user: post.user, size: 28)
+                HStack(spacing: 10) {
+                    AvatarView(user: post.user, size: 32)
 
                     Text(post.user.displayName)
-                        .font(.subheadline.weight(.medium))
+                        .font(.callout.weight(.medium))
                         .foregroundStyle(.primary)
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
 
             // Image — tappable to open post detail
             Button {
@@ -46,9 +46,13 @@ struct PostCard: View {
                             ProgressView()
                         }
                     case let .success(image):
-                        image
-                            .resizable()
-                            .scaledToFill()
+                        Color.clear
+                            .overlay {
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            }
+                            .clipped()
                     case .failure:
                         ZStack {
                             Rectangle()
@@ -66,31 +70,27 @@ struct PostCard: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 240)
+                .frame(height: 260)
                 .clipped()
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             // Info below photo
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
                 // Metadata row (closest to photo)
                 HStack(spacing: 16) {
                     Label(post.timeAgoFormatted, systemImage: "clock")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                     Label(post.locationName, systemImage: "mappin")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                     Spacer()
                 }
-
-                // Caption
-                Text(post.caption)
-                    .font(.body)
-                    .foregroundStyle(.primary)
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
         .background(.background)
     }

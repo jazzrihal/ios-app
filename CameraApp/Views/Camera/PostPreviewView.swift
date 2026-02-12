@@ -8,10 +8,13 @@ struct PostPreviewView: View {
     let onDiscard: () -> Void
     let onPost: () -> Void
 
+    @Environment(AuthManager.self) private var authManager
     @State private var caption = ""
     @State private var captureDate = Date()
     @State private var scope: PostScope = .friends
     @State private var locationManager = PostLocationManager()
+    @State private var isUploading = false
+    @State private var uploadError: String?
     @FocusState private var captionFocused: Bool
 
     var body: some View {
@@ -23,6 +26,14 @@ struct PostPreviewView: View {
                     dateTimeSection
                     locationSection
                     scopeSection
+
+                    if let uploadError {
+                        Text(uploadError)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 16)
+                    }
+
                     postButton
                 }
             }
@@ -36,7 +47,8 @@ struct PostPreviewView: View {
                         onDiscard()
                     }
                     .accessibilityIdentifier("DiscardButton")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.primary)
+                    .disabled(isUploading)
                 }
             }
         }
@@ -82,7 +94,7 @@ struct PostPreviewView: View {
 
             HStack(spacing: 10) {
                 Image(systemName: "clock.fill")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.primary)
                     .font(.title3)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -132,7 +144,7 @@ struct PostPreviewView: View {
                 .foregroundStyle(.secondary)
         } else if let name = locationManager.locationName {
             Image(systemName: "mappin.circle.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(.primary)
                 .font(.title3)
             Text(name)
                 .font(.subheadline)
@@ -167,7 +179,7 @@ struct PostPreviewView: View {
             .padding(4)
             .background(
                 .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: 12)
+                in: RoundedRectangle(cornerRadius: 10)
             )
         }
         .padding(.horizontal, 16)
@@ -175,18 +187,76 @@ struct PostPreviewView: View {
 
     private var postButton: some View {
         Button {
-            onPost()
+            uploadAndPost()
         } label: {
-            Text("Post")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+            Group {
+                if isUploading {
+                    ProgressView()
+                        .tint(Color(.systemGray))
+                } else {
+                    Text("Post")
+                        .font(.headline)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .foregroundStyle(isUploading ? Color(.systemGray) : Color(.systemBackground))
+            .background(isUploading ? Color(.systemGray5) : Color.primary, in: RoundedRectangle(cornerRadius: 10))
         }
         .accessibilityIdentifier("PostButton")
-        .buttonStyle(.borderedProminent)
-        .tint(.blue)
+        .buttonStyle(.plain)
+        .disabled(isUploading)
         .padding(.horizontal, 16)
         .padding(.bottom, 32)
+    }
+
+    // MARK: - Upload Logic
+
+    private func uploadAndPost() {
+        guard let userId = authManager.userId else {
+            uploadError = "Not signed in."
+            return
+        }
+
+        isUploading = true
+        uploadError = nil
+
+        Task {
+            do {
+                let postId = UUID()
+                guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                    throw PostUploadError.imageConversion
+                }
+
+                // 1. Upload image to Storage
+                let storagePath = "\(userId)/\(postId).jpg"
+                try await SupabaseManager.client.storage
+                    .from("post-images")
+                    .upload(storagePath, data: imageData, options: .init(contentType: "image/jpeg"))
+
+                // 2. Insert post row directly
+                let coord = locationManager.coordinate
+                let insert = PublicSchema.PostsInsert(
+                    caption: caption.isEmpty ? nil : caption,
+                    createdAt: nil,
+                    id: postId,
+                    imagePath: storagePath,
+                    latitude: coord?.latitude ?? 0,
+                    location: nil,
+                    locationName: locationManager.locationName,
+                    longitude: coord?.longitude ?? 0,
+                    scope: scope.databaseValue,
+                    userId: userId
+                )
+                try await SupabaseManager.client.from("posts").insert(insert).execute()
+
+                // Success — dismiss
+                await MainActor.run { onPost() }
+            } catch {
+                uploadError = error.localizedDescription
+                isUploading = false
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -201,6 +271,18 @@ struct PostPreviewView: View {
         captureDate.formatted(
             .dateTime.hour().minute().second()
         )
+    }
+}
+
+// MARK: - Errors
+
+private enum PostUploadError: LocalizedError {
+    case imageConversion
+
+    var errorDescription: String? {
+        switch self {
+        case .imageConversion: "Failed to compress image."
+        }
     }
 }
 
@@ -221,16 +303,16 @@ struct ScopeOptionButton: View {
                 Text(option.subtitle)
                     .font(.caption2)
                     .foregroundStyle(
-                        isSelected ? Color.blue.opacity(0.8) : Color.gray.opacity(0.4)
+                        isSelected ? Color.primary.opacity(0.8) : Color.gray.opacity(0.4)
                     )
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(
-                isSelected ? Color.blue.opacity(0.12) : Color.clear,
+                isSelected ? Color.primary.opacity(0.12) : Color.clear,
                 in: RoundedRectangle(cornerRadius: 10)
             )
-            .foregroundStyle(isSelected ? .blue : .secondary)
+            .foregroundStyle(isSelected ? .primary : .secondary)
         }
         .buttonStyle(.plain)
     }

@@ -1,0 +1,15 @@
+---
+description: Prevents modification of SupabaseTypes.swift, which is auto-generated from the database project
+globs: "**/SupabaseTypes.swift"
+alwaysApply: false
+---
+
+# Do not modify SupabaseTypes.swift
+
+`CameraApp/Models/SupabaseTypes.swift` is **auto-generated** from the database project and must not be edited by hand or by the AI agent.
+
+## Rules
+
+- **Never** add, remove, or change any code in `SupabaseTypes.swift`.
+- If a task requires changes to the Supabase types, inform the user that the types are generated from the database project and must be updated there instead.
+- When you need new or modified types that don't exist in `SupabaseTypes.swift`, create or update a **separate** file rather than editing the generated file.

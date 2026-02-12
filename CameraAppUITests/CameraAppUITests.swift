@@ -9,6 +9,7 @@ final class CameraAppUITests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launch()
+        try ensureSignedIn(app: app)
     }
 
     override func tearDownWithError() throws {
@@ -28,6 +29,7 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Camera"].exists)
         XCTAssertTrue(app.tabBars.buttons["Moments"].exists)
         XCTAssertTrue(app.tabBars.buttons["Friends"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Profile"].exists)
     }
 
     func testNavigateToMomentsTab() {
@@ -169,7 +171,7 @@ final class CameraAppUITests: XCTestCase {
         // Should dismiss back to the main tab view
         let exploreNav = app.navigationBars["Explore"]
         XCTAssertTrue(
-            exploreNav.waitForExistence(timeout: 5),
+            exploreNav.waitForExistence(timeout: 10),
             "Should return to main app after posting"
         )
     }
@@ -207,14 +209,13 @@ final class CameraAppUITests: XCTestCase {
 
     // MARK: - Moments View Tests
 
-    func testMomentsViewShowsSampleData() {
+    func testMomentsViewShowsSeededData() {
         app.tabBars.buttons["Moments"].tap()
         XCTAssertTrue(app.navigationBars["Moments"].waitForExistence(timeout: 3))
 
-        // MomentsStore initialises with sample moments, so the list should be populated
         XCTAssertTrue(
-            app.staticTexts["San Francisco, United States"].waitForExistence(timeout: 3),
-            "Sample moment location should be visible"
+            app.staticTexts["Golden Gate Bridge"].waitForExistence(timeout: 5),
+            "Seeded moment location should be visible"
         )
     }
 

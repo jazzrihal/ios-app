@@ -25,6 +25,7 @@ final class ExploreViewModel {
     var posts: [ImagePost] = []
     var hasSearched = false
     var isSearching = false
+    var searchError: String?
 
     // MARK: - UI Toggles
 
@@ -41,6 +42,43 @@ final class ExploreViewModel {
 
     var navigateToProfileUser: User?
     var navigateToPostIndex: Int?
+
+    // MARK: - Date Shortcuts
+
+    enum DateShortcut: String, CaseIterable, Identifiable {
+        case today = "Today"
+        case yesterday = "Yesterday"
+        case oneWeekAgo = "1 week ago"
+        case oneMonthAgo = "1 month ago"
+        case oneYearAgo = "1 year ago"
+
+        var id: String {
+            rawValue
+        }
+
+        var date: Date {
+            let calendar = Calendar.current
+            let now = Date()
+            switch self {
+            case .today:
+                return now
+            case .yesterday:
+                return calendar.date(byAdding: .day, value: -1, to: now)!
+            case .oneWeekAgo:
+                return calendar.date(byAdding: .weekOfYear, value: -1, to: now)!
+            case .oneMonthAgo:
+                return calendar.date(byAdding: .month, value: -1, to: now)!
+            case .oneYearAgo:
+                return calendar.date(byAdding: .year, value: -1, to: now)!
+            }
+        }
+    }
+
+    func applyDateShortcut(_ shortcut: DateShortcut) {
+        withAnimation(.spring(duration: 0.3)) {
+            selectedDate = shortcut.date
+        }
+    }
 
     // MARK: - Date/Map Toggle Actions
 
@@ -192,6 +230,7 @@ final class ExploreViewModel {
         isSearching = true
         hasSearched = false
         momentSaved = false
+        searchError = nil
 
         // Collapse all expanded UI elements
         withAnimation(.spring(duration: 0.3)) {
@@ -200,14 +239,38 @@ final class ExploreViewModel {
         }
         dismissPlaceSearch()
 
-        // Simulate network delay
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(1200))
-            withAnimation(.spring(duration: 0.4)) {
-                posts = ImagePost.samplePosts(near: coord, around: selectedDate)
-                hasSearched = true
-                isSearching = false
+            do {
+                let params = NearbyPostsParams(
+                    lng: coord.longitude,
+                    lat: coord.latitude,
+                    searchDate: Self.iso8601String(from: selectedDate),
+                    radiusMeters: 5000
+                )
+
+                let rows: [NearbyPostRow] = try await SupabaseManager.client
+                    .rpc("nearby_posts", params: params)
+                    .execute()
+                    .value
+
+                withAnimation(.spring(duration: 0.4)) {
+                    posts = rows.map { ImagePost(from: $0) }
+                    hasSearched = true
+                    isSearching = false
+                }
+            } catch {
+                withAnimation(.spring(duration: 0.4)) {
+                    searchError = error.localizedDescription
+                    hasSearched = true
+                    isSearching = false
+                }
             }
         }
+    }
+
+    private static func iso8601String(from date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
     }
 }

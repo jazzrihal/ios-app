@@ -2,11 +2,26 @@ import CoreLocation
 import Foundation
 
 struct Moment: Identifiable {
-    let id = UUID()
+    let id: UUID
     let date: Date
     let locationName: String
     let coordinate: CLLocationCoordinate2D
     let addedAt: Date
+
+    /// Memberwise initializer with auto-generated `id`.
+    init(
+        id: UUID = UUID(),
+        date: Date,
+        locationName: String,
+        coordinate: CLLocationCoordinate2D,
+        addedAt: Date
+    ) {
+        self.id = id
+        self.date = date
+        self.locationName = locationName
+        self.coordinate = coordinate
+        self.addedAt = addedAt
+    }
 
     // MARK: - Formatted helpers
 
@@ -25,42 +40,25 @@ struct Moment: Identifiable {
     }
 }
 
-// MARK: - Sample Data
+// MARK: - Init from Supabase
 
 extension Moment {
-    static func sampleMoments() -> [Moment] {
-        let now = Date()
-        return [
-            Moment(
-                date: Calendar.current.date(byAdding: .hour, value: -3, to: now)!,
-                locationName: "San Francisco, United States",
-                coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                addedAt: Calendar.current.date(byAdding: .minute, value: -15, to: now)!
-            ),
-            Moment(
-                date: Calendar.current.date(byAdding: .hour, value: -18, to: now)!,
-                locationName: "Los Angeles, United States",
-                coordinate: CLLocationCoordinate2D(latitude: 34.0522, longitude: -118.2437),
-                addedAt: Calendar.current.date(byAdding: .hour, value: -2, to: now)!
-            ),
-            Moment(
-                date: Calendar.current.date(byAdding: .day, value: -3, to: now)!,
-                locationName: "New York, United States",
-                coordinate: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060),
-                addedAt: Calendar.current.date(byAdding: .day, value: -1, to: now)!
-            ),
-            Moment(
-                date: Calendar.current.date(byAdding: .day, value: -7, to: now)!,
-                locationName: "London, United Kingdom",
-                coordinate: CLLocationCoordinate2D(latitude: 51.5074, longitude: -0.1278),
-                addedAt: Calendar.current.date(byAdding: .day, value: -3, to: now)!
-            ),
-            Moment(
-                date: Calendar.current.date(byAdding: .day, value: -14, to: now)!,
-                locationName: "Tokyo, Japan",
-                coordinate: CLLocationCoordinate2D(latitude: 35.6762, longitude: 139.6503),
-                addedAt: Calendar.current.date(byAdding: .day, value: -5, to: now)!
-            ),
-        ]
+    /// Creates a `Moment` from a Supabase `MomentsSelect` row.
+    init(from row: PublicSchema.MomentsSelect) {
+        id = row.id
+        date = Self.parseISO8601(row.momentDate) ?? Date()
+        locationName = row.locationName ?? ""
+        coordinate = CLLocationCoordinate2D(
+            latitude: row.latitude,
+            longitude: row.longitude
+        )
+        addedAt = Self.parseISO8601(row.createdAt) ?? Date()
+    }
+
+    private static func parseISO8601(_ string: String?) -> Date? {
+        guard let string else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: string) ?? ISO8601DateFormatter().date(from: string)
     }
 }
