@@ -2,32 +2,6 @@ import CoreLocation
 import Observation
 import SwiftUI
 
-// MARK: - Post Row (excludes geography column)
-
-/// Decodes a post row without the `location` geography column, which PostGIS
-/// returns as WKB hex. Uses the separate `latitude`/`longitude` columns instead.
-private struct PostRowWithoutLocation: Codable {
-    let id: UUID
-    let userId: UUID
-    let imagePath: String
-    let caption: String?
-    let latitude: Double
-    let longitude: Double
-    let locationName: String?
-    let scope: String
-    let createdAt: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case userId = "user_id"
-        case imagePath = "image_path"
-        case caption, latitude, longitude
-        case locationName = "location_name"
-        case scope
-        case createdAt = "created_at"
-    }
-}
-
 // MARK: - Friend Profile View Model
 
 @Observable
@@ -81,12 +55,6 @@ final class FriendProfileViewModel {
 
     // MARK: - Posts Loading
 
-    /// Columns to select — excludes the `location` geography column which
-    /// PostGIS returns as WKB hex (incompatible with GeographySelect).
-    /// The backend provides `latitude` / `longitude` as separate columns.
-    private static let postColumns =
-        "id,user_id,image_path,caption,latitude,longitude,location_name,scope,created_at"
-
     /// Fetches the user's posts from Supabase. RLS handles scope filtering.
     func loadPosts() {
         isLoadingPosts = true
@@ -96,7 +64,7 @@ final class FriendProfileViewModel {
             do {
                 let rows: [PostRowWithoutLocation] = try await SupabaseManager.client
                     .from("posts")
-                    .select(Self.postColumns)
+                    .select(PostRowWithoutLocation.selectColumns)
                     .eq("user_id", value: user.id)
                     .order("created_at", ascending: false)
                     .execute()

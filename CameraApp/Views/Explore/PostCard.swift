@@ -46,9 +46,13 @@ struct PostCard: View {
                             ProgressView()
                         }
                     case let .success(image):
-                        image
-                            .resizable()
-                            .scaledToFill()
+                        Color.clear
+                            .overlay {
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            }
+                            .clipped()
                     case .failure:
                         ZStack {
                             Rectangle()

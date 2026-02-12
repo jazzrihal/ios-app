@@ -6,8 +6,6 @@ struct FriendProfileView: View {
 
     @State private var viewModel: FriendProfileViewModel
 
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
-
     init(user: User) {
         _viewModel = State(initialValue: FriendProfileViewModel(user: user))
     }
@@ -15,12 +13,18 @@ struct FriendProfileView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                profileHeader
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
+                ProfileHeaderView(user: viewModel.user) {
+                    HStack(spacing: 16) {
+                        ProfileStatItem(value: viewModel.userPosts.count, label: "Posts")
+                        ProfileStatItem(value: viewModel.user.friendCount, label: "Friends")
+                        ProfileStatItem(value: viewModel.user.mutualFriendCount, label: "Mutual")
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
 
                 if !viewModel.user.bio.isEmpty {
-                    bioSection
+                    ProfileBioView(bio: viewModel.user.bio)
                         .padding(.horizontal, 16)
                         .padding(.top, 10)
                 }
@@ -29,8 +33,10 @@ struct FriendProfileView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
-                postsSection
-                    .padding(.top, 16)
+                ProfilePostsSection(isLoading: viewModel.isLoadingPosts, posts: viewModel.userPosts) {
+                    friendPostsEmptyState
+                }
+                .padding(.top, 16)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -67,56 +73,6 @@ struct FriendProfileView: View {
         } message: {
             Text("Are you sure you want to remove \(viewModel.user.displayName) from your friends? This cannot be undone.")
         }
-    }
-
-    // MARK: - Profile Header (compact horizontal)
-
-    private var profileHeader: some View {
-        HStack(spacing: 16) {
-            AvatarView(user: viewModel.user, size: 72)
-                .shadow(color: viewModel.user.gradientColors.first?.opacity(0.25) ?? .clear, radius: 8, y: 3)
-
-            VStack(alignment: .leading, spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.user.displayName)
-                        .font(.title3.weight(.bold))
-
-                    Text("@\(viewModel.user.username)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack(spacing: 14) {
-                    statItem(value: viewModel.userPosts.count, label: "Posts")
-                    statItem(value: viewModel.user.friendCount, label: "Friends")
-                    statItem(value: viewModel.user.mutualFriendCount, label: "Mutual")
-                }
-            }
-
-            Spacer(minLength: 0)
-        }
-    }
-
-    // MARK: - Stats
-
-    private func statItem(value: Int, label: String) -> some View {
-        HStack(spacing: 4) {
-            Text("\(value)")
-                .font(.subheadline.weight(.bold))
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    // MARK: - Bio
-
-    private var bioSection: some View {
-        Text(viewModel.user.bio)
-            .font(.subheadline)
-            .foregroundStyle(.primary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .lineLimit(2)
     }
 
     // MARK: - Action Buttons
@@ -210,73 +166,23 @@ struct FriendProfileView: View {
         }
     }
 
-    // MARK: - Posts Section
+    // MARK: - Empty State
 
-    private var postsSection: some View {
-        VStack(spacing: 0) {
-            Divider()
-
-            if viewModel.userPosts.isEmpty {
-                postsEmptyState
+    private var friendPostsEmptyState: some View {
+        Group {
+            if store.status(for: viewModel.user) == .friends {
+                ProfilePostsEmptyState(
+                    icon: "photo.on.rectangle.angled",
+                    title: "No posts yet"
+                )
             } else {
-                postsGrid
+                ProfilePostsEmptyState(
+                    icon: "photo.on.rectangle.angled",
+                    title: "No public posts",
+                    subtitle: "Add \(viewModel.user.displayName) as a friend to see more."
+                )
             }
         }
-    }
-
-    private var postsGrid: some View {
-        LazyVGrid(columns: gridColumns, spacing: 2) {
-            ForEach(Array(viewModel.userPosts.enumerated()), id: \.element.id) { index, post in
-                NavigationLink(destination: PostDetailView(posts: viewModel.userPosts, initialIndex: index, queryDate: Date())) {
-                    AsyncImage(url: post.imageURL) { phase in
-                        switch phase {
-                        case .empty:
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .overlay { ProgressView() }
-                        case let .success(image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        case .failure:
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .overlay {
-                                    Image(systemName: "photo.badge.exclamationmark")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
-                    .aspectRatio(1, contentMode: .fill)
-                    .clipped()
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private var postsEmptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 28))
-                .foregroundStyle(.tertiary)
-
-            Text(store.status(for: viewModel.user) == .friends ? "No posts yet" : "No public posts")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            if store.status(for: viewModel.user) != .friends {
-                Text("Add \(viewModel.user.displayName) as a friend to see more.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
     }
 }
 
