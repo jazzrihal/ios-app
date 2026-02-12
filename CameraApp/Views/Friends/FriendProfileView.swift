@@ -14,30 +14,44 @@ struct FriendProfileView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: 0) {
                 profileHeader
-                statsSection
-                bioSection
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+
+                if !viewModel.user.bio.isEmpty {
+                    bioSection
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                }
+
                 actionButtons
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
 
                 postsSection
-
-                if store.status(for: viewModel.user) == .friends {
-                    Button {
-                        viewModel.showRemoveConfirmation = true
+                    .padding(.top, 16)
+            }
+        }
+        .navigationTitle(viewModel.user.displayName)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if store.status(for: viewModel.user) == .friends {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button(role: .destructive) {
+                            viewModel.showRemoveConfirmation = true
+                        } label: {
+                            Label("Remove Friend", systemImage: "person.badge.minus")
+                        }
                     } label: {
-                        Text("Remove Friend")
-                            .font(.footnote)
+                        Image(systemName: "ellipsis")
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
                 }
             }
-            .padding(.top, 20)
         }
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.loadFullProfile()
             viewModel.loadPosts()
@@ -56,82 +70,60 @@ struct FriendProfileView: View {
         }
     }
 
-    // MARK: - Profile Header
+    // MARK: - Profile Header (compact horizontal)
 
     private var profileHeader: some View {
-        VStack(spacing: 14) {
-            AvatarView(user: viewModel.user, size: 96)
-                .shadow(color: viewModel.user.gradientColors.first?.opacity(0.3) ?? .clear, radius: 12, y: 4)
+        HStack(spacing: 16) {
+            AvatarView(user: viewModel.user, size: 72)
+                .shadow(color: viewModel.user.gradientColors.first?.opacity(0.25) ?? .clear, radius: 8, y: 3)
 
-            VStack(spacing: 4) {
-                Text(viewModel.user.displayName)
-                    .font(.title2.weight(.bold))
+            VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.user.displayName)
+                        .font(.title3.weight(.bold))
 
-                Text("@\(viewModel.user.username)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    Text("@\(viewModel.user.username)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 14) {
+                    statItem(value: viewModel.userPosts.count, label: "Posts")
+                    statItem(value: viewModel.user.friendCount, label: "Friends")
+                    statItem(value: viewModel.user.mutualFriendCount, label: "Mutual")
+                }
             }
 
-            HStack(spacing: 4) {
-                Image(systemName: "calendar")
-                    .font(.caption2)
-                Text("Joined \(viewModel.user.joinDateFormatted)")
-                    .font(.caption)
-            }
-            .foregroundStyle(.tertiary)
+            Spacer(minLength: 0)
         }
     }
 
     // MARK: - Stats
 
-    private var statsSection: some View {
-        HStack(spacing: 0) {
-            statItem(value: "\(viewModel.userPosts.count)", label: "Posts")
-            Divider()
-                .frame(height: 36)
-            statItem(value: "\(viewModel.user.friendCount)", label: "Friends")
-            Divider()
-                .frame(height: 36)
-            statItem(value: "\(viewModel.user.mutualFriendCount)", label: "Mutual")
-        }
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 16)
-    }
-
-    private func statItem(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.title3.weight(.bold))
+    private func statItem(value: Int, label: String) -> some View {
+        HStack(spacing: 4) {
+            Text("\(value)")
+                .font(.subheadline.weight(.bold))
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Bio
 
     private var bioSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("About", systemImage: "text.quote")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            Text(viewModel.user.bio)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        }
-        .padding(.horizontal, 16)
+        Text(viewModel.user.bio)
+            .font(.subheadline)
+            .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .lineLimit(2)
     }
 
     // MARK: - Action Buttons
 
     private var actionButtons: some View {
-        VStack(spacing: 12) {
+        Group {
             let friendStatus = store.status(for: viewModel.user)
 
             switch friendStatus {
@@ -139,50 +131,47 @@ struct FriendProfileView: View {
                 Button {
                     viewModel.sendRequest(store: store)
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Image(systemName: "person.badge.plus")
+                            .font(.subheadline)
                         Text("Add Friend")
-                            .fontWeight(.semibold)
+                            .font(.subheadline.weight(.semibold))
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.blue)
-                .padding(.horizontal, 16)
 
             case .pendingSent:
                 Button {
                     viewModel.cancelRequest(store: store)
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Image(systemName: "clock")
+                            .font(.subheadline)
                         Text("Request Pending")
-                            .fontWeight(.semibold)
+                            .font(.subheadline.weight(.semibold))
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                 }
                 .buttonStyle(.bordered)
                 .tint(.secondary)
-                .padding(.horizontal, 16)
-
-                Text("Tap to cancel request")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
 
             case .pendingReceived:
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     Button {
                         viewModel.acceptRequest(store: store)
                     } label: {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: "checkmark")
+                                .font(.subheadline)
                             Text("Accept")
-                                .fontWeight(.semibold)
+                                .font(.subheadline.weight(.semibold))
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
@@ -190,30 +179,30 @@ struct FriendProfileView: View {
                     Button {
                         viewModel.declineRequest(store: store)
                     } label: {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: "xmark")
+                                .font(.subheadline)
                             Text("Decline")
-                                .fontWeight(.semibold)
+                                .font(.subheadline.weight(.semibold))
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                     }
                     .buttonStyle(.bordered)
                     .tint(.red)
                 }
-                .padding(.horizontal, 16)
 
             case .friends:
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
+                        .font(.subheadline)
                     Text("Friends")
-                        .fontWeight(.semibold)
+                        .font(.subheadline.weight(.semibold))
                 }
                 .foregroundStyle(.green)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(.green.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.green.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
             }
         }
     }
@@ -221,19 +210,8 @@ struct FriendProfileView: View {
     // MARK: - Posts Section
 
     private var postsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Posts", systemImage: "photo.on.rectangle")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Text("\(viewModel.userPosts.count)")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 16)
+        VStack(spacing: 0) {
+            Divider()
 
             if viewModel.userPosts.isEmpty {
                 postsEmptyState
@@ -278,9 +256,9 @@ struct FriendProfileView: View {
     }
 
     private var postsEmptyState: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 32))
+                .font(.system(size: 28))
                 .foregroundStyle(.tertiary)
 
             Text(store.status(for: viewModel.user) == .friends ? "No posts yet" : "No public posts")
