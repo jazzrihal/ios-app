@@ -8,10 +8,13 @@ struct PostPreviewView: View {
     let onDiscard: () -> Void
     let onPost: () -> Void
 
+    @Environment(AuthManager.self) private var authManager
     @State private var caption = ""
     @State private var captureDate = Date()
     @State private var scope: PostScope = .friends
     @State private var locationManager = PostLocationManager()
+    @State private var isUploading = false
+    @State private var uploadError: String?
     @FocusState private var captionFocused: Bool
 
     var body: some View {
@@ -23,6 +26,14 @@ struct PostPreviewView: View {
                     dateTimeSection
                     locationSection
                     scopeSection
+
+                    if let uploadError {
+                        Text(uploadError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 16)
+                    }
+
                     postButton
                 }
             }
@@ -37,6 +48,7 @@ struct PostPreviewView: View {
                     }
                     .accessibilityIdentifier("DiscardButton")
                     .foregroundStyle(.red)
+                    .disabled(isUploading)
                 }
             }
         }
@@ -175,18 +187,75 @@ struct PostPreviewView: View {
 
     private var postButton: some View {
         Button {
-            onPost()
+            uploadAndPost()
         } label: {
-            Text("Post")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+            if isUploading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            } else {
+                Text("Post")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
         }
         .accessibilityIdentifier("PostButton")
         .buttonStyle(.borderedProminent)
         .tint(.blue)
+        .disabled(isUploading)
         .padding(.horizontal, 16)
         .padding(.bottom, 32)
+    }
+
+    // MARK: - Upload Logic
+
+    private func uploadAndPost() {
+        guard let userId = authManager.userId else {
+            uploadError = "Not signed in."
+            return
+        }
+
+        isUploading = true
+        uploadError = nil
+
+        Task {
+            do {
+                let postId = UUID()
+                guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                    throw PostUploadError.imageConversion
+                }
+
+                // 1. Upload image to Storage
+                let storagePath = "\(userId)/\(postId).jpg"
+                try await SupabaseManager.client.storage
+                    .from("post-images")
+                    .upload(storagePath, data: imageData, options: .init(contentType: "image/jpeg"))
+
+                // 2. Insert post row via RPC (handles GeoJSON → geography conversion)
+                let coord = locationManager.coordinate
+                let location = GeographySelect.point(
+                    latitude: coord?.latitude ?? 0,
+                    longitude: coord?.longitude ?? 0
+                )
+
+                let params = CreatePostParams(
+                    imagePath: storagePath,
+                    location: location,
+                    caption: caption.isEmpty ? nil : caption,
+                    locationName: locationManager.locationName,
+                    scope: scope.databaseValue,
+                    id: postId
+                )
+                try await SupabaseManager.client.rpc("create_post", params: params).execute()
+
+                // Success — dismiss
+                await MainActor.run { onPost() }
+            } catch {
+                uploadError = error.localizedDescription
+                isUploading = false
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -201,6 +270,41 @@ struct PostPreviewView: View {
         captureDate.formatted(
             .dateTime.hour().minute().second()
         )
+    }
+}
+
+// MARK: - RPC Params
+
+/// Parameters for the `create_post` RPC function.
+/// Kept separate from the auto-generated `PostsInsert` because the server-side
+/// function accepts location as JSONB and converts it to geography.
+private struct CreatePostParams: Encodable {
+    let imagePath: String
+    let location: GeographySelect
+    let caption: String?
+    let locationName: String?
+    let scope: String?
+    let id: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case imagePath = "image_path"
+        case location
+        case caption
+        case locationName = "location_name"
+        case scope
+        case id
+    }
+}
+
+// MARK: - Errors
+
+private enum PostUploadError: LocalizedError {
+    case imageConversion
+
+    var errorDescription: String? {
+        switch self {
+        case .imageConversion: "Failed to compress image."
+        }
     }
 }
 

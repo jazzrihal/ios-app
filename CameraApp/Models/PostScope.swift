@@ -26,4 +26,20 @@ enum PostScope: String, CaseIterable, Identifiable {
         case .public: "Everyone"
         }
     }
+
+    /// The lowercased value used when inserting into the database.
+    var databaseValue: String {
+        rawValue.lowercased()
+    }
+
+    /// Creates a `PostScope` from a lowercased database string (e.g. `"friends"`).
+    /// Falls back to `.public` for unknown values.
+    init(serverValue: String) {
+        switch serverValue.lowercased() {
+        case "private": self = .private
+        case "friends": self = .friends
+        case "public": self = .public
+        default: self = .public
+        }
+    }
 }

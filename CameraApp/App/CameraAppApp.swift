@@ -22,6 +22,14 @@ struct CameraAppApp: App {
             .environment(authManager)
             .environment(momentsStore)
             .environment(friendsStore)
+            .onChange(of: authManager.isAuthenticated) {
+                if authManager.isAuthenticated, let uid = authManager.userId {
+                    friendsStore.currentUserId = uid
+                    momentsStore.currentUserId = uid
+                    Task { await friendsStore.loadAll() }
+                    Task { await momentsStore.loadMoments() }
+                }
+            }
         }
     }
 
@@ -60,6 +68,13 @@ struct CameraAppApp: App {
                 }
                 .tag(3)
                 .accessibilityIdentifier("FriendsTab")
+
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.crop.circle")
+                }
+                .tag(4)
+                .accessibilityIdentifier("ProfileTab")
         }
         .onChange(of: store.selectedTab) { oldValue, newValue in
             if newValue == 1 {

@@ -42,7 +42,18 @@ enum SupabaseManager {
         )
     )
 
-    // MARK: - Helpers
+    // MARK: - Storage Helpers
+
+    /// Returns the public URL for an image stored in the `post-images` bucket.
+    ///
+    /// - Parameter path: The storage path (e.g. `"{userId}/{postId}.jpg"`).
+    /// - Returns: A fully-qualified public URL.
+    static func imageURL(for path: String) -> URL {
+        // swiftlint:disable:next force_try
+        try! client.storage.from("post-images").getPublicURL(path: path)
+    }
+
+    // MARK: - Config Helpers
 
     /// Reads a value from `Secrets.plist` bundled in the app.
     private static func configValue(for key: String) -> String? {

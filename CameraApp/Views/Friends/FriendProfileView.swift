@@ -38,8 +38,8 @@ struct FriendProfileView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { viewModel.loadPosts(store: store) }
-        .onChange(of: store.status(for: viewModel.user)) { _, _ in viewModel.loadPosts(store: store) }
+        .onAppear { viewModel.loadPosts() }
+        .onChange(of: store.status(for: viewModel.user)) { _, _ in viewModel.loadPosts() }
         .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }
@@ -304,4 +304,5 @@ struct FriendProfileView: View {
     }
     .environment(FriendsStore())
     .environment(MomentsStore())
+    .environment(AuthManager())
 }

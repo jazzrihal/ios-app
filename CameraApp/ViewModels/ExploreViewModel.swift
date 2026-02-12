@@ -25,6 +25,7 @@ final class ExploreViewModel {
     var posts: [ImagePost] = []
     var hasSearched = false
     var isSearching = false
+    var searchError: String?
 
     // MARK: - UI Toggles
 
@@ -192,6 +193,7 @@ final class ExploreViewModel {
         isSearching = true
         hasSearched = false
         momentSaved = false
+        searchError = nil
 
         // Collapse all expanded UI elements
         withAnimation(.spring(duration: 0.3)) {
@@ -200,14 +202,38 @@ final class ExploreViewModel {
         }
         dismissPlaceSearch()
 
-        // Simulate network delay
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(1200))
-            withAnimation(.spring(duration: 0.4)) {
-                posts = ImagePost.samplePosts(near: coord, around: selectedDate)
-                hasSearched = true
-                isSearching = false
+            do {
+                let params = NearbyPostsParams(
+                    lng: coord.longitude,
+                    lat: coord.latitude,
+                    searchDate: Self.iso8601String(from: selectedDate),
+                    radiusMeters: 5000
+                )
+
+                let rows: [NearbyPostRow] = try await SupabaseManager.client
+                    .rpc("nearby_posts", params: params)
+                    .execute()
+                    .value
+
+                withAnimation(.spring(duration: 0.4)) {
+                    posts = rows.map { ImagePost(from: $0) }
+                    hasSearched = true
+                    isSearching = false
+                }
+            } catch {
+                withAnimation(.spring(duration: 0.4)) {
+                    searchError = error.localizedDescription
+                    hasSearched = true
+                    isSearching = false
+                }
             }
         }
+    }
+
+    private static func iso8601String(from date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
     }
 }

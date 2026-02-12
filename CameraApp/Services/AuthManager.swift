@@ -10,11 +10,14 @@ import Supabase
 final class AuthManager {
     // MARK: - State
 
-    /// The currently authenticated user, if any.
+    /// The currently authenticated Supabase Auth user, if any.
     private(set) var currentUser: Supabase.User?
 
     /// The current session, if any.
     private(set) var currentSession: Session?
+
+    /// The app-level profile for the signed-in user, loaded from the `profiles` table.
+    private(set) var currentProfile: User?
 
     /// `true` until the initial session check completes (prevents auth-screen flash).
     private(set) var isInitializing = true
@@ -39,6 +42,26 @@ final class AuthManager {
 
     private var authStateTask: Task<Void, Never>?
 
+    // MARK: - Profile Loading
+
+    /// Fetches the `profiles` row for the given user ID and stores it on `currentProfile`.
+    private func loadProfile(for userId: UUID) async {
+        do {
+            let profile: PublicSchema.ProfilesSelect = try await SupabaseManager.client
+                .from("profiles")
+                .select()
+                .eq("id", value: userId)
+                .single()
+                .execute()
+                .value
+
+            currentProfile = User(from: profile)
+        } catch {
+            print("[AuthManager] Failed to load profile: \(error)")
+            currentProfile = nil
+        }
+    }
+
     // MARK: - Lifecycle
 
     init() {
@@ -61,21 +84,27 @@ final class AuthManager {
                 switch event {
                 case .initialSession:
                     if let session, session.isExpired {
-                        // Session exists but is expired — a background refresh
-                        // will fire `.tokenRefreshed` or `.signedOut` next.
                         currentSession = nil
                         currentUser = nil
+                        currentProfile = nil
                     } else {
                         currentSession = session
                         currentUser = session?.user
+                        if let uid = session?.user.id {
+                            await loadProfile(for: uid)
+                        }
                     }
                     isInitializing = false
                 case .signedIn, .tokenRefreshed:
                     currentSession = session
                     currentUser = session?.user
+                    if let uid = session?.user.id {
+                        await loadProfile(for: uid)
+                    }
                 case .signedOut:
                     currentSession = nil
                     currentUser = nil
+                    currentProfile = nil
                 default:
                     break
                 }
@@ -136,6 +165,7 @@ final class AuthManager {
             try await SupabaseManager.client.auth.signOut()
             currentSession = nil
             currentUser = nil
+            currentProfile = nil
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -15,6 +15,7 @@ private struct ActionFramePreferenceKey: PreferenceKey {
 
 struct PostDetailView: View {
     @Environment(MomentsStore.self) private var store
+    @Environment(AuthManager.self) private var authManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var viewModel: PostDetailViewModel
@@ -89,6 +90,10 @@ struct PostDetailView: View {
         }
         .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
+        }
+        .onAppear {
+            viewModel.userId = authManager.userId
+            viewModel.loadLikesAndPins()
         }
     }
 
@@ -374,4 +379,5 @@ struct PostDetailView: View {
     }
     .environment(FriendsStore())
     .environment(MomentsStore())
+    .environment(AuthManager())
 }

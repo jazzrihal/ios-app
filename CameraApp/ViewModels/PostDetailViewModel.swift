@@ -12,6 +12,11 @@ final class PostDetailViewModel {
     let posts: [ImagePost]
     let queryDate: Date
 
+    // MARK: - Auth
+
+    /// The authenticated user's UUID, used for like/pin persistence.
+    var userId: UUID?
+
     // MARK: - Paging State
 
     var currentIndex: Int
@@ -70,6 +75,44 @@ final class PostDetailViewModel {
         self.posts = posts
         self.queryDate = queryDate
         currentIndex = initialIndex
+    }
+
+    // MARK: - Load Existing Likes / Pins
+
+    /// Fetches the user's existing likes and pins for the current set of post IDs.
+    func loadLikesAndPins() {
+        guard let userId else { return }
+        let postIds = posts.map(\.id)
+
+        Task { @MainActor in
+            do {
+                let likes: [PublicSchema.LikesSelect] = try await SupabaseManager.client
+                    .from("likes")
+                    .select()
+                    .eq("user_id", value: userId)
+                    .in("post_id", values: postIds)
+                    .execute()
+                    .value
+
+                likedPostIDs = Set(likes.map(\.postId))
+            } catch {
+                print("[PostDetail] Failed to load likes: \(error)")
+            }
+
+            do {
+                let pins: [PublicSchema.PinsSelect] = try await SupabaseManager.client
+                    .from("pins")
+                    .select()
+                    .eq("user_id", value: userId)
+                    .in("post_id", values: postIds)
+                    .execute()
+                    .value
+
+                pinnedPostIDs = Set(pins.map(\.postId))
+            } catch {
+                print("[PostDetail] Failed to load pins: \(error)")
+            }
+        }
     }
 
     // MARK: - Zoom Helpers
@@ -158,12 +201,7 @@ final class PostDetailViewModel {
 
         switch action {
         case .like:
-            if isLiked {
-                likedPostIDs.remove(post.id)
-            } else {
-                likedPostIDs.insert(post.id)
-                triggerOverlayAnimation(icon: "heart.fill", color: .red)
-            }
+            toggleLike()
         case .share:
             showShareSheet = true
         case .jump:
@@ -176,11 +214,86 @@ final class PostDetailViewModel {
             store.selectedTab = 0
             shouldDismiss = true
         case .pinToProfile:
-            if isPinned {
-                pinnedPostIDs.remove(post.id)
-            } else {
-                pinnedPostIDs.insert(post.id)
-                triggerOverlayAnimation(icon: "pin.fill", color: .orange)
+            togglePin()
+        }
+    }
+
+    // MARK: - Like / Pin Persistence
+
+    private func toggleLike() {
+        guard let userId else { return }
+        let postId = post.id
+
+        if isLiked {
+            // Optimistic unlike
+            likedPostIDs.remove(postId)
+            Task {
+                do {
+                    try await SupabaseManager.client.from("likes")
+                        .delete()
+                        .eq("user_id", value: userId)
+                        .eq("post_id", value: postId)
+                        .execute()
+                } catch {
+                    likedPostIDs.insert(postId)
+                    print("[PostDetail] Unlike failed: \(error)")
+                }
+            }
+        } else {
+            // Optimistic like
+            likedPostIDs.insert(postId)
+            triggerOverlayAnimation(icon: "heart.fill", color: .red)
+            Task {
+                do {
+                    let insert = PublicSchema.LikesInsert(
+                        createdAt: nil, postId: postId, userId: userId
+                    )
+                    try await SupabaseManager.client.from("likes")
+                        .insert(insert)
+                        .execute()
+                } catch {
+                    likedPostIDs.remove(postId)
+                    print("[PostDetail] Like failed: \(error)")
+                }
+            }
+        }
+    }
+
+    private func togglePin() {
+        guard let userId else { return }
+        let postId = post.id
+
+        if isPinned {
+            // Optimistic unpin
+            pinnedPostIDs.remove(postId)
+            Task {
+                do {
+                    try await SupabaseManager.client.from("pins")
+                        .delete()
+                        .eq("user_id", value: userId)
+                        .eq("post_id", value: postId)
+                        .execute()
+                } catch {
+                    pinnedPostIDs.insert(postId)
+                    print("[PostDetail] Unpin failed: \(error)")
+                }
+            }
+        } else {
+            // Optimistic pin
+            pinnedPostIDs.insert(postId)
+            triggerOverlayAnimation(icon: "pin.fill", color: .orange)
+            Task {
+                do {
+                    let insert = PublicSchema.PinsInsert(
+                        createdAt: nil, postId: postId, userId: userId
+                    )
+                    try await SupabaseManager.client.from("pins")
+                        .insert(insert)
+                        .execute()
+                } catch {
+                    pinnedPostIDs.remove(postId)
+                    print("[PostDetail] Pin failed: \(error)")
+                }
             }
         }
     }

@@ -393,4 +393,5 @@ struct ExploreView: View {
     ExploreView()
         .environment(MomentsStore())
         .environment(FriendsStore())
+        .environment(AuthManager())
 }
