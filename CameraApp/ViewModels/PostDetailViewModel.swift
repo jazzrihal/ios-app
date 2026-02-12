@@ -242,7 +242,7 @@ final class PostDetailViewModel {
         } else {
             // Optimistic like
             likedPostIDs.insert(postId)
-            triggerOverlayAnimation(icon: "heart.fill", color: .red)
+            triggerOverlayAnimation(icon: "heart.fill", color: .white)
             Task {
                 do {
                     let insert = PublicSchema.LikesInsert(
@@ -281,7 +281,7 @@ final class PostDetailViewModel {
         } else {
             // Optimistic pin
             pinnedPostIDs.insert(postId)
-            triggerOverlayAnimation(icon: "pin.fill", color: .orange)
+            triggerOverlayAnimation(icon: "pin.fill", color: .white)
             Task {
                 do {
                     let insert = PublicSchema.PinsInsert(

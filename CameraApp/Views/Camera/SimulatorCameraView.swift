@@ -67,10 +67,10 @@ struct SimulatorCameraView: View {
                     Text("SIMULATOR")
                         .font(.caption2.weight(.bold))
                         .tracking(1.5)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(.orange.opacity(0.15), in: Capsule())
+                        .background(.secondary.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -145,9 +145,9 @@ struct SimulatorCameraView: View {
         return renderer.image { ctx in
             // Gradient background
             let colors = [
-                UIColor.systemBlue.withAlphaComponent(0.6).cgColor,
-                UIColor.systemPurple.withAlphaComponent(0.6).cgColor,
-                UIColor.systemTeal.withAlphaComponent(0.4).cgColor,
+                UIColor.systemGray2.withAlphaComponent(0.6).cgColor,
+                UIColor.systemGray3.withAlphaComponent(0.6).cgColor,
+                UIColor.systemGray4.withAlphaComponent(0.4).cgColor,
             ]
             guard let gradient = CGGradient(
                 colorsSpace: CGColorSpaceCreateDeviceRGB(),

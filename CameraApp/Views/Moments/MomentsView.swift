@@ -76,19 +76,13 @@ struct MomentRow: View {
         HStack(spacing: 14) {
             // Icon
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        LinearGradient(
-                            colors: [.blue.opacity(0.8), .purple.opacity(0.8)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.primary.opacity(0.85))
                     .frame(width: 48, height: 48)
 
                 Image(systemName: "mappin.and.ellipse")
                     .font(.title3)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(.systemBackground))
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -150,30 +144,18 @@ struct MomentsMapView: View {
                             VStack(spacing: 0) {
                                 ZStack {
                                     Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [.blue.opacity(0.9), .purple.opacity(0.9)],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
+                                        .fill(Color.primary.opacity(0.9))
                                         .frame(width: 36, height: 36)
                                         .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
 
                                     Image(systemName: "mappin.and.ellipse")
                                         .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(Color(.systemBackground))
                                 }
 
                                 // Triangle pointer
                                 Triangle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.blue.opacity(0.9), .purple.opacity(0.9)],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
+                                    .fill(Color.primary.opacity(0.9))
                                     .frame(width: 12, height: 8)
                                     .offset(y: -1)
                             }
@@ -247,7 +229,7 @@ struct MomentDetailCard: View {
             HStack {
                 Image(systemName: "mappin.and.ellipse")
                     .font(.title3)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.primary)
 
                 Text(moment.locationName)
                     .font(.subheadline.weight(.semibold))
@@ -300,14 +282,10 @@ struct MomentDetailCard: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(
-                    LinearGradient(
-                        colors: [.blue, .purple],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    in: RoundedRectangle(cornerRadius: 12)
+                    Color.primary,
+                    in: RoundedRectangle(cornerRadius: 10)
                 )
-                .foregroundStyle(.white)
+                .foregroundStyle(Color(.systemBackground))
             }
             .buttonStyle(.plain)
         }

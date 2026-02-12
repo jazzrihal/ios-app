@@ -58,7 +58,7 @@ struct FriendsView: View {
                         }
 
                         Rectangle()
-                            .fill(selectedSection == section ? Color.blue : Color.clear)
+                            .fill(selectedSection == section ? Color.primary : Color.clear)
                             .frame(height: 2)
                     }
                     .frame(maxWidth: .infinity)
@@ -78,7 +78,7 @@ struct FriendsView: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(.red, in: Capsule())
+            .background(Color.primary, in: RoundedRectangle(cornerRadius: 6))
     }
 
     // MARK: - Friends List Section
@@ -124,7 +124,7 @@ struct FriendsView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "person.badge.plus")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.primary)
                 Text("Friend Requests")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
@@ -133,7 +133,7 @@ struct FriendsView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(.blue, in: Capsule())
+                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 6))
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -342,8 +342,8 @@ struct IncomingRequestRow: View {
                     .font(.caption.weight(.semibold))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(.blue, in: Capsule())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(.systemBackground))
+                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
 
@@ -424,8 +424,8 @@ struct DiscoverUserRow: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(.blue, in: Capsule())
-                .foregroundStyle(.white)
+                .foregroundStyle(Color(.systemBackground))
+                .background(Color.primary, in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
 
@@ -443,8 +443,8 @@ struct DiscoverUserRow: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(.ultraThinMaterial, in: Capsule())
                 .foregroundStyle(.secondary)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
 
@@ -462,8 +462,8 @@ struct DiscoverUserRow: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(.green, in: Capsule())
-                .foregroundStyle(.white)
+                .foregroundStyle(Color(.systemBackground))
+                .background(Color.primary, in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
 
@@ -476,7 +476,7 @@ struct DiscoverUserRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .foregroundStyle(.green)
+            .foregroundStyle(.primary)
         }
     }
 }

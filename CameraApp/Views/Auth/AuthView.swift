@@ -17,7 +17,7 @@ struct AuthView: View {
                 // App branding
                 Image(systemName: "camera.fill")
                     .font(.system(size: 56))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.primary)
                 Text("CameraApp")
                     .font(.largeTitle.bold())
 
@@ -31,8 +31,7 @@ struct AuthView: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .padding()
-                            .background(.ultraThinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                     }
 
                     TextField("Email", text: $email)
@@ -40,25 +39,25 @@ struct AuthView: View {
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
                         .padding()
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
 
                     SecureField("Password", text: $password)
                         .textContentType(isSignUp ? .newPassword : .password)
                         .padding()
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                 }
 
                 // Error
                 if let error = auth.errorMessage {
                     Text(error)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.primary)
                         .multilineTextAlignment(.center)
                 }
 
                 // Primary action
+                let authDisabled = email.isEmpty || password.isEmpty || (isSignUp && username.isEmpty) || auth.isLoading
+
                 Button {
                     Task {
                         if isSignUp {
@@ -71,6 +70,7 @@ struct AuthView: View {
                     Group {
                         if auth.isLoading {
                             ProgressView()
+                                .tint(Color(.systemGray))
                         } else {
                             Text(isSignUp ? "Create Account" : "Sign In")
                                 .fontWeight(.semibold)
@@ -78,11 +78,11 @@ struct AuthView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(.blue)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .foregroundStyle(authDisabled ? Color(.systemGray) : Color(.systemBackground))
+                    .background(authDisabled ? Color(.systemGray5) : Color.primary, in: RoundedRectangle(cornerRadius: 10))
                 }
-                .disabled(email.isEmpty || password.isEmpty || (isSignUp && username.isEmpty) || auth.isLoading)
+                .buttonStyle(.plain)
+                .disabled(authDisabled)
 
                 // Toggle mode
                 Button {

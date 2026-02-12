@@ -58,7 +58,7 @@ struct ExploreView: View {
                 HStack {
                     Image(systemName: "calendar.badge.clock")
                         .font(.title3)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.primary)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Search around")
@@ -77,7 +77,7 @@ struct ExploreView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
@@ -107,7 +107,7 @@ struct ExploreView: View {
                 HStack {
                     Image(systemName: "mappin.and.ellipse")
                         .font(.title3)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.primary)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Location")
@@ -141,7 +141,7 @@ struct ExploreView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
@@ -169,14 +169,14 @@ struct ExploreView: View {
                                 Annotation("Search here", coordinate: pin) {
                                     ZStack {
                                         Circle()
-                                            .fill(.blue.opacity(0.15))
+                                            .fill(Color.primary.opacity(0.1))
                                             .frame(width: 44, height: 44)
                                         Circle()
-                                            .fill(.blue.opacity(0.3))
+                                            .fill(Color.primary.opacity(0.2))
                                             .frame(width: 28, height: 28)
                                         Image(systemName: "mappin.circle.fill")
                                             .font(.title2)
-                                            .foregroundStyle(.white, .blue)
+                                            .foregroundStyle(.white, .primary)
                                     }
                                 }
                             }
@@ -254,7 +254,7 @@ struct ExploreView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "mappin.circle.fill")
                             .font(.title3)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(.primary)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(completion.title)
@@ -292,13 +292,15 @@ struct ExploreView: View {
     // MARK: - Search Button
 
     private var searchButton: some View {
-        Button {
+        let isDisabled = viewModel.pinnedCoordinate == nil || viewModel.isSearching
+
+        return Button {
             viewModel.performSearch()
         } label: {
             HStack(spacing: 8) {
                 if viewModel.isSearching {
                     ProgressView()
-                        .tint(.white)
+                        .tint(isDisabled ? Color(.systemGray) : Color(.systemBackground))
                 } else {
                     Image(systemName: "magnifyingglass")
                 }
@@ -307,11 +309,12 @@ struct ExploreView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
+            .foregroundStyle(isDisabled ? Color(.systemGray) : Color(.systemBackground))
+            .background(isDisabled ? Color(.systemGray5) : Color.primary, in: RoundedRectangle(cornerRadius: 10))
         }
         .accessibilityIdentifier("FindNearbyPostsButton")
-        .buttonStyle(.borderedProminent)
-        .tint(.blue)
-        .disabled(viewModel.pinnedCoordinate == nil || viewModel.isSearching)
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
         .padding(.horizontal, 16)
     }
 
@@ -329,10 +332,18 @@ struct ExploreView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
+                .foregroundStyle(viewModel.momentSaved ? Color(.systemGray2) : .primary)
+                .background(
+                    viewModel.momentSaved ? Color(.systemGray6) : Color.primary.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: 10)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(viewModel.momentSaved ? Color(.systemGray5) : Color.primary.opacity(0.2))
+                )
             }
             .accessibilityIdentifier("SaveMomentButton")
-            .buttonStyle(.bordered)
-            .tint(viewModel.momentSaved ? .green : .purple)
+            .buttonStyle(.plain)
             .disabled(viewModel.momentSaved)
             .padding(.horizontal, 16)
         }

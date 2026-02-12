@@ -79,7 +79,7 @@ extension User {
     /// Falls back to a default gradient when the input is nil or empty.
     static func parseGradientColors(_ strings: [String]?) -> [Color] {
         guard let strings, !strings.isEmpty else {
-            return [.blue, .purple]
+            return [.gray, Color(.systemGray3)]
         }
         return strings.map { Color(hex: $0) }
     }
@@ -100,7 +100,7 @@ extension User {
         username: "me",
         displayName: "You",
         bio: "This is you!",
-        gradientColors: [.blue, .purple],
+        gradientColors: [.gray, Color(.systemGray3)],
         joinDate: Calendar.current.date(byAdding: .month, value: -8, to: Date())!,
         postCount: 24,
         friendCount: 12,
@@ -108,18 +108,18 @@ extension User {
     )
 
     private static let allGradients: [[Color]] = [
-        [.blue, .cyan],
-        [.purple, .pink],
-        [.orange, .red],
-        [.green, .mint],
-        [.indigo, .blue],
-        [.pink, .orange],
-        [.teal, .green],
-        [.red, .purple],
-        [.cyan, .indigo],
-        [.mint, .teal],
-        [.yellow, .orange],
-        [.brown, .orange],
+        [Color(.systemGray), Color(.systemGray3)],
+        [Color(.systemGray2), Color(.systemGray4)],
+        [Color(.systemGray3), Color(.systemGray5)],
+        [Color(.systemGray), Color(.systemGray4)],
+        [Color(.systemGray2), Color(.systemGray5)],
+        [Color(.systemGray3), Color(.systemGray)],
+        [Color(.systemGray4), Color(.systemGray2)],
+        [Color(.systemGray5), Color(.systemGray3)],
+        [Color(.systemGray), Color(.systemGray2)],
+        [Color(.systemGray3), Color(.systemGray4)],
+        [Color(.systemGray2), Color(.systemGray)],
+        [Color(.systemGray4), Color(.systemGray3)],
     ]
 
     static func sampleFriends() -> [User] {

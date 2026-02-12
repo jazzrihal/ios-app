@@ -138,9 +138,10 @@ struct FriendProfileView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
+                    .foregroundStyle(Color(.systemBackground))
+                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .buttonStyle(.plain)
 
             case .pendingSent:
                 Button {
@@ -154,9 +155,10 @@ struct FriendProfileView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
+                    .foregroundStyle(.secondary)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.bordered)
-                .tint(.secondary)
+                .buttonStyle(.plain)
 
             case .pendingReceived:
                 HStack(spacing: 10) {
@@ -171,9 +173,10 @@ struct FriendProfileView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
+                        .foregroundStyle(Color(.systemBackground))
+                        .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
+                    .buttonStyle(.plain)
 
                     Button {
                         viewModel.declineRequest(store: store)
@@ -186,9 +189,10 @@ struct FriendProfileView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
+                        .foregroundStyle(.secondary)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
+                    .buttonStyle(.plain)
                 }
 
             case .friends:
@@ -198,10 +202,10 @@ struct FriendProfileView: View {
                     Text("Friends")
                         .font(.subheadline.weight(.semibold))
                 }
-                .foregroundStyle(.green)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(.green.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
             }
         }
     }

@@ -30,7 +30,7 @@ struct PostPreviewView: View {
                     if let uploadError {
                         Text(uploadError)
                             .font(.caption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(.primary)
                             .padding(.horizontal, 16)
                     }
 
@@ -47,7 +47,7 @@ struct PostPreviewView: View {
                         onDiscard()
                     }
                     .accessibilityIdentifier("DiscardButton")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.primary)
                     .disabled(isUploading)
                 }
             }
@@ -94,7 +94,7 @@ struct PostPreviewView: View {
 
             HStack(spacing: 10) {
                 Image(systemName: "clock.fill")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.primary)
                     .font(.title3)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -144,7 +144,7 @@ struct PostPreviewView: View {
                 .foregroundStyle(.secondary)
         } else if let name = locationManager.locationName {
             Image(systemName: "mappin.circle.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(.primary)
                 .font(.title3)
             Text(name)
                 .font(.subheadline)
@@ -179,7 +179,7 @@ struct PostPreviewView: View {
             .padding(4)
             .background(
                 .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: 12)
+                in: RoundedRectangle(cornerRadius: 10)
             )
         }
         .padding(.horizontal, 16)
@@ -189,20 +189,22 @@ struct PostPreviewView: View {
         Button {
             uploadAndPost()
         } label: {
-            if isUploading {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-            } else {
-                Text("Post")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+            Group {
+                if isUploading {
+                    ProgressView()
+                        .tint(Color(.systemGray))
+                } else {
+                    Text("Post")
+                        .font(.headline)
+                }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .foregroundStyle(isUploading ? Color(.systemGray) : Color(.systemBackground))
+            .background(isUploading ? Color(.systemGray5) : Color.primary, in: RoundedRectangle(cornerRadius: 10))
         }
         .accessibilityIdentifier("PostButton")
-        .buttonStyle(.borderedProminent)
-        .tint(.blue)
+        .buttonStyle(.plain)
         .disabled(isUploading)
         .padding(.horizontal, 16)
         .padding(.bottom, 32)
@@ -301,16 +303,16 @@ struct ScopeOptionButton: View {
                 Text(option.subtitle)
                     .font(.caption2)
                     .foregroundStyle(
-                        isSelected ? Color.blue.opacity(0.8) : Color.gray.opacity(0.4)
+                        isSelected ? Color.primary.opacity(0.8) : Color.gray.opacity(0.4)
                     )
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(
-                isSelected ? Color.blue.opacity(0.12) : Color.clear,
+                isSelected ? Color.primary.opacity(0.12) : Color.clear,
                 in: RoundedRectangle(cornerRadius: 10)
             )
-            .foregroundStyle(isSelected ? .blue : .secondary)
+            .foregroundStyle(isSelected ? .primary : .secondary)
         }
         .buttonStyle(.plain)
     }

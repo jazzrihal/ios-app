@@ -117,7 +117,7 @@ struct PostDetailView: View {
                 if viewModel.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.body)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.white)
                         .padding(10)
                         .background(.ultraThinMaterial, in: Circle())
                 }
@@ -125,7 +125,7 @@ struct PostDetailView: View {
                 if viewModel.isLiked {
                     Image(systemName: "heart.fill")
                         .font(.body)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.white)
                         .padding(10)
                         .background(.ultraThinMaterial, in: Circle())
                 }
@@ -260,10 +260,10 @@ struct PostDetailView: View {
         switch action {
         case .like where viewModel.isLiked:
             iconName = "heart.fill"
-            iconColor = .red
+            iconColor = Color(.darkGray)
         case .pinToProfile where viewModel.isPinned:
             iconName = "pin.fill"
-            iconColor = .orange
+            iconColor = Color(.darkGray)
         default:
             iconName = action.iconName
             iconColor = Color(.darkGray)
