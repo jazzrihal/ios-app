@@ -38,22 +38,30 @@ class FriendsStore {
         isLoading = true
         errorMessage = nil
 
-        do {
-            async let friendsResult = loadFriends(userId: userId)
-            async let incomingResult = loadIncomingRequests(userId: userId)
-            async let sentResult = loadSentRequests(userId: userId)
-            async let suggestedResult = loadSuggestedUsers(userId: userId)
+        // Load friends, requests, and suggestions independently so that a
+        // failure in one (e.g. suggested users) doesn't discard the others.
+        async let friendsResult = Result { try await loadFriends(userId: userId) }
+        async let incomingResult = Result { try await loadIncomingRequests(userId: userId) }
+        async let sentResult = Result { try await loadSentRequests(userId: userId) }
+        async let suggestedResult = Result { try await loadSuggestedUsers(userId: userId) }
 
-            let (loadedFriends, incoming, sent, suggested) = try await (
-                friendsResult, incomingResult, sentResult, suggestedResult
-            )
+        let (fr, ir, sr, sgr) = await (friendsResult, incomingResult, sentResult, suggestedResult)
 
-            friends = loadedFriends
-            incomingRequests = incoming
-            pendingSentRequests = Set(sent.map(\.id))
-            suggestedUsers = suggested
-        } catch {
-            errorMessage = error.localizedDescription
+        switch fr {
+        case let .success(value): friends = value
+        case let .failure(error): errorMessage = error.localizedDescription
+        }
+        switch ir {
+        case let .success(value): incomingRequests = value
+        case let .failure(error): errorMessage = error.localizedDescription
+        }
+        switch sr {
+        case let .success(value): pendingSentRequests = Set(value.map(\.id))
+        case let .failure(error): errorMessage = error.localizedDescription
+        }
+        switch sgr {
+        case let .success(value): suggestedUsers = value
+        case let .failure(error): errorMessage = error.localizedDescription
         }
 
         isLoading = false
@@ -315,10 +323,15 @@ class FriendsStore {
             + Array(pendingSentRequests)
             + [userId]
 
+        // Format as a parenthesized list — PostgREST `in` filters require
+        // `(val1,val2,…)` syntax; passing a Swift array directly produces
+        // `{…}` which PostgREST rejects.
+        let excludeList = "(\(excludeIds.map(\.uuidString).joined(separator: ",")))"
+
         let profiles: [PublicSchema.ProfilesSelect] = try await SupabaseManager.client
             .from("profiles")
             .select()
-            .not("id", operator: .in, value: excludeIds)
+            .not("id", operator: .in, value: excludeList)
             .limit(20)
             .execute()
             .value
