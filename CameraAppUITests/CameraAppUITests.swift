@@ -69,11 +69,52 @@ final class CameraAppUITests: XCTestCase {
     // MARK: - Camera Flow Tests
 
     // On simulator the camera tab opens UIImagePickerController in photo-library
-    // mode. Tests interact with the system picker's Cancel button and photo cells.
+    // mode. Tests interact with the system picker's Cancel button and photo grid.
 
     /// The system picker's Cancel button lives in a navigation bar.
     private var pickerCancelButton: XCUIElement {
         app.navigationBars.buttons["Cancel"]
+    }
+
+    /// Selects the first photo in the system photo picker, handling iOS version
+    /// differences. On iOS 26+ the picker uses Image elements instead of
+    /// collection-view cells, and may show an onboarding banner that must be
+    /// scrolled past.
+    private func tapFirstPickerPhoto() {
+        // iOS 26+: photos are Image elements with identifier PXGGridLayout-Info
+        let gridPhotos = app.images.matching(
+            NSPredicate(format: "identifier == 'PXGGridLayout-Info'")
+        )
+
+        if gridPhotos.firstMatch.waitForExistence(timeout: 5) {
+            // Scroll the picker so photos are visible past any onboarding banner
+            let scrollView = app.scrollViews["photosView_content_scroll_view"]
+            if scrollView.exists {
+                scrollView.swipeUp()
+            }
+
+            // Find a hittable photo after scrolling
+            let photoCount = gridPhotos.count
+            for index in 0 ..< photoCount {
+                let photo = gridPhotos.element(boundBy: index)
+                if photo.exists, photo.isHittable {
+                    photo.tap()
+                    return
+                }
+            }
+            // Last resort: force-tap the first photo via its coordinate
+            gridPhotos.firstMatch.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+            ).tap()
+        } else {
+            // Fallback for older iOS: collection view cells
+            let firstCell = app.collectionViews.cells.firstMatch
+            XCTAssertTrue(
+                firstCell.waitForExistence(timeout: 5),
+                "At least one photo should be available in the simulator library"
+            )
+            firstCell.tap()
+        }
     }
 
     func testCameraTabOpensPhotoPicker() {
@@ -111,12 +152,7 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
 
         // Select the first photo in the library
-        let firstPhoto = app.collectionViews.cells.firstMatch
-        XCTAssertTrue(
-            firstPhoto.waitForExistence(timeout: 5),
-            "At least one photo should be available in the simulator library"
-        )
-        firstPhoto.tap()
+        tapFirstPickerPhoto()
 
         // Post preview should appear with New Post title
         let newPostNav = app.navigationBars["New Post"]
@@ -138,9 +174,7 @@ final class CameraAppUITests: XCTestCase {
         app.tabBars.buttons["Camera"].tap()
         XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
 
-        let firstPhoto = app.collectionViews.cells.firstMatch
-        XCTAssertTrue(firstPhoto.waitForExistence(timeout: 5))
-        firstPhoto.tap()
+        tapFirstPickerPhoto()
 
         // Wait for post preview
         let newPostNav = app.navigationBars["New Post"]
@@ -163,9 +197,7 @@ final class CameraAppUITests: XCTestCase {
         app.tabBars.buttons["Camera"].tap()
         XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
 
-        let firstPhoto = app.collectionViews.cells.firstMatch
-        XCTAssertTrue(firstPhoto.waitForExistence(timeout: 5))
-        firstPhoto.tap()
+        tapFirstPickerPhoto()
 
         // Wait for post preview
         let newPostNav = app.navigationBars["New Post"]
