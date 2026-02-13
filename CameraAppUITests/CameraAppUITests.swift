@@ -68,20 +68,21 @@ final class CameraAppUITests: XCTestCase {
 
     // MARK: - Camera Flow Tests
 
-    func testCameraTabOpensFullScreenCover() {
+    // On simulator the camera tab opens UIImagePickerController in photo-library
+    // mode. Tests interact with the system picker's Cancel button and photo cells.
+
+    /// The system picker's Cancel button lives in a navigation bar.
+    private var pickerCancelButton: XCUIElement {
+        app.navigationBars.buttons["Cancel"]
+    }
+
+    func testCameraTabOpensPhotoPicker() {
         app.tabBars.buttons["Camera"].tap()
 
-        // The simulator camera view should appear with identifiable elements
-        let cancelButton = app.buttons["CameraCancelButton"]
+        // The system photo picker should appear with a Cancel button
         XCTAssertTrue(
-            cancelButton.waitForExistence(timeout: 5),
-            "Camera cancel button should appear when camera opens"
-        )
-
-        let shutterButton = app.buttons["CameraShutterButton"]
-        XCTAssertTrue(
-            shutterButton.exists,
-            "Camera shutter button should be visible"
+            pickerCancelButton.waitForExistence(timeout: 5),
+            "Photo picker Cancel button should appear when camera tab opens"
         )
     }
 
@@ -89,36 +90,39 @@ final class CameraAppUITests: XCTestCase {
         // Start on Explore
         XCTAssertTrue(app.tabBars.buttons["Explore"].isSelected)
 
-        // Open camera
+        // Open camera (shows photo library picker on simulator)
         app.tabBars.buttons["Camera"].tap()
-        let cancelButton = app.buttons["CameraCancelButton"]
-        XCTAssertTrue(cancelButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
 
-        // Dismiss camera
-        cancelButton.tap()
+        // Dismiss picker
+        pickerCancelButton.tap()
 
         // Should return to Explore
         let exploreNav = app.navigationBars["Explore"]
         XCTAssertTrue(
             exploreNav.waitForExistence(timeout: 3),
-            "Should return to Explore tab after dismissing camera"
+            "Should return to Explore tab after dismissing picker"
         )
     }
 
-    func testCameraShutterOpensPostPreview() {
-        // Open camera
+    func testPhotoSelectionOpensPostPreview() {
+        // Open camera (shows photo library picker on simulator)
         app.tabBars.buttons["Camera"].tap()
-        let shutterButton = app.buttons["CameraShutterButton"]
-        XCTAssertTrue(shutterButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
 
-        // Tap shutter to simulate capture
-        shutterButton.tap()
+        // Select the first photo in the library
+        let firstPhoto = app.collectionViews.cells.firstMatch
+        XCTAssertTrue(
+            firstPhoto.waitForExistence(timeout: 5),
+            "At least one photo should be available in the simulator library"
+        )
+        firstPhoto.tap()
 
         // Post preview should appear with New Post title
         let newPostNav = app.navigationBars["New Post"]
         XCTAssertTrue(
             newPostNav.waitForExistence(timeout: 5),
-            "Post preview screen should appear after capture"
+            "Post preview screen should appear after selecting a photo"
         )
 
         // Verify key post preview elements exist
@@ -129,12 +133,14 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertTrue(postButton.exists, "Post button should exist")
     }
 
-    func testPostPreviewDiscardReturnsToCameraView() {
-        // Open camera and capture
+    func testPostPreviewDiscardReturnsToPhotoPicker() {
+        // Open camera and select a photo
         app.tabBars.buttons["Camera"].tap()
-        let shutterButton = app.buttons["CameraShutterButton"]
-        XCTAssertTrue(shutterButton.waitForExistence(timeout: 3))
-        shutterButton.tap()
+        XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
+
+        let firstPhoto = app.collectionViews.cells.firstMatch
+        XCTAssertTrue(firstPhoto.waitForExistence(timeout: 5))
+        firstPhoto.tap()
 
         // Wait for post preview
         let newPostNav = app.navigationBars["New Post"]
@@ -145,19 +151,21 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertTrue(discardButton.exists, "Discard button should exist")
         discardButton.tap()
 
-        // Should return to camera view (shutter button visible again)
+        // Should return to the photo picker (Cancel button visible again)
         XCTAssertTrue(
-            shutterButton.waitForExistence(timeout: 3),
-            "Camera shutter should reappear after discarding"
+            pickerCancelButton.waitForExistence(timeout: 3),
+            "Photo picker should reappear after discarding"
         )
     }
 
     func testPostPreviewPostDismissesCameraFlow() {
-        // Open camera and capture
+        // Open camera and select a photo
         app.tabBars.buttons["Camera"].tap()
-        let shutterButton = app.buttons["CameraShutterButton"]
-        XCTAssertTrue(shutterButton.waitForExistence(timeout: 3))
-        shutterButton.tap()
+        XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
+
+        let firstPhoto = app.collectionViews.cells.firstMatch
+        XCTAssertTrue(firstPhoto.waitForExistence(timeout: 5))
+        firstPhoto.tap()
 
         // Wait for post preview
         let newPostNav = app.navigationBars["New Post"]
