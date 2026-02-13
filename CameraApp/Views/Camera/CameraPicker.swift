@@ -1,13 +1,16 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Camera Picker (UIImagePickerController wrapper)
+
 struct CameraPicker: UIViewControllerRepresentable {
-    @Environment(\.dismiss) private var dismiss
-    @Binding var image: UIImage?
+    let sourceType: UIImagePickerController.SourceType
+    let onCapture: (UIImage) -> Void
+    let onCancel: () -> Void
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
-        picker.sourceType = .camera
+        picker.sourceType = sourceType
         picker.delegate = context.coordinator
         return picker
     }
@@ -29,14 +32,13 @@ struct CameraPicker: UIViewControllerRepresentable {
             _ picker: UIImagePickerController,
             didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
         ) {
-            if let uiImage = info[.originalImage] as? UIImage {
-                parent.image = uiImage
+            if let image = info[.originalImage] as? UIImage {
+                parent.onCapture(image)
             }
-            parent.dismiss()
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
+            parent.onCancel()
         }
     }
 }

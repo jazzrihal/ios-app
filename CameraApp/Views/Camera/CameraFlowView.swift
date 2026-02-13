@@ -1,57 +1,39 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Camera Flow View (manages camera → preview transition)
 
 struct CameraFlowView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var capturedPhoto: CapturedPhoto?
-    @State private var camera = CameraModel()
 
-    var body: some View {
-        cameraView
-            .fullScreenCover(item: $capturedPhoto) { photo in
-                PostPreviewView(
-                    image: photo.image,
-                    onDiscard: {
-                        capturedPhoto = nil
-                        #if !targetEnvironment(simulator)
-                            camera.startSession()
-                        #endif
-                    },
-                    onPost: {
-                        #if !targetEnvironment(simulator)
-                            camera.stopSession()
-                        #endif
-                        dismiss()
-                    }
-                )
-            }
+    private var sourceType: UIImagePickerController.SourceType {
+        #if targetEnvironment(simulator)
+            .photoLibrary
+        #else
+            .camera
+        #endif
     }
 
-    @ViewBuilder private var cameraView: some View {
-        #if targetEnvironment(simulator)
-            SimulatorCameraView(
-                onCapture: { image in
-                    capturedPhoto = CapturedPhoto(image: image)
+    var body: some View {
+        CameraPicker(
+            sourceType: sourceType,
+            onCapture: { image in
+                capturedPhoto = CapturedPhoto(image: image)
+            },
+            onCancel: { dismiss() }
+        )
+        .ignoresSafeArea()
+        .fullScreenCover(item: $capturedPhoto) { photo in
+            PostPreviewView(
+                image: photo.image,
+                onDiscard: {
+                    capturedPhoto = nil
                 },
-                onCancel: { dismiss() }
-            )
-        #else
-            CameraViewfinderView(
-                camera: camera,
-                onCapture: { image in
-                    camera.stopSession()
-                    capturedPhoto = CapturedPhoto(image: image)
-                },
-                onCancel: {
-                    camera.stopSession()
+                onPost: {
                     dismiss()
                 }
             )
-            .onAppear {
-                camera.configure()
-                camera.startSession()
-            }
-        #endif
+        }
     }
 }
