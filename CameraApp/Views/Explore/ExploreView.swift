@@ -204,7 +204,7 @@ struct ExploreView: View {
                                         .frame(width: 28, height: 28)
                                     Image(systemName: "mappin.circle.fill")
                                         .font(.title2)
-                                        .foregroundStyle(.white, .primary)
+                                        .foregroundStyle(Color(.systemBackground), .primary)
                                 }
                             }
                         }
