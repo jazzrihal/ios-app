@@ -232,7 +232,6 @@ final class ExploreViewModel {
     func performSearch() {
         guard let coord = pinnedCoordinate else { return }
         isSearching = true
-        hasSearched = false
         momentSaved = false
         searchError = nil
 

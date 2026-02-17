@@ -318,49 +318,58 @@ struct ExploreView: View {
     // MARK: - Action Buttons
 
     private var actionButtons: some View {
-        HStack(spacing: 10) {
-            Button {
-                viewModel.performSearch()
-            } label: {
-                HStack(spacing: 5) {
-                    if viewModel.isSearching {
-                        ProgressView()
-                            .controlSize(.mini)
-                    } else {
-                        Image(systemName: "magnifyingglass")
-                    }
-                    Text(viewModel.isSearching ? "Searching…" : "Search")
-                }
-                .font(.subheadline.weight(.medium))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .foregroundStyle(viewModel.pinnedCoordinate == nil ? .tertiary : .primary)
-                .background(Color.primary.opacity(0.08), in: Capsule())
-            }
-            .accessibilityIdentifier("FindNearbyPostsButton")
-            .buttonStyle(.plain)
-            .disabled(viewModel.pinnedCoordinate == nil || viewModel.isSearching)
+        let buttonShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
 
+        return HStack(spacing: 10) {
             if viewModel.hasSearched, !viewModel.posts.isEmpty {
                 Button {
                     viewModel.saveMoment(store: store)
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 6) {
                         Image(systemName: viewModel.momentSaved ? "checkmark" : "bookmark")
-                        Text(viewModel.momentSaved ? "Saved" : "Save Moment")
+                            .frame(width: 16, height: 16)
+                        Text("Save Moment")
+                            .hidden()
+                            .overlay {
+                                Text(viewModel.momentSaved ? "Saved" : "Save Moment")
+                            }
                     }
-                    .font(.subheadline.weight(.medium))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 20)
+                    .padding(.vertical, 10)
                     .foregroundStyle(viewModel.momentSaved ? .tertiary : .primary)
-                    .background(Color.primary.opacity(0.08), in: Capsule())
+                    .background(Color.primary.opacity(0.1), in: buttonShape)
                 }
                 .accessibilityIdentifier("SaveMomentButton")
                 .buttonStyle(.plain)
                 .disabled(viewModel.momentSaved)
             }
 
-            Spacer()
+            Button {
+                viewModel.performSearch()
+            } label: {
+                HStack(spacing: 6) {
+                    ZStack {
+                        if viewModel.isSearching {
+                            ProgressView()
+                                .controlSize(.mini)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                        }
+                    }
+                    .frame(width: 16, height: 16)
+
+                    Text("Search")
+                }
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 20)
+                .padding(.vertical, 10)
+                .foregroundStyle(viewModel.pinnedCoordinate == nil ? .tertiary : .primary)
+                .background(Color.primary.opacity(0.1), in: buttonShape)
+            }
+            .accessibilityIdentifier("FindNearbyPostsButton")
+            .buttonStyle(.plain)
+            .disabled(viewModel.pinnedCoordinate == nil || viewModel.isSearching)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
