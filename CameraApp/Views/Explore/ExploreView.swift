@@ -69,7 +69,7 @@ struct ExploreView: View {
             } label: {
                 HStack {
                     Group {
-                        if viewModel.isReverseGeocoding {
+                        if viewModel.isFetchingLocation || viewModel.isReverseGeocoding {
                             HStack(spacing: 6) {
                                 ProgressView()
                                     .controlSize(.mini)
@@ -428,6 +428,9 @@ struct ExploreView: View {
                         }
                     }
                 }
+            } else if viewModel.isFetchingLocation || viewModel.isSearching {
+                ProgressView()
+                    .padding(.top, 40)
             } else {
                 VStack(spacing: 12) {
                     Image(systemName: "sparkle.magnifyingglass")

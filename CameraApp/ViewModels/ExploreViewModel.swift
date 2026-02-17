@@ -57,6 +57,8 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
 
     /// Requests the user's current location and uses it for the first explore query.
     /// Only runs once; skips if a pending moment already set a coordinate.
+    /// Uses the cached location from CLLocationManager when available (fresh within 10 min)
+    /// to eliminate the loading state in the common case.
     func fetchCurrentLocationOnLaunch() {
         guard !hasLoadedInitialLocation else { return }
         hasLoadedInitialLocation = true
@@ -64,12 +66,32 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         guard pinnedCoordinate == nil else { return }
 
         let status = locationManager.authorizationStatus
-        if status == .authorizedWhenInUse || status == .authorizedAlways {
+        guard status == .authorizedWhenInUse || status == .authorizedAlways else {
+            if status == .notDetermined {
+                isFetchingLocation = true
+                locationManager.requestWhenInUseAuthorization()
+            }
+            return
+        }
+
+        // Use cached location for instant results when fresh enough
+        if let cached = locationManager.location,
+           cached.timestamp.timeIntervalSinceNow > -600 {
+            let coord = cached.coordinate
+            withAnimation(.spring(duration: 0.3)) {
+                pinnedCoordinate = coord
+                cameraPosition = .region(
+                    MKCoordinateRegion(
+                        center: coord,
+                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                    )
+                )
+            }
+            reverseGeocode(coord)
+            performSearch()
+        } else {
             isFetchingLocation = true
             locationManager.requestLocation()
-        } else if status == .notDetermined {
-            isFetchingLocation = true
-            locationManager.requestWhenInUseAuthorization()
         }
     }
 
