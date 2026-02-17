@@ -48,6 +48,26 @@ class MomentsStore {
         }
     }
 
+    // MARK: - Delete
+
+    /// Deletes a moment from Supabase and removes it from local state.
+    func deleteMoment(_ moment: Moment) async {
+        // Optimistic local removal
+        moments.removeAll { $0.id == moment.id }
+        nearbyPosts.removeValue(forKey: moment.id)
+
+        do {
+            try await SupabaseManager.client.from("moments")
+                .delete()
+                .eq("id", value: moment.id)
+                .execute()
+        } catch {
+            errorMessage = error.localizedDescription
+            // Reload to restore consistent state on failure
+            await loadMoments()
+        }
+    }
+
     // MARK: - Add
 
     func addMoment(date: Date, locationName: String, coordinate: CLLocationCoordinate2D) {

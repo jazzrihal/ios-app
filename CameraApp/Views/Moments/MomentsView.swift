@@ -22,21 +22,28 @@ struct MomentsView: View {
                         onNavigate: navigateToExplore
                     )
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 16) {
-                            ForEach(sortedMoments) { moment in
-                                let posts = store.nearbyPosts[moment.id] ?? []
-                                MomentCard(
-                                    moment: moment,
-                                    posts: posts
-                                ) {
-                                    navigateToExplore(moment)
+                    List {
+                        ForEach(sortedMoments) { moment in
+                            let posts = store.nearbyPosts[moment.id] ?? []
+                            MomentCard(
+                                moment: moment,
+                                posts: posts
+                            ) {
+                                navigateToExplore(moment)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    Task { await store.deleteMoment(moment) }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowBackground(Color.clear)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
                     }
+                    .listStyle(.plain)
                 }
             }
             .overlay {
