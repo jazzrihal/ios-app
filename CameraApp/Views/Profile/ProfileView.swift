@@ -4,6 +4,7 @@ import SwiftUI
 struct ProfileView: View {
     @Environment(AuthManager.self) private var authManager
     @Environment(FriendsStore.self) private var friendsStore
+    @Environment(UploadManager.self) private var uploadManager
 
     @State private var userPosts: [ImagePost] = []
     @State private var isLoadingPosts = false
@@ -31,6 +32,9 @@ struct ProfileView: View {
                 }
             }
             .task { await loadPosts() }
+            .onChange(of: uploadManager.completedUploadCount) {
+                Task { await loadPosts() }
+            }
         }
     }
 
@@ -41,7 +45,10 @@ struct ProfileView: View {
             VStack(spacing: 0) {
                 ProfileHeaderView(user: user) {
                     HStack(spacing: 16) {
-                        ProfileStatItem(value: userPosts.count, label: "Posts")
+                        ProfileStatItem(
+                            value: userPosts.count + uploadManager.pendingPosts.count,
+                            label: "Posts"
+                        )
                         ProfileStatItem(value: friendsStore.friends.count, label: "Friends")
                     }
                 }
@@ -54,21 +61,44 @@ struct ProfileView: View {
                         .padding(.top, 10)
                 }
 
-                ProfilePostsSection(isLoading: isLoadingPosts, posts: userPosts) {
-                    ProfilePostsEmptyState(
-                        icon: "camera",
-                        title: "No photos yet",
-                        subtitle: "Your photos will appear here."
-                    )
-                }
+                ProfilePostsSection(
+                    isLoading: isLoadingPosts,
+                    items: gridItems,
+                    uploadedPosts: userPosts,
+                    onRetry: { post in uploadManager.retryPost(post) },
+                    onRemove: { post in uploadManager.removePost(post) },
+                    emptyContent: {
+                        ProfilePostsEmptyState(
+                            icon: "camera",
+                            title: "No photos yet",
+                            subtitle: "Your photos will appear here."
+                        )
+                    }
+                )
                 .padding(.top, 16)
             }
         }
     }
 
+    // MARK: - Grid Items
+
+    /// Pending uploads first (newest at top), then server-side posts.
+    private var gridItems: [ProfileGridItem] {
+        let pendingItems: [ProfileGridItem] = uploadManager.pendingPosts.map { post in
+            let image: UIImage? = {
+                guard let data = uploadManager.loadImage(fileName: post.localImageFileName) else {
+                    return nil
+                }
+                return UIImage(data: data)
+            }()
+            return .pending(post, image)
+        }
+        let uploadedItems: [ProfileGridItem] = userPosts.map { .uploaded($0) }
+        return pendingItems + uploadedItems
+    }
+
     // MARK: - Data Loading
 
-    /// Loads the current user's posts from the `posts` table.
     private func loadPosts() async {
         guard let userId = authManager.userId,
               let user = authManager.currentProfile else { return }
@@ -112,4 +142,5 @@ struct ProfileView: View {
         .environment(AuthManager())
         .environment(FriendsStore())
         .environment(MomentsStore())
+        .environment(UploadManager())
 }

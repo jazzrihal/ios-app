@@ -33,9 +33,14 @@ struct FriendProfileView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
-                ProfilePostsSection(isLoading: viewModel.isLoadingPosts, posts: viewModel.userPosts) {
-                    friendPostsEmptyState
-                }
+                ProfilePostsSection(
+                    isLoading: viewModel.isLoadingPosts,
+                    items: viewModel.userPosts.map { .uploaded($0) },
+                    uploadedPosts: viewModel.userPosts,
+                    emptyContent: {
+                        friendPostsEmptyState
+                    }
+                )
                 .padding(.top, 16)
             }
         }

@@ -9,12 +9,12 @@ struct PostPreviewView: View {
     let onPost: () -> Void
 
     @Environment(AuthManager.self) private var authManager
+    @Environment(UploadManager.self) private var uploadManager
     @State private var caption = ""
     @State private var captureDate = Date()
     @State private var scope: PostScope = .friends
     @State private var locationManager = PostLocationManager()
-    @State private var isUploading = false
-    @State private var uploadError: String?
+    @State private var enqueueError: String?
     @FocusState private var captionFocused: Bool
 
     var body: some View {
@@ -27,10 +27,10 @@ struct PostPreviewView: View {
                     locationSection
                     scopeSection
 
-                    if let uploadError {
-                        Text(uploadError)
+                    if let enqueueError {
+                        Text(enqueueError)
                             .font(.caption)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.red)
                             .padding(.horizontal, 16)
                     }
 
@@ -48,7 +48,6 @@ struct PostPreviewView: View {
                     }
                     .accessibilityIdentifier("DiscardButton")
                     .foregroundStyle(.primary)
-                    .disabled(isUploading)
                 }
             }
         }
@@ -187,76 +186,42 @@ struct PostPreviewView: View {
 
     private var postButton: some View {
         Button {
-            uploadAndPost()
+            enqueueAndDismiss()
         } label: {
-            Group {
-                if isUploading {
-                    ProgressView()
-                        .tint(Color(.systemGray))
-                } else {
-                    Text("Post")
-                        .font(.headline)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .foregroundStyle(isUploading ? Color(.systemGray) : Color(.systemBackground))
-            .background(isUploading ? Color(.systemGray5) : Color.primary, in: RoundedRectangle(cornerRadius: 10))
+            Text("Post")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .foregroundStyle(Color(.systemBackground))
+                .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
         }
         .accessibilityIdentifier("PostButton")
         .buttonStyle(.plain)
-        .disabled(isUploading)
         .padding(.horizontal, 16)
         .padding(.bottom, 32)
     }
 
-    // MARK: - Upload Logic
+    // MARK: - Enqueue Logic
 
-    private func uploadAndPost() {
+    private func enqueueAndDismiss() {
         guard let userId = authManager.userId else {
-            uploadError = "Not signed in."
+            enqueueError = "Not signed in."
             return
         }
 
-        isUploading = true
-        uploadError = nil
+        let coord = locationManager.coordinate
+        let input = PostEnqueueInput(
+            image: image,
+            caption: caption.isEmpty ? nil : caption,
+            latitude: coord?.latitude ?? 0,
+            longitude: coord?.longitude ?? 0,
+            locationName: locationManager.locationName,
+            scope: scope.databaseValue,
+            userId: userId
+        )
+        uploadManager.enqueue(input)
 
-        Task {
-            do {
-                let postId = UUID()
-                guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-                    throw PostUploadError.imageConversion
-                }
-
-                // 1. Upload image to Storage
-                let storagePath = "\(userId)/\(postId).jpg"
-                try await SupabaseManager.client.storage
-                    .from("post-images")
-                    .upload(storagePath, data: imageData, options: .init(contentType: "image/jpeg"))
-
-                // 2. Insert post row directly
-                let coord = locationManager.coordinate
-                let insert = PublicSchema.PostsInsert(
-                    caption: caption.isEmpty ? nil : caption,
-                    createdAt: nil,
-                    id: postId,
-                    imagePath: storagePath,
-                    latitude: coord?.latitude ?? 0,
-                    location: nil,
-                    locationName: locationManager.locationName,
-                    longitude: coord?.longitude ?? 0,
-                    scope: scope.databaseValue,
-                    userId: userId
-                )
-                try await SupabaseManager.client.from("posts").insert(insert).execute()
-
-                // Success — dismiss
-                await MainActor.run { onPost() }
-            } catch {
-                uploadError = error.localizedDescription
-                isUploading = false
-            }
-        }
+        onPost()
     }
 
     // MARK: - Helpers
@@ -271,18 +236,6 @@ struct PostPreviewView: View {
         captureDate.formatted(
             .dateTime.hour().minute().second()
         )
-    }
-}
-
-// MARK: - Errors
-
-private enum PostUploadError: LocalizedError {
-    case imageConversion
-
-    var errorDescription: String? {
-        switch self {
-        case .imageConversion: "Failed to compress image."
-        }
     }
 }
 

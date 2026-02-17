@@ -94,20 +94,37 @@ struct ProfileBioView: View {
     }
 }
 
+// MARK: - Grid Item
+
+/// Unified type for the profile photo grid. Wraps either a server-side uploaded
+/// post or a local pending post that is still in the upload queue.
+enum ProfileGridItem: Identifiable {
+    case uploaded(ImagePost)
+    case pending(PendingPost, UIImage?)
+
+    var id: UUID {
+        switch self {
+        case let .uploaded(post): post.id
+        case let .pending(post, _): post.id
+        }
+    }
+}
+
 // MARK: - Photo Grid
 
 /// Instagram-style photo grid with navigation to post detail.
-/// Rows with fewer than `columnCount` items expand to fill the full width,
-/// keeping every cell square.
+/// Supports both uploaded posts (navigable) and pending posts (with status overlay).
 struct ProfilePhotoGrid: View {
-    let posts: [ImagePost]
+    let items: [ProfileGridItem]
+    let uploadedPosts: [ImagePost]
+    var onRetry: ((PendingPost) -> Void)?
+    var onRemove: ((PendingPost) -> Void)?
 
     private let columnCount = 3
     private let spacing: CGFloat = 2
 
-    /// Posts split into rows of `columnCount`, preserving original indices.
-    private var rows: [[(offset: Int, element: ImagePost)]] {
-        let enumerated = Array(posts.enumerated())
+    private var rows: [[(offset: Int, element: ProfileGridItem)]] {
+        let enumerated = Array(items.enumerated())
         return stride(from: 0, to: enumerated.count, by: columnCount).map {
             Array(enumerated[$0 ..< min($0 + columnCount, enumerated.count)])
         }
@@ -118,23 +135,38 @@ struct ProfilePhotoGrid: View {
             ForEach(rows.indices, id: \.self) { rowIndex in
                 HStack(spacing: spacing) {
                     ForEach(rows[rowIndex], id: \.element.id) { item in
-                        NavigationLink(
-                            destination: PostDetailView(
-                                posts: posts,
-                                initialIndex: item.offset,
-                                queryDate: Date()
-                            )
-                        ) {
-                            gridCell(for: item.element)
-                        }
-                        .buttonStyle(.plain)
+                        gridItemView(item: item.element, globalIndex: item.offset)
                     }
                 }
             }
         }
     }
 
-    private func gridCell(for post: ImagePost) -> some View {
+    @ViewBuilder
+    private func gridItemView(item: ProfileGridItem, globalIndex: Int) -> some View {
+        switch item {
+        case let .uploaded(post):
+            NavigationLink(
+                destination: PostDetailView(
+                    posts: uploadedPosts,
+                    initialIndex: uploadedPostIndex(for: post),
+                    queryDate: Date()
+                )
+            ) {
+                uploadedGridCell(for: post)
+            }
+            .buttonStyle(.plain)
+
+        case let .pending(post, image):
+            pendingGridCell(post: post, image: image)
+        }
+    }
+
+    private func uploadedPostIndex(for post: ImagePost) -> Int {
+        uploadedPosts.firstIndex(where: { $0.id == post.id }) ?? 0
+    }
+
+    private func uploadedGridCell(for post: ImagePost) -> some View {
         LazyImage(url: post.imageURL) { state in
             if let image = state.image {
                 Color.clear
@@ -161,6 +193,56 @@ struct ProfilePhotoGrid: View {
         .aspectRatio(1, contentMode: .fill)
         .clipped()
     }
+
+    private func pendingGridCell(post: PendingPost, image: UIImage?) -> some View {
+        ZStack {
+            if let image {
+                Color.clear
+                    .overlay {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    }
+                    .clipped()
+            } else {
+                Rectangle()
+                    .fill(Color(.systemGray5))
+            }
+
+            Color.black.opacity(0.3)
+
+            pendingStatusOverlay(for: post)
+        }
+        .aspectRatio(1, contentMode: .fill)
+        .clipped()
+        .onTapGesture {
+            if post.status == .failed {
+                onRetry?(post)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func pendingStatusOverlay(for post: PendingPost) -> some View {
+        switch post.status {
+        case .queued:
+            Image(systemName: "clock.fill")
+                .font(.title3)
+                .foregroundStyle(.white)
+        case .uploading:
+            ProgressView()
+                .tint(.white)
+        case .failed:
+            VStack(spacing: 4) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.red)
+                Text("Tap to retry")
+                    .font(.caption2)
+                    .foregroundStyle(.white)
+            }
+        }
+    }
 }
 
 // MARK: - Posts Section
@@ -169,21 +251,29 @@ struct ProfilePhotoGrid: View {
 /// photo grid depending on the current state.
 struct ProfilePostsSection<EmptyContent: View>: View {
     let isLoading: Bool
-    let posts: [ImagePost]
+    let items: [ProfileGridItem]
+    let uploadedPosts: [ImagePost]
+    var onRetry: ((PendingPost) -> Void)?
+    var onRemove: ((PendingPost) -> Void)?
     @ViewBuilder let emptyContent: () -> EmptyContent
 
     var body: some View {
         VStack(spacing: 0) {
             Divider()
 
-            if isLoading {
+            if isLoading, items.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
-            } else if posts.isEmpty {
+            } else if items.isEmpty {
                 emptyContent()
             } else {
-                ProfilePhotoGrid(posts: posts)
+                ProfilePhotoGrid(
+                    items: items,
+                    uploadedPosts: uploadedPosts,
+                    onRetry: onRetry,
+                    onRemove: onRemove
+                )
             }
         }
     }

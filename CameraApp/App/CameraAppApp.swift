@@ -2,9 +2,11 @@ import SwiftUI
 
 @main
 struct CameraAppApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var authManager = AuthManager()
     @State private var momentsStore = MomentsStore()
     @State private var friendsStore = FriendsStore()
+    @State private var uploadManager = UploadManager()
     @State private var showCamera = false
     @State private var previousTab: Int = 0
 
@@ -22,12 +24,23 @@ struct CameraAppApp: App {
             .environment(authManager)
             .environment(momentsStore)
             .environment(friendsStore)
+            .environment(uploadManager)
             .onChange(of: authManager.isAuthenticated, initial: true) {
                 if authManager.isAuthenticated, let uid = authManager.userId {
                     friendsStore.currentUserId = uid
                     momentsStore.currentUserId = uid
                     Task { await friendsStore.loadAll() }
                     Task { await momentsStore.loadMoments() }
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                switch newPhase {
+                case .active:
+                    uploadManager.handleForeground()
+                case .background:
+                    uploadManager.handleBackground()
+                default:
+                    break
                 }
             }
         }
