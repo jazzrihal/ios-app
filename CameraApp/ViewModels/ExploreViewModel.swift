@@ -6,7 +6,7 @@ import SwiftUI
 // MARK: - Explore View Model
 
 @Observable
-final class ExploreViewModel {
+final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
     // MARK: - Search Parameters
 
     var selectedDate = Date()
@@ -42,6 +42,76 @@ final class ExploreViewModel {
 
     var navigateToProfileUser: User?
     var navigateToPostIndex: Int?
+
+    // MARK: - Current Location
+
+    private let locationManager = CLLocationManager()
+    private var hasLoadedInitialLocation = false
+    var isFetchingLocation = false
+
+    override init() {
+        super.init()
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyKilometer
+    }
+
+    /// Requests the user's current location and uses it for the first explore query.
+    /// Only runs once; skips if a pending moment already set a coordinate.
+    func fetchCurrentLocationOnLaunch() {
+        guard !hasLoadedInitialLocation else { return }
+        hasLoadedInitialLocation = true
+
+        guard pinnedCoordinate == nil else { return }
+
+        let status = locationManager.authorizationStatus
+        if status == .authorizedWhenInUse || status == .authorizedAlways {
+            isFetchingLocation = true
+            locationManager.requestLocation()
+        } else if status == .notDetermined {
+            isFetchingLocation = true
+            locationManager.requestWhenInUseAuthorization()
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard isFetchingLocation else { return }
+        let status = manager.authorizationStatus
+        if status == .authorizedWhenInUse || status == .authorizedAlways {
+            manager.requestLocation()
+        } else if status != .notDetermined {
+            isFetchingLocation = false
+        }
+    }
+
+    func locationManager(
+        _ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]
+    ) {
+        guard isFetchingLocation else { return }
+        isFetchingLocation = false
+        guard let location = locations.first else { return }
+
+        // Don't override if the user already dropped a pin manually
+        guard pinnedCoordinate == nil else { return }
+
+        let coord = location.coordinate
+
+        withAnimation(.spring(duration: 0.3)) {
+            pinnedCoordinate = coord
+            cameraPosition = .region(
+                MKCoordinateRegion(
+                    center: coord,
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                )
+            )
+        }
+
+        reverseGeocode(coord)
+        performSearch()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError _: Error) {
+        isFetchingLocation = false
+    }
 
     // MARK: - Date Shortcuts
 

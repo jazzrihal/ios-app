@@ -48,6 +48,7 @@ struct ExploreView: View {
             }
             .onAppear {
                 viewModel.loadPendingMoment(store: store)
+                viewModel.fetchCurrentLocationOnLaunch()
             }
             .onChange(of: store.pendingMoment?.id) { _, _ in
                 viewModel.loadPendingMoment(store: store)
