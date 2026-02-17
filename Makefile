@@ -2,6 +2,7 @@
 
 SCHEME      := CameraApp
 DESTINATION := platform=iOS Simulator,name=iPhone 16,OS=latest
+RUN_DEVICE  := iPhone SE (3rd generation)
 
 .DEFAULT_GOAL := help
 
@@ -47,6 +48,18 @@ build: ## Build the app
 .PHONY: test
 test: ## Run all tests
 	xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -quiet
+
+.PHONY: run
+run: ## Build and run the app in the simulator (iPhone SE 3rd gen)
+	@UDID=$$(xcrun simctl list devices available | grep '$(RUN_DEVICE)' | tail -1 | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}') && \
+	echo "Using $(RUN_DEVICE) ($$UDID)" && \
+	(xcrun simctl boot "$$UDID" 2>/dev/null || true) && \
+	open -a Simulator && \
+	xcodebuild build -scheme $(SCHEME) -destination "id=$$UDID" -quiet && \
+	APP=$$(xcodebuild -scheme $(SCHEME) -destination "id=$$UDID" -showBuildSettings 2>/dev/null | \
+		awk '$$1=="BUILT_PRODUCTS_DIR" {dir=$$3} $$1=="FULL_PRODUCT_NAME" {name=$$3} END {print dir "/" name}') && \
+	xcrun simctl install "$$UDID" "$$APP" && \
+	xcrun simctl launch "$$UDID" com.cameraapp.CameraApp
 
 .PHONY: clean
 clean: ## Remove build artifacts
