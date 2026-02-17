@@ -1,7 +1,7 @@
 # CameraApp — run `make help` for available targets
 
 SCHEME      := CameraApp
-DESTINATION := platform=iOS Simulator,name=iPhone 16,OS=latest
+DESTINATION := platform=iOS Simulator,name=iPhone 17 Pro,OS=latest
 RUN_DEVICE  := iPhone SE (3rd generation)
 
 .DEFAULT_GOAL := help
