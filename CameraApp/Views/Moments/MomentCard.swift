@@ -1,5 +1,5 @@
+import NukeUI
 import SwiftUI
-import UIKit
 
 // MARK: - Moment Card
 
@@ -89,31 +89,16 @@ struct MomentCard: View {
     }
 
     private func thumbnailImage(for post: ImagePost) -> some View {
-        CachedAsyncImage(url: post.imageURL)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-// MARK: - Cached Async Image
-
-/// Downloads images independently of the SwiftUI view lifecycle, preventing
-/// cancellation when views are rapidly torn down and recreated.
-struct CachedAsyncImage: View {
-    let url: URL
-    @State private var image: UIImage?
-    @State private var failed = false
-
-    var body: some View {
-        Group {
-            if let image {
+        LazyImage(url: post.imageURL) { state in
+            if let image = state.image {
                 Color.clear
                     .overlay {
-                        Image(uiImage: image)
+                        image
                             .resizable()
                             .scaledToFill()
                     }
                     .clipped()
-            } else if failed {
+            } else if state.error != nil {
                 Rectangle()
                     .fill(Color(.systemGray5))
                     .overlay {
@@ -126,48 +111,7 @@ struct CachedAsyncImage: View {
                     .overlay { ProgressView().tint(.secondary) }
             }
         }
-        .onAppear { loadImage() }
-    }
-
-    private func loadImage() {
-        if image != nil { return }
-        if let cached = ImageCache.shared[url] {
-            image = cached
-            return
-        }
-        Task.detached(priority: .userInitiated) {
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                guard let downloaded = UIImage(data: data) else {
-                    await MainActor.run { failed = true }
-                    return
-                }
-                ImageCache.shared[url] = downloaded
-                await MainActor.run { image = downloaded }
-            } catch {
-                await MainActor.run { failed = true }
-            }
-        }
-    }
-}
-
-// MARK: - Image Cache
-
-/// Thread-safe in-memory image cache backed by `NSCache`, which automatically
-/// evicts entries under memory pressure.
-private final class ImageCache: @unchecked Sendable {
-    static let shared = ImageCache()
-    private let store = NSCache<NSURL, UIImage>()
-
-    subscript(url: URL) -> UIImage? {
-        get { store.object(forKey: url as NSURL) }
-        set {
-            if let newValue {
-                store.setObject(newValue, forKey: url as NSURL)
-            } else {
-                store.removeObject(forKey: url as NSURL)
-            }
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

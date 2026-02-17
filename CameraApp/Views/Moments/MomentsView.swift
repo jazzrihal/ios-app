@@ -1,9 +1,11 @@
 import MapKit
+import Nuke
 import SwiftUI
 
 struct MomentsView: View {
     @Environment(MomentsStore.self) private var store
     @State private var showMap = false
+    @State private var prefetcher = ImagePrefetcher()
 
     var body: some View {
         NavigationStack {
@@ -58,6 +60,10 @@ struct MomentsView: View {
                         .frame(width: 100)
                     }
                 }
+            }
+            .onChange(of: store.nearbyPosts.keys.sorted()) { _, _ in
+                let urls = store.nearbyPosts.values.flatMap { $0.map(\.imageURL) }
+                prefetcher.startPrefetching(with: urls)
             }
         }
     }

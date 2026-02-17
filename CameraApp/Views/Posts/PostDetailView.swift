@@ -1,4 +1,5 @@
 import CoreLocation
+import NukeUI
 import SwiftUI
 import UIKit
 
@@ -138,12 +139,8 @@ struct PostDetailView: View {
     // MARK: - Post Image
 
     private func postImage(for displayPost: ImagePost) -> some View {
-        AsyncImage(url: displayPost.imageURL) { phase in
-            switch phase {
-            case .empty:
-                ProgressView()
-                    .tint(.white)
-            case let .success(image):
+        LazyImage(url: displayPost.imageURL) { state in
+            if let image = state.image {
                 image
                     .resizable()
                     .scaledToFit()
@@ -170,7 +167,7 @@ struct PostDetailView: View {
                         viewModel.handleDoubleTap()
                     }
                     .clipped()
-            case .failure:
+            } else if state.error != nil {
                 VStack(spacing: 6) {
                     Image(systemName: "photo.badge.exclamationmark")
                         .font(.title2)
@@ -178,8 +175,9 @@ struct PostDetailView: View {
                         .font(.caption)
                 }
                 .foregroundStyle(.gray)
-            @unknown default:
-                EmptyView()
+            } else {
+                ProgressView()
+                    .tint(.white)
             }
         }
     }

@@ -1,3 +1,4 @@
+import NukeUI
 import SwiftUI
 
 // MARK: - Post Card
@@ -37,15 +38,8 @@ struct PostCard: View {
             Button {
                 onTapPost()
             } label: {
-                AsyncImage(url: post.imageURL) { phase in
-                    switch phase {
-                    case .empty:
-                        ZStack {
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                            ProgressView()
-                        }
-                    case let .success(image):
+                LazyImage(url: post.imageURL) { state in
+                    if let image = state.image {
                         Color.clear
                             .overlay {
                                 image
@@ -53,7 +47,7 @@ struct PostCard: View {
                                     .scaledToFill()
                             }
                             .clipped()
-                    case .failure:
+                    } else if state.error != nil {
                         ZStack {
                             Rectangle()
                                 .fill(Color(.systemGray5))
@@ -65,8 +59,12 @@ struct PostCard: View {
                             }
                             .foregroundStyle(.secondary)
                         }
-                    @unknown default:
-                        EmptyView()
+                    } else {
+                        ZStack {
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                            ProgressView()
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity)

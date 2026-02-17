@@ -1,4 +1,5 @@
 import MapKit
+import Nuke
 import SwiftUI
 
 struct ExploreView: View {
@@ -6,6 +7,7 @@ struct ExploreView: View {
 
     @Environment(MomentsStore.self) private var store
     @State private var viewModel = ExploreViewModel()
+    @State private var prefetcher = ImagePrefetcher()
     @FocusState private var isSearchFieldFocused: Bool
 
     // MARK: - Body
@@ -44,6 +46,10 @@ struct ExploreView: View {
             }
             .onChange(of: store.pendingMoment?.id) { _, _ in
                 viewModel.loadPendingMoment(store: store)
+            }
+            .onChange(of: viewModel.posts.map(\.id)) { _, _ in
+                let urls = viewModel.posts.map(\.imageURL)
+                prefetcher.startPrefetching(with: urls)
             }
         }
     }

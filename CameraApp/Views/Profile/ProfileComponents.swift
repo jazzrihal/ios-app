@@ -1,3 +1,4 @@
+import NukeUI
 import SwiftUI
 
 // MARK: - Post Row (excludes geography column)
@@ -134,13 +135,8 @@ struct ProfilePhotoGrid: View {
     }
 
     private func gridCell(for post: ImagePost) -> some View {
-        AsyncImage(url: post.imageURL) { phase in
-            switch phase {
-            case .empty:
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .overlay { ProgressView() }
-            case let .success(image):
+        LazyImage(url: post.imageURL) { state in
+            if let image = state.image {
                 Color.clear
                     .overlay {
                         image
@@ -148,7 +144,7 @@ struct ProfilePhotoGrid: View {
                             .scaledToFill()
                     }
                     .clipped()
-            case .failure:
+            } else if state.error != nil {
                 Rectangle()
                     .fill(Color(.systemGray5))
                     .overlay {
@@ -156,8 +152,10 @@ struct ProfilePhotoGrid: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-            @unknown default:
-                EmptyView()
+            } else {
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .overlay { ProgressView() }
             }
         }
         .aspectRatio(1, contentMode: .fill)
