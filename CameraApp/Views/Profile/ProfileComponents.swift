@@ -120,24 +120,18 @@ struct ProfilePhotoGrid: View {
     var onRetry: ((PendingPost) -> Void)?
     var onRemove: ((PendingPost) -> Void)?
 
-    private let columnCount = 3
     private let spacing: CGFloat = 2
 
-    private var rows: [[(offset: Int, element: ProfileGridItem)]] {
-        let enumerated = Array(items.enumerated())
-        return stride(from: 0, to: enumerated.count, by: columnCount).map {
-            Array(enumerated[$0 ..< min($0 + columnCount, enumerated.count)])
-        }
-    }
+    private let columns = [
+        GridItem(.flexible(), spacing: 2),
+        GridItem(.flexible(), spacing: 2),
+        GridItem(.flexible(), spacing: 2),
+    ]
 
     var body: some View {
-        VStack(spacing: spacing) {
-            ForEach(rows.indices, id: \.self) { rowIndex in
-                HStack(spacing: spacing) {
-                    ForEach(rows[rowIndex], id: \.element.id) { item in
-                        gridItemView(item: item.element, globalIndex: item.offset)
-                    }
-                }
+        LazyVGrid(columns: columns, spacing: spacing) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                gridItemView(item: item, globalIndex: index)
             }
         }
     }
