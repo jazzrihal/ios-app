@@ -75,7 +75,9 @@ final class ExploreViewModel {
     }
 
     func applyDateShortcut(_ shortcut: DateShortcut) {
-        withAnimation(.spring(duration: 0.3)) {
+        var transaction = Transaction()
+        transaction.animation = nil
+        withTransaction(transaction) {
             selectedDate = shortcut.date
         }
     }

@@ -14,17 +14,21 @@ struct ExploreView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 8) {
-                    dateSelector
-                    locationSelector
-                    searchButton
-                    saveMomentButton
+            VStack(spacing: 0) {
+                filterHeader
+
+                expandedMap
+                expandedDatePicker
+
+                actionButtons
+
+                Divider()
+
+                ScrollView {
                     resultsSection
                 }
             }
-            .navigationTitle("Explore")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: Binding(
                 get: { viewModel.navigateToProfileUser != nil },
                 set: { if !$0 { viewModel.navigateToProfileUser = nil } }
@@ -54,53 +58,90 @@ struct ExploreView: View {
         }
     }
 
-    // MARK: - Date Selector
+    // MARK: - Fixed Filter Header
 
-    private var dateSelector: some View {
-        VStack(spacing: 0) {
+    private var filterHeader: some View {
+        VStack(alignment: .leading, spacing: 0) {
             Button {
-                viewModel.toggleDatePicker()
+                viewModel.toggleMap()
             } label: {
                 HStack {
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.title3)
-                        .foregroundStyle(.primary)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Search around")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(viewModel.selectedDate.formatted(.dateTime.month(.wide).day().year().hour().minute()))
-                            .font(.subheadline.weight(.medium))
+                    Group {
+                        if viewModel.isReverseGeocoding {
+                            HStack(spacing: 6) {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                Text("Finding location…")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else if let locationName = viewModel.locationName {
+                            Text(locationName)
+                                .font(.title3.weight(.semibold))
+                                .lineLimit(1)
+                        } else {
+                            Text("Choose a location")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.down")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(viewModel.showDatePicker ? 180 : 0))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(viewModel.showMap ? 180 : 0))
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
 
-            if viewModel.showDatePicker {
+            Button {
+                viewModel.toggleDatePicker()
+            } label: {
+                HStack {
+                    Text(viewModel.selectedDate.formatted(.dateTime.month(.wide).day().year().hour().minute()))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(viewModel.showDatePicker ? 180 : 0))
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Expanded Date Picker
+
+    @ViewBuilder private var expandedDatePicker: some View {
+        if viewModel.showDatePicker {
+            VStack(spacing: 12) {
                 dateShortcuts
 
-                DatePicker(
-                    "Select date & time",
-                    selection: $viewModel.selectedDate,
-                    in: ...Date(),
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .datePickerStyle(.graphical)
+                HStack {
+                    DatePicker(
+                        "Date & time",
+                        selection: $viewModel.selectedDate,
+                        in: ...Date(),
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+
+                    Spacer()
+                }
                 .padding(.horizontal, 16)
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
+            .padding(.bottom, 6)
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
@@ -108,21 +149,17 @@ struct ExploreView: View {
 
     private var dateShortcuts: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 ForEach(ExploreViewModel.DateShortcut.allCases) { shortcut in
                     Button {
                         viewModel.applyDateShortcut(shortcut)
                     } label: {
                         Text(shortcut.rawValue)
-                            .font(.caption.weight(.medium))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .foregroundStyle(.primary)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .overlay(
-                                Capsule()
-                                    .strokeBorder(Color.primary.opacity(0.15))
-                            )
+                            .font(.caption2.weight(.medium))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .foregroundStyle(.secondary)
+                            .background(Color.primary.opacity(0.04), in: Capsule())
                     }
                     .buttonStyle(.plain)
                 }
@@ -133,110 +170,63 @@ struct ExploreView: View {
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
-    // MARK: - Location Selector
+    // MARK: - Expanded Map
 
-    private var locationSelector: some View {
-        VStack(spacing: 0) {
-            Button {
-                viewModel.toggleMap()
-            } label: {
-                HStack {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.title3)
-                        .foregroundStyle(.primary)
+    @ViewBuilder private var expandedMap: some View {
+        if viewModel.showMap {
+            VStack(alignment: .leading, spacing: 8) {
+                placeSearchBar
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Location")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        if viewModel.isReverseGeocoding {
-                            HStack(spacing: 6) {
-                                ProgressView()
-                                    .controlSize(.mini)
-                                Text("Finding location…")
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                            }
-                        } else if let locationName = viewModel.locationName {
-                            Text(locationName)
-                                .font(.subheadline.weight(.medium))
-                        } else {
-                            Text("Tap to choose on map")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(viewModel.showMap ? 180 : 0))
+                if !viewModel.searchCompleter.results.isEmpty, !viewModel.searchCompleter.queryFragment.isEmpty {
+                    placeSearchResults
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 16)
 
-            if viewModel.showMap {
-                VStack(alignment: .leading, spacing: 8) {
-                    placeSearchBar
+                HStack {
+                    Image(systemName: "hand.tap")
+                        .foregroundStyle(.secondary)
+                    Text(viewModel.pinnedCoordinate != nil ? "Tap the map to move pin" : "Tap the map to drop a pin")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 4)
 
-                    if !viewModel.searchCompleter.results.isEmpty, !viewModel.searchCompleter.queryFragment.isEmpty {
-                        placeSearchResults
-                    }
-
-                    HStack {
-                        Image(systemName: "hand.tap")
-                            .foregroundStyle(.secondary)
-                        Text(viewModel.pinnedCoordinate != nil ? "Tap the map to move pin" : "Tap the map to drop a pin")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 4)
-
-                    MapReader { proxy in
-                        Map(position: $viewModel.cameraPosition) {
-                            if let pin = viewModel.pinnedCoordinate {
-                                Annotation("Search here", coordinate: pin) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.primary.opacity(0.1))
-                                            .frame(width: 44, height: 44)
-                                        Circle()
-                                            .fill(Color.primary.opacity(0.2))
-                                            .frame(width: 28, height: 28)
-                                        Image(systemName: "mappin.circle.fill")
-                                            .font(.title2)
-                                            .foregroundStyle(.white, .primary)
-                                    }
+                MapReader { proxy in
+                    Map(position: $viewModel.cameraPosition) {
+                        if let pin = viewModel.pinnedCoordinate {
+                            Annotation("Search here", coordinate: pin) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.primary.opacity(0.1))
+                                        .frame(width: 44, height: 44)
+                                    Circle()
+                                        .fill(Color.primary.opacity(0.2))
+                                        .frame(width: 28, height: 28)
+                                    Image(systemName: "mappin.circle.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.white, .primary)
                                 }
                             }
                         }
-                        .mapStyle(.standard(elevation: .realistic))
-                        .mapControls {
-                            MapUserLocationButton()
-                            MapCompass()
-                            MapScaleView()
-                        }
-                        .onTapGesture { screenPoint in
-                            if let coord = proxy.convert(screenPoint, from: .local) {
-                                isSearchFieldFocused = false
-                                viewModel.handleMapTap(coordinate: coord)
-                            }
+                    }
+                    .mapStyle(.standard(elevation: .realistic))
+                    .mapControls {
+                        MapUserLocationButton()
+                        MapCompass()
+                        MapScaleView()
+                    }
+                    .onTapGesture { screenPoint in
+                        if let coord = proxy.convert(screenPoint, from: .local) {
+                            isSearchFieldFocused = false
+                            viewModel.handleMapTap(coordinate: coord)
                         }
                     }
-                    .frame(height: 180)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .frame(height: 180)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
@@ -325,64 +315,55 @@ struct ExploreView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
 
-    // MARK: - Search Button
+    // MARK: - Action Buttons
 
-    private var searchButton: some View {
-        let isDisabled = viewModel.pinnedCoordinate == nil || viewModel.isSearching
-
-        return Button {
-            viewModel.performSearch()
-        } label: {
-            HStack(spacing: 8) {
-                if viewModel.isSearching {
-                    ProgressView()
-                        .tint(isDisabled ? Color(.systemGray) : Color(.systemBackground))
-                } else {
-                    Image(systemName: "magnifyingglass")
-                }
-                Text(viewModel.isSearching ? "Searching…" : "Find Nearby Posts")
-                    .fontWeight(.semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .foregroundStyle(isDisabled ? Color(.systemGray) : Color(.systemBackground))
-            .background(isDisabled ? Color(.systemGray5) : Color.primary, in: RoundedRectangle(cornerRadius: 10))
-        }
-        .accessibilityIdentifier("FindNearbyPostsButton")
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
-        .padding(.horizontal, 16)
-    }
-
-    // MARK: - Save Moment Button
-
-    @ViewBuilder private var saveMomentButton: some View {
-        if viewModel.hasSearched, !viewModel.posts.isEmpty {
+    private var actionButtons: some View {
+        HStack(spacing: 10) {
             Button {
-                viewModel.saveMoment(store: store)
+                viewModel.performSearch()
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: viewModel.momentSaved ? "checkmark.circle.fill" : "bookmark.fill")
-                    Text(viewModel.momentSaved ? "Moment Saved!" : "Save this Moment")
-                        .fontWeight(.semibold)
+                HStack(spacing: 5) {
+                    if viewModel.isSearching {
+                        ProgressView()
+                            .controlSize(.mini)
+                    } else {
+                        Image(systemName: "magnifyingglass")
+                    }
+                    Text(viewModel.isSearching ? "Searching…" : "Search")
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .foregroundStyle(viewModel.momentSaved ? Color(.systemGray2) : .primary)
-                .background(
-                    viewModel.momentSaved ? Color(.systemGray6) : Color.primary.opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: 10)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(viewModel.momentSaved ? Color(.systemGray5) : Color.primary.opacity(0.2))
-                )
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .foregroundStyle(viewModel.pinnedCoordinate == nil ? .tertiary : .primary)
+                .background(Color.primary.opacity(0.08), in: Capsule())
             }
-            .accessibilityIdentifier("SaveMomentButton")
+            .accessibilityIdentifier("FindNearbyPostsButton")
             .buttonStyle(.plain)
-            .disabled(viewModel.momentSaved)
-            .padding(.horizontal, 16)
+            .disabled(viewModel.pinnedCoordinate == nil || viewModel.isSearching)
+
+            if viewModel.hasSearched, !viewModel.posts.isEmpty {
+                Button {
+                    viewModel.saveMoment(store: store)
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: viewModel.momentSaved ? "checkmark" : "bookmark")
+                        Text(viewModel.momentSaved ? "Saved" : "Save Moment")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .foregroundStyle(viewModel.momentSaved ? .tertiary : .primary)
+                    .background(Color.primary.opacity(0.08), in: Capsule())
+                }
+                .accessibilityIdentifier("SaveMomentButton")
+                .buttonStyle(.plain)
+                .disabled(viewModel.momentSaved)
+            }
+
+            Spacer()
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Results Section
