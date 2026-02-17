@@ -186,6 +186,7 @@ final class ExploreViewModel {
 
     // MARK: - Moment Actions
 
+    @MainActor
     func saveMoment(store: MomentsStore) {
         guard let coord = pinnedCoordinate, let name = locationName else { return }
         store.addMoment(date: selectedDate, locationName: name, coordinate: coord)
@@ -202,6 +203,7 @@ final class ExploreViewModel {
         }
     }
 
+    @MainActor
     func loadPendingMoment(store: MomentsStore) {
         guard let moment = store.pendingMoment else { return }
         selectedDate = moment.date

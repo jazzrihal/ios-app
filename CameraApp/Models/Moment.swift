@@ -46,19 +46,12 @@ extension Moment {
     /// Creates a `Moment` from a Supabase `MomentsSelect` row.
     init(from row: PublicSchema.MomentsSelect) {
         id = row.id
-        date = Self.parseISO8601(row.momentDate) ?? Date()
+        date = ISO8601DateFormatter.flexibleParse(row.momentDate) ?? Date()
         locationName = row.locationName ?? ""
         coordinate = CLLocationCoordinate2D(
             latitude: row.latitude,
             longitude: row.longitude
         )
-        addedAt = Self.parseISO8601(row.createdAt) ?? Date()
-    }
-
-    private static func parseISO8601(_ string: String?) -> Date? {
-        guard let string else { return nil }
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: string) ?? ISO8601DateFormatter().date(from: string)
+        addedAt = ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date()
     }
 }

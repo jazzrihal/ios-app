@@ -2,9 +2,11 @@ import CoreLocation
 import Foundation
 import Observation
 
-@Observable
+@MainActor @Observable
 class MomentsStore {
     var moments: [Moment] = []
+    var nearbyPosts: [UUID: [ImagePost]] = [:]
+    var isLoading = false
     var pendingMoment: Moment?
     var selectedTab: Int = 0
     var errorMessage: String?
@@ -14,19 +16,32 @@ class MomentsStore {
 
     // MARK: - Load
 
-    /// Fetches all moments for the current user from the `moments` table.
+    /// Fetches all moments with their nearby posts via the `moments_with_nearby_posts` RPC.
     func loadMoments() async {
-        guard let userId = currentUserId else { return }
+        guard currentUserId != nil else { return }
+
+        isLoading = true
+        defer { isLoading = false }
 
         do {
-            let rows: [PublicSchema.MomentsSelect] = try await SupabaseManager.client
-                .from("moments")
-                .select("id, created_at, latitude, longitude, location_name, moment_date, user_id")
-                .eq("user_id", value: userId)
-                .order("created_at", ascending: false)
+            let params = MomentsWithNearbyPostsParams(
+                radiusMeters: nil,
+                dateRangeDays: nil,
+                timeDecayHours: nil,
+                distanceWeight: nil,
+                postsPerMoment: 5
+            )
+
+            let rows: [MomentWithNearbyPostsRow] = try await SupabaseManager.client
+                .rpc("moments_with_nearby_posts", params: params)
                 .execute()
                 .value
 
+            nearbyPosts = Dictionary(
+                uniqueKeysWithValues: rows.map { row in
+                    (row.momentId, row.nearbyPosts.map { ImagePost(from: $0) })
+                }
+            )
             moments = rows.map { Moment(from: $0) }
         } catch {
             errorMessage = error.localizedDescription
@@ -38,24 +53,18 @@ class MomentsStore {
     func addMoment(date: Date, locationName: String, coordinate: CLLocationCoordinate2D) {
         guard let userId = currentUserId else { return }
 
-        let moment = Moment(
-            date: date,
-            locationName: locationName,
-            coordinate: coordinate,
-            addedAt: Date()
-        )
-
-        // Optimistic insert
-        moments.insert(moment, at: 0)
+        isLoading = true
 
         Task {
+            defer { isLoading = false }
+
             do {
                 let formatter = ISO8601DateFormatter()
                 formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
                 let insert = PublicSchema.MomentsInsert(
                     createdAt: nil,
-                    id: moment.id,
+                    id: UUID(),
                     latitude: coordinate.latitude,
                     location: nil,
                     locationName: locationName,
@@ -64,9 +73,9 @@ class MomentsStore {
                     userId: userId
                 )
                 try await SupabaseManager.client.from("moments").insert(insert).execute()
+
+                await loadMoments()
             } catch {
-                // Revert on failure
-                moments.removeAll { $0.id == moment.id }
                 errorMessage = error.localizedDescription
             }
         }

@@ -8,7 +8,7 @@ struct MomentsView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if store.moments.isEmpty {
+                if store.moments.isEmpty, !store.isLoading {
                     ContentUnavailableView(
                         "No Moments Yet",
                         systemImage: "clock.badge.questionmark",
@@ -21,18 +21,26 @@ struct MomentsView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 12) {
+                        LazyVStack(spacing: 16) {
                             ForEach(sortedMoments) { moment in
-                                MomentRow(moment: moment)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        navigateToExplore(moment)
-                                    }
+                                let posts = store.nearbyPosts[moment.id] ?? []
+                                MomentCard(
+                                    moment: moment,
+                                    posts: posts
+                                ) {
+                                    navigateToExplore(moment)
+                                }
                             }
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                     }
+                }
+            }
+            .overlay {
+                if store.isLoading {
+                    ProgressView()
+                        .tint(.secondary)
                 }
             }
             .navigationTitle("Moments")
@@ -64,57 +72,6 @@ struct MomentsView: View {
     private func navigateToExplore(_ moment: Moment) {
         store.pendingMoment = moment
         store.selectedTab = 0 // Explore tab
-    }
-}
-
-// MARK: - Moment Row
-
-struct MomentRow: View {
-    let moment: Moment
-
-    var body: some View {
-        HStack(spacing: 14) {
-            // Icon
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.primary.opacity(0.85))
-                    .frame(width: 48, height: 48)
-
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.title3)
-                    .foregroundStyle(Color(.systemBackground))
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(moment.locationName)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar")
-                        .font(.caption2)
-                    Text(moment.dateFormatted)
-                        .font(.caption)
-                }
-                .foregroundStyle(.secondary)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                        .font(.caption2)
-                    Text("Saved \(moment.addedAtFormatted)")
-                        .font(.caption)
-                }
-                .foregroundStyle(.tertiary)
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-        }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 }
 

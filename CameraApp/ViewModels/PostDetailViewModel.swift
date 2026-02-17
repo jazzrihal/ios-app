@@ -195,6 +195,7 @@ final class PostDetailViewModel {
 
     // MARK: - Action Handlers
 
+    @MainActor
     func performAction(_ action: PostAction, store: MomentsStore) {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
