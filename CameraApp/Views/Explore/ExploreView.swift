@@ -1,5 +1,6 @@
 import MapKit
 import Nuke
+import NukeUI
 import SwiftUI
 
 struct ExploreView: View {
@@ -388,26 +389,43 @@ struct ExploreView: View {
                     )
                     .padding(.top, 28)
                 } else {
-                    LazyVStack(spacing: 0) {
+                    LazyVGrid(
+                        columns: [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)],
+                        spacing: 2
+                    ) {
                         ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
-                            PostCard(
-                                post: post,
-                                queryDate: viewModel.selectedDate,
-                                onTapProfile: {
-                                    viewModel.navigateToProfileUser = post.user
-                                },
-                                onTapPost: {
-                                    viewModel.navigateToPostIndex = index
+                            Button {
+                                viewModel.navigateToPostIndex = index
+                            } label: {
+                                LazyImage(url: post.imageURL) { state in
+                                    if let image = state.image {
+                                        Color.clear
+                                            .overlay {
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                            }
+                                            .clipped()
+                                    } else if state.error != nil {
+                                        Rectangle()
+                                            .fill(Color(.systemGray5))
+                                            .overlay {
+                                                Image(systemName: "photo.badge.exclamationmark")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                    } else {
+                                        Rectangle()
+                                            .fill(Color(.systemGray5))
+                                            .overlay { ProgressView() }
+                                    }
                                 }
-                            )
-                            if index < viewModel.posts.count - 1 {
-                                Divider()
-                                    .foregroundStyle(.quaternary)
-                                    .padding(.vertical, 8)
+                                .aspectRatio(1, contentMode: .fill)
+                                .clipped()
                             }
+                            .buttonStyle(.plain)
                         }
                     }
-                    .padding(.bottom, 24)
                 }
             } else {
                 VStack(spacing: 12) {
