@@ -320,61 +320,67 @@ struct ExploreView: View {
     // MARK: - Action Buttons
 
     private var actionButtons: some View {
-        let buttonShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        VStack(spacing: 0) {
+            Divider()
 
-        return HStack(spacing: 10) {
-            if viewModel.hasSearched, !viewModel.posts.isEmpty {
-                Button {
-                    viewModel.saveMoment(store: store)
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: viewModel.momentSaved ? "checkmark" : "bookmark")
-                            .frame(width: 16, height: 16)
-                        Text("Save Moment")
-                            .hidden()
-                            .overlay {
-                                Text(viewModel.momentSaved ? "Saved" : "Save Moment")
-                            }
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 20)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(viewModel.momentSaved ? .tertiary : .primary)
-                    .background(Color.primary.opacity(0.1), in: buttonShape)
-                }
-                .accessibilityIdentifier("SaveMomentButton")
-                .buttonStyle(.plain)
-                .disabled(viewModel.momentSaved)
-            }
-
-            Button {
-                viewModel.performSearch()
-            } label: {
-                HStack(spacing: 6) {
-                    ZStack {
-                        if viewModel.isSearching {
-                            ProgressView()
-                                .controlSize(.mini)
-                        } else {
-                            Image(systemName: "magnifyingglass")
+            HStack(spacing: 0) {
+                if viewModel.hasSearched, !viewModel.posts.isEmpty {
+                    Button {
+                        viewModel.saveMoment(store: store)
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: viewModel.momentSaved ? "checkmark" : "bookmark")
+                                .contentTransition(.identity)
+                                .font(.title2)
+                                .frame(width: 28, height: 28)
+                            Text("Save Moment")
+                                .font(.caption2.weight(.medium))
+                                .hidden()
+                                .overlay {
+                                    Text(viewModel.momentSaved ? "Saved" : "Save Moment")
+                                        .contentTransition(.identity)
+                                        .font(.caption2.weight(.medium))
+                                }
                         }
+                        .foregroundStyle(viewModel.momentSaved ? .tertiary : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                     }
-                    .frame(width: 16, height: 16)
-
-                    Text("Search")
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("SaveMomentButton")
+                    .disabled(viewModel.momentSaved)
                 }
-                .font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 20)
-                .padding(.vertical, 10)
-                .foregroundStyle(viewModel.pinnedCoordinate == nil ? .tertiary : .primary)
-                .background(Color.primary.opacity(0.1), in: buttonShape)
+
+                Button {
+                    viewModel.performSearch()
+                } label: {
+                    VStack(spacing: 4) {
+                        ZStack {
+                            if viewModel.isSearching {
+                                ProgressView()
+                                    .controlSize(.mini)
+                            } else {
+                                Image(systemName: "magnifyingglass")
+                                    .contentTransition(.identity)
+                            }
+                        }
+                        .font(.title2)
+
+                        Text("Search")
+                            .contentTransition(.identity)
+                            .font(.caption2.weight(.medium))
+                    }
+                    .foregroundStyle(viewModel.pinnedCoordinate == nil ? .tertiary : .primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("FindNearbyPostsButton")
+                .disabled(viewModel.pinnedCoordinate == nil || viewModel.isSearching)
             }
-            .accessibilityIdentifier("FindNearbyPostsButton")
-            .buttonStyle(.plain)
-            .disabled(viewModel.pinnedCoordinate == nil || viewModel.isSearching)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
     }
 
     // MARK: - Results Section
