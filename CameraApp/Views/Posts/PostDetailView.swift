@@ -1,16 +1,6 @@
 import CoreLocation
 import NukeUI
 import SwiftUI
-import UIKit
-
-// MARK: - Preference Key for Icon Frames
-
-private struct ActionFramePreferenceKey: PreferenceKey {
-    static var defaultValue: [PostAction: CGRect] = [:]
-    static func reduce(value: inout [PostAction: CGRect], nextValue: () -> [PostAction: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { $1 })
-    }
-}
 
 // MARK: - Post Detail View
 
@@ -20,9 +10,6 @@ struct PostDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var viewModel: PostDetailViewModel
-
-    /// `@GestureState` must remain in the view (SwiftUI requirement).
-    @GestureState private var isInteracting: Bool = false
 
     init(posts: [ImagePost], initialIndex: Int, queryDate: Date) {
         _viewModel = State(initialValue: PostDetailViewModel(
@@ -35,59 +22,22 @@ struct PostDetailView: View {
     // MARK: - Body
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            // Paged image layer
+        VStack(spacing: 0) {
             TabView(selection: $viewModel.currentIndex) {
-                ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, _ in
-                    postImage(for: viewModel.posts[index])
+                ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
+                    postPage(for: post)
                         .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            // Action feedback animation overlay (like / pin)
-            if let icon = viewModel.overlayIcon {
-                Image(systemName: icon)
-                    .font(.system(size: 100))
-                    .foregroundStyle(viewModel.overlayColor)
-                    .scaleEffect(viewModel.overlayScale)
-                    .opacity(viewModel.overlayOpacity)
-                    .shadow(color: viewModel.overlayColor.opacity(0.4), radius: 12, x: 0, y: 4)
-                    .allowsHitTesting(false)
-            }
-
-            // Caption + action overlay when pressing
-            if viewModel.isPressing {
-                pressOverlay
-            }
-
-            // Close button, like indicator & metadata
-            if !viewModel.isPressing {
-                VStack {
-                    topBar
-                    Spacer()
-                    postMetadata
-                }
-            }
+            actionBar
         }
-        .coordinateSpace(name: "postDetail")
-        .toolbar(.hidden, for: .navigationBar)
+        .background(Color(.systemBackground))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: $viewModel.showShareSheet) {
             ShareSheet(items: [viewModel.post.imageURL])
-        }
-        .onChange(of: viewModel.currentIndex) { _, _ in
-            viewModel.handlePageChange()
-        }
-        .onChange(of: isInteracting) { _, interacting in
-            if !interacting {
-                viewModel.handlePressEnded()
-            }
-        }
-        .onChange(of: viewModel.dragLocation) { _, newLocation in
-            viewModel.updateHoveredAction(at: newLocation)
         }
         .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
@@ -98,267 +48,163 @@ struct PostDetailView: View {
         }
     }
 
-    // MARK: - Top Bar
+    // MARK: - Post Page
 
-    private var topBar: some View {
-        HStack {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(10)
-                    .background(.ultraThinMaterial, in: Circle())
-            }
-            .padding(.leading, 16)
-            .padding(.top, 12)
-
-            Spacer()
-
-            HStack(spacing: 8) {
-                if viewModel.isPinned {
-                    Image(systemName: "pin.fill")
-                        .font(.body)
-                        .foregroundStyle(.white)
-                        .padding(10)
-                        .background(.ultraThinMaterial, in: Circle())
+    private func postPage(for post: ImagePost) -> some View {
+        GeometryReader { geo in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    postImage(for: post)
+                    postInfo(for: post)
                 }
-
-                if viewModel.isLiked {
-                    Image(systemName: "heart.fill")
-                        .font(.body)
-                        .foregroundStyle(.white)
-                        .padding(10)
-                        .background(.ultraThinMaterial, in: Circle())
-                }
+                .frame(minHeight: geo.size.height)
+                .frame(maxWidth: .infinity)
             }
-            .padding(.trailing, 16)
-            .padding(.top, 8)
         }
     }
 
     // MARK: - Post Image
 
-    private func postImage(for displayPost: ImagePost) -> some View {
-        LazyImage(url: displayPost.imageURL) { state in
+    private func postImage(for post: ImagePost) -> some View {
+        LazyImage(url: post.imageURL) { state in
             if let image = state.image {
                 image
                     .resizable()
                     .scaledToFit()
-                    .overlay(
-                        Color.white
-                            .opacity(viewModel.isPressing ? 1 : 0)
-                            .animation(.easeInOut(duration: 0.2), value: viewModel.isPressing)
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear
-                                .onAppear { viewModel.imageSize = geo.size }
-                                .onChange(of: geo.size) { _, newSize in
-                                    viewModel.imageSize = newSize
-                                }
-                        }
-                    )
-                    .scaleEffect(viewModel.effectiveZoom)
-                    .offset(viewModel.offset)
-                    .gesture(zoomGestures)
-                    .simultaneousGesture(longPressGesture)
-                    .onTapGesture(count: 2) {
-                        viewModel.handleDoubleTap()
-                    }
+                    .frame(maxWidth: .infinity)
                     .clipped()
             } else if state.error != nil {
-                VStack(spacing: 6) {
-                    Image(systemName: "photo.badge.exclamationmark")
-                        .font(.title2)
-                    Text("Failed to load")
-                        .font(.caption)
+                ZStack {
+                    Rectangle()
+                        .fill(Color(.systemGray5))
+                        .frame(height: 300)
+                    VStack(spacing: 6) {
+                        Image(systemName: "photo.badge.exclamationmark")
+                            .font(.title2)
+                        Text("Failed to load")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(.gray)
             } else {
-                ProgressView()
-                    .tint(.white)
+                ZStack {
+                    Rectangle()
+                        .fill(Color(.systemGray5))
+                        .frame(height: 300)
+                    ProgressView()
+                }
+            }
+        }
+        .overlay {
+            if let icon = viewModel.overlayIcon {
+                Image(systemName: icon)
+                    .font(.system(size: 80))
+                    .foregroundStyle(viewModel.overlayColor)
+                    .scaleEffect(viewModel.overlayScale)
+                    .opacity(viewModel.overlayOpacity)
+                    .animation(.easeOut(duration: 0.3), value: viewModel.overlayScale)
+                    .animation(.easeInOut(duration: 0.4), value: viewModel.overlayOpacity)
+                    .allowsHitTesting(false)
             }
         }
     }
 
-    // MARK: - Press Overlay
+    // MARK: - Post Info
 
-    private var pressOverlay: some View {
-        ZStack {
-            Text(viewModel.post.caption)
-                .font(.title3.bold())
-                .foregroundStyle(.black)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .transition(.scale(scale: 0.9).combined(with: .opacity))
-
-            VStack {
-                Spacer()
-
-                HStack(spacing: 40) {
-                    ForEach(PostAction.allCases, id: \.self) { action in
-                        actionIcon(for: action)
-                    }
-                }
-                .onPreferenceChange(ActionFramePreferenceKey.self) { frames in
-                    viewModel.actionFrames = frames
-                }
-                .padding(.bottom, 12)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+    private func postInfo(for post: ImagePost) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            NavigationLink(destination: FriendProfileView(user: post.user)) {
+                Text(post.user.displayName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
             }
+            .buttonStyle(.plain)
+
+            captionSection(for: post)
+            metadataSection(for: post)
         }
-        .allowsHitTesting(false)
-    }
-
-    // MARK: - Post Metadata
-
-    private var postMetadata: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(viewModel.post.user.displayName)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
-
-            HStack(spacing: 4) {
-                Image(systemName: "clock")
-                    .font(.caption2)
-                Text(viewModel.post.timestamp.formatted(.dateTime.month(.abbreviated).day().year().hour().minute()))
-                    .font(.caption)
-            }
-            .foregroundStyle(.white.opacity(0.7))
-
-            HStack(spacing: 4) {
-                Image(systemName: "location")
-                    .font(.caption2)
-                Text(viewModel.post.locationName)
-                    .font(.caption)
-            }
-            .foregroundStyle(.white.opacity(0.7))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.4)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .allowsHitTesting(false)
-        )
     }
 
-    // MARK: - Action Icon
+    // MARK: - Action Bar
 
-    private func actionIcon(for action: PostAction) -> some View {
-        let isHovered = viewModel.hoveredAction == action
+    private var actionBar: some View {
+        HStack(spacing: 0) {
+            ForEach(PostAction.allCases, id: \.self) { action in
+                actionButton(for: action)
+            }
+        }
+        .background(Color(.systemBackground))
+    }
 
-        let iconName: String
-        let iconColor: Color
+    private func actionButton(for action: PostAction) -> some View {
+        Button {
+            viewModel.performAction(action, store: store)
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: viewModel.iconName(for: action))
+                    .contentTransition(.identity)
+                    .font(.title3)
+                Text(viewModel.displayLabel(for: action))
+                    .contentTransition(.identity)
+                    .font(.caption2.weight(.medium))
+            }
+            .foregroundStyle(actionColor(for: action))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .animation(.none, value: viewModel.isActionActive(action))
+        .accessibilityLabel(viewModel.accessibilityLabel(for: action))
+        .accessibilityHint(viewModel.accessibilityHint(for: action))
+    }
+
+    private func actionColor(for action: PostAction) -> Color {
         switch action {
-        case .like where viewModel.isLiked:
-            iconName = "heart.fill"
-            iconColor = Color(.darkGray)
-        case .pinToProfile where viewModel.isPinned:
-            iconName = "pin.fill"
-            iconColor = Color(.darkGray)
+        case .like:
+            viewModel.isLiked ? .red : .primary
+        case .pinToProfile:
+            viewModel.isPinned ? .orange : .primary
         default:
-            iconName = action.iconName
-            iconColor = Color(.darkGray)
+            .primary
         }
-
-        return VStack(spacing: 8) {
-            Image(systemName: iconName)
-                .font(.title.weight(.semibold))
-                .foregroundStyle(iconColor)
-                .frame(width: 64, height: 64)
-                .scaleEffect(isHovered ? 1.3 : 1.0)
-                .shadow(color: isHovered ? .black.opacity(0.15) : .clear, radius: 8)
-                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
-
-            Text(action.label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(isHovered ? Color(.darkGray) : Color(.darkGray).opacity(0.7))
-        }
-        .background(
-            GeometryReader { geo in
-                Color.clear
-                    .preference(
-                        key: ActionFramePreferenceKey.self,
-                        value: [action: geo.frame(in: .named("postDetail"))]
-                    )
-            }
-        )
     }
 
-    // MARK: - Zoom Gestures
+    // MARK: - Caption
 
-    private var zoomGestures: some Gesture {
-        let pinch = MagnifyGesture()
-            .onChanged { value in
-                guard !viewModel.isPressing else { return }
-                viewModel.currentZoom = value.magnification - 1
-            }
-            .onEnded { _ in
-                guard !viewModel.isPressing else { return }
-                viewModel.totalZoom = viewModel.effectiveZoom
-                viewModel.currentZoom = 0
-                if viewModel.totalZoom <= 1.05 {
-                    viewModel.resetZoom()
-                } else {
-                    let clamped = viewModel.clampedOffset(viewModel.offset, zoom: viewModel.totalZoom)
-                    if clamped != viewModel.offset {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                            viewModel.offset = clamped
-                            viewModel.lastOffset = clamped
-                        }
-                    }
-                }
-            }
-
-        let drag = DragGesture()
-            .onChanged { value in
-                guard !viewModel.isPressing, viewModel.effectiveZoom > 1 else { return }
-                let proposed = CGSize(
-                    width: viewModel.lastOffset.width + value.translation.width,
-                    height: viewModel.lastOffset.height + value.translation.height
-                )
-                viewModel.offset = viewModel.clampedOffset(proposed, zoom: viewModel.effectiveZoom)
-            }
-            .onEnded { _ in
-                guard !viewModel.isPressing else { return }
-                viewModel.lastOffset = viewModel.offset
-            }
-
-        return pinch.simultaneously(with: drag)
+    @ViewBuilder
+    private func captionSection(for post: ImagePost) -> some View {
+        if !post.caption.isEmpty {
+            Text(post.caption)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
-    // MARK: - Long Press Gesture
+    // MARK: - Metadata
 
-    private var longPressGesture: some Gesture {
-        LongPressGesture(minimumDuration: 0.01)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("postDetail")))
-            .updating($isInteracting) { _, state, _ in
-                state = true
+    private func metadataSection(for post: ImagePost) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label {
+                Text(post.timestamp.formatted(
+                    .dateTime.month(.abbreviated).day().year().hour().minute()
+                ))
+            } icon: {
+                Image(systemName: "clock")
             }
-            .onChanged { value in
-                switch value {
-                case .first(true):
-                    viewModel.handlePressBegan()
-                case .second(true, let drag):
-                    if !viewModel.isPressing {
-                        viewModel.handlePressBegan()
-                    }
-                    viewModel.dragLocation = drag?.location
-                default:
-                    break
+
+            if !post.locationName.isEmpty {
+                Label {
+                    Text(post.locationName)
+                } icon: {
+                    Image(systemName: "mappin.and.ellipse")
                 }
             }
-            .onEnded { _ in
-                if let action = viewModel.hoveredAction {
-                    viewModel.performAction(action, store: store)
-                }
-            }
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
