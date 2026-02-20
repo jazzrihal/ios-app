@@ -172,11 +172,13 @@ struct FriendsView: View {
                     subtitle: "When your friends share photos, they'll show up here"
                 )
             } else {
-                LazyVGrid(
-                    columns: [GridItem(.flexible(), spacing: AppStyle.Spacing.grid), GridItem(.flexible(), spacing: AppStyle.Spacing.grid)],
-                    spacing: AppStyle.Spacing.grid
-                ) {
-                    ForEach(Array(feedViewModel.posts.enumerated()), id: \.element.id) { index, post in
+                PhotoGrid(
+                    items: feedViewModel.posts,
+                    columns: 2,
+                    hasMorePages: feedViewModel.hasMorePages,
+                    isLoadingMore: feedViewModel.isLoadingMore,
+                    onLoadMore: { Task { await feedViewModel.loadNextPage(friends: store.friends) } },
+                    cell: { index, post in
                         Button {
                             feedNavigateToIndex = index
                         } label: {
@@ -186,23 +188,7 @@ struct FriendsView: View {
                         }
                         .buttonStyle(.plain)
                     }
-
-                    if feedViewModel.hasMorePages {
-                        Color.clear
-                            .frame(height: 44)
-                            .overlay {
-                                if feedViewModel.isLoadingMore {
-                                    ProgressView()
-                                }
-                            }
-                            .gridCellColumns(2)
-                            .onAppear {
-                                Task {
-                                    await feedViewModel.loadNextPage(friends: store.friends)
-                                }
-                            }
-                    }
-                }
+                )
             }
         }
         .refreshable {

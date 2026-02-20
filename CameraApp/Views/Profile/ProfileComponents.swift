@@ -123,30 +123,17 @@ struct ProfilePhotoGrid: View {
     var isLoadingMore: Bool = false
     var onLoadMore: (() -> Void)?
 
-    private let columns = [
-        GridItem(.flexible(), spacing: AppStyle.Spacing.grid),
-        GridItem(.flexible(), spacing: AppStyle.Spacing.grid),
-        GridItem(.flexible(), spacing: AppStyle.Spacing.grid),
-    ]
-
     var body: some View {
-        LazyVGrid(columns: columns, spacing: AppStyle.Spacing.grid) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+        PhotoGrid(
+            items: items,
+            columns: 3,
+            hasMorePages: hasMorePages,
+            isLoadingMore: isLoadingMore,
+            onLoadMore: onLoadMore,
+            cell: { index, item in
                 gridItemView(item: item, globalIndex: index)
             }
-
-            if hasMorePages, let onLoadMore {
-                Color.clear
-                    .frame(height: 44)
-                    .overlay {
-                        if isLoadingMore {
-                            ProgressView()
-                        }
-                    }
-                    .gridCellColumns(3)
-                    .onAppear(perform: onLoadMore)
-            }
-        }
+        )
     }
 
     @ViewBuilder

@@ -374,11 +374,13 @@ struct ExploreView: View {
                     )
                     .padding(.top, 28)
                 } else {
-                    LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: AppStyle.Spacing.grid), GridItem(.flexible(), spacing: AppStyle.Spacing.grid)],
-                        spacing: AppStyle.Spacing.grid
-                    ) {
-                        ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
+                    PhotoGrid(
+                        items: viewModel.posts,
+                        columns: 2,
+                        hasMorePages: viewModel.hasMorePages,
+                        isLoadingMore: viewModel.isLoadingMore,
+                        onLoadMore: { Task { await viewModel.loadNextPage() } },
+                        cell: { index, post in
                             Button {
                                 viewModel.navigateToPostIndex = index
                             } label: {
@@ -388,23 +390,7 @@ struct ExploreView: View {
                             }
                             .buttonStyle(.plain)
                         }
-
-                        if viewModel.hasMorePages {
-                            Color.clear
-                                .frame(height: 44)
-                                .overlay {
-                                    if viewModel.isLoadingMore {
-                                        ProgressView()
-                                    }
-                                }
-                                .gridCellColumns(2)
-                                .onAppear {
-                                    Task {
-                                        await viewModel.loadNextPage()
-                                    }
-                                }
-                        }
-                    }
+                    )
                 }
             } else if viewModel.isFetchingLocation || viewModel.isSearching {
                 ProgressView()
