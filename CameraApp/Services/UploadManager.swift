@@ -95,6 +95,38 @@ final class UploadManager {
         Task { await processQueue() }
     }
 
+    // MARK: - Save Draft
+
+    /// Saves the image to disk and creates a draft post that will NOT be uploaded
+    /// until the user explicitly promotes it.
+    func saveDraft(_ input: PostEnqueueInput) {
+        let postId = UUID()
+        let fileName = "\(postId.uuidString).jpg"
+
+        guard let data = input.image.jpegData(compressionQuality: 0.8) else {
+            print("[UploadManager] Failed to compress image for draft.")
+            return
+        }
+
+        saveImage(data, fileName: fileName)
+
+        let post = PendingPost(
+            id: postId,
+            localImageFileName: fileName,
+            caption: input.caption,
+            latitude: input.latitude,
+            longitude: input.longitude,
+            locationName: input.locationName,
+            scope: input.scope,
+            createdAt: Date(),
+            userId: input.userId,
+            status: .draft
+        )
+
+        pendingPosts.insert(post, at: 0)
+        persistQueue()
+    }
+
     // MARK: - Queue Processing
 
     /// Sequentially uploads each queued or retryable failed item.
@@ -103,12 +135,22 @@ final class UploadManager {
         isProcessing = true
         defer { isProcessing = false }
 
-        for index in pendingPosts.indices {
+        let currentUserId = SupabaseManager.client.auth.currentSession?.user.id
+        let postIds = pendingPosts.map(\.id)
+
+        for postId in postIds {
+            guard let index = pendingPosts.firstIndex(where: { $0.id == postId }) else { continue }
             let post = pendingPosts[index]
 
             guard post.status == .queued
                 || (post.status == .failed && post.retryCount < Self.maxRetries)
-            else { continue }
+            else {
+                continue
+            }
+
+            if let currentUserId, post.userId != currentUserId {
+                continue
+            }
 
             pendingPosts[index].status = .uploading
             persistQueue()

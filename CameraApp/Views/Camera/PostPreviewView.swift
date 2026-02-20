@@ -5,11 +5,11 @@ import SwiftUI
 
 struct PostPreviewView: View {
     let image: UIImage
-    let onDiscard: () -> Void
-    let onPost: () -> Void
+    let onDone: () -> Void
 
     @Environment(AuthManager.self) private var authManager
     @Environment(UploadManager.self) private var uploadManager
+    @Environment(NetworkMonitor.self) private var networkMonitor
     @State private var caption = ""
     @State private var captureDate = Date()
     @State private var scope: PostScope = .friends
@@ -21,7 +21,9 @@ struct PostPreviewView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    imagePreviewSection
+                    imageSection
+                    quickActionsSection
+                    offlineBanner
                     captionSection
                     dateTimeSection
                     locationSection
@@ -44,7 +46,7 @@ struct PostPreviewView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Discard") {
-                        onDiscard()
+                        onDone()
                     }
                     .accessibilityIdentifier("DiscardButton")
                     .foregroundStyle(.primary)
@@ -56,15 +58,80 @@ struct PostPreviewView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Image
 
-    private var imagePreviewSection: some View {
+    private var imageSection: some View {
         Image(uiImage: image)
             .resizable()
             .scaledToFit()
             .frame(maxWidth: .infinity)
             .clipped()
     }
+
+    // MARK: - Quick Actions
+
+    private var quickActionsSection: some View {
+        VStack(spacing: 12) {
+            Button {
+                enqueueWithDefaults()
+            } label: {
+                Label("Post Without Editing", systemImage: "paperplane.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundStyle(Color(.systemBackground))
+                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
+            }
+            .accessibilityIdentifier("PostWithoutEditingButton")
+            .buttonStyle(.plain)
+
+            Button {
+                saveDraft()
+            } label: {
+                Label("Save Without Uploading", systemImage: "square.and.arrow.down")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundStyle(.primary)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+            }
+            .accessibilityIdentifier("SaveWithoutUploadingButton")
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - Offline Banner
+
+    @ViewBuilder private var offlineBanner: some View {
+        if !networkMonitor.isConnected {
+            HStack(spacing: 10) {
+                Image(systemName: "wifi.slash")
+                    .font(.title3)
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("You are offline")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Save your photo and upload when you're back online.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(12)
+            .background(
+                Color.orange.opacity(0.1),
+                in: RoundedRectangle(cornerRadius: 10)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
+        }
+    }
+
+    // MARK: - Caption
 
     private var captionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -84,6 +151,8 @@ struct PostPreviewView: View {
         }
         .padding(.horizontal, 16)
     }
+
+    // MARK: - Date & Time
 
     private var dateTimeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -114,6 +183,8 @@ struct PostPreviewView: View {
         }
         .padding(.horizontal, 16)
     }
+
+    // MARK: - Location
 
     private var locationSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -157,6 +228,8 @@ struct PostPreviewView: View {
         }
     }
 
+    // MARK: - Scope
+
     private var scopeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Who can see this?", systemImage: "eye")
@@ -184,9 +257,11 @@ struct PostPreviewView: View {
         .padding(.horizontal, 16)
     }
 
+    // MARK: - Post Button
+
     private var postButton: some View {
         Button {
-            enqueueAndDismiss()
+            enqueueWithSettings()
         } label: {
             Text("Post")
                 .font(.headline)
@@ -201,27 +276,63 @@ struct PostPreviewView: View {
         .padding(.bottom, 32)
     }
 
-    // MARK: - Enqueue Logic
+    // MARK: - Actions
 
-    private func enqueueAndDismiss() {
+    private func enqueueWithDefaults() {
         guard let userId = authManager.userId else {
             enqueueError = "Not signed in."
             return
         }
 
-        let coord = locationManager.coordinate
+        let input = PostEnqueueInput(
+            image: image,
+            caption: nil,
+            latitude: locationManager.coordinate?.latitude ?? 0,
+            longitude: locationManager.coordinate?.longitude ?? 0,
+            locationName: locationManager.locationName,
+            scope: PostScope.friends.databaseValue,
+            userId: userId
+        )
+        uploadManager.enqueue(input)
+        onDone()
+    }
+
+    private func saveDraft() {
+        guard let userId = authManager.userId else {
+            enqueueError = "Not signed in."
+            return
+        }
+
         let input = PostEnqueueInput(
             image: image,
             caption: caption.isEmpty ? nil : caption,
-            latitude: coord?.latitude ?? 0,
-            longitude: coord?.longitude ?? 0,
+            latitude: locationManager.coordinate?.latitude ?? 0,
+            longitude: locationManager.coordinate?.longitude ?? 0,
+            locationName: locationManager.locationName,
+            scope: scope.databaseValue,
+            userId: userId
+        )
+        uploadManager.saveDraft(input)
+        onDone()
+    }
+
+    private func enqueueWithSettings() {
+        guard let userId = authManager.userId else {
+            enqueueError = "Not signed in."
+            return
+        }
+
+        let input = PostEnqueueInput(
+            image: image,
+            caption: caption.isEmpty ? nil : caption,
+            latitude: locationManager.coordinate?.latitude ?? 0,
+            longitude: locationManager.coordinate?.longitude ?? 0,
             locationName: locationManager.locationName,
             scope: scope.databaseValue,
             userId: userId
         )
         uploadManager.enqueue(input)
-
-        onPost()
+        onDone()
     }
 
     // MARK: - Helpers

@@ -7,6 +7,7 @@ struct CameraAppApp: App {
     @State private var momentsStore = MomentsStore()
     @State private var friendsStore = FriendsStore()
     @State private var uploadManager = UploadManager()
+    @State private var networkMonitor = NetworkMonitor()
     @State private var showCamera = false
     @State private var previousTab: Int = 0
 
@@ -25,6 +26,7 @@ struct CameraAppApp: App {
             .environment(momentsStore)
             .environment(friendsStore)
             .environment(uploadManager)
+            .environment(networkMonitor)
             .onChange(of: authManager.isAuthenticated, initial: true) {
                 if authManager.isAuthenticated, let uid = authManager.userId {
                     friendsStore.currentUserId = uid

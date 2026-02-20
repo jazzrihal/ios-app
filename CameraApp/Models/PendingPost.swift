@@ -19,7 +19,7 @@ struct PendingPost: Identifiable, Codable {
     var retryCount: Int = 0
 
     enum UploadStatus: String, Codable {
-        case queued, uploading, failed
+        case draft, queued, uploading, failed
     }
 }
 

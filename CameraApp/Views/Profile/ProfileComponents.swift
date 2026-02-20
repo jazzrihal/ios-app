@@ -219,6 +219,10 @@ struct ProfilePhotoGrid: View {
     @ViewBuilder
     private func pendingStatusOverlay(for post: PendingPost) -> some View {
         switch post.status {
+        case .draft:
+            Image(systemName: "square.and.arrow.down.fill")
+                .font(.title3)
+                .foregroundStyle(.white)
         case .queued:
             Image(systemName: "clock.fill")
                 .font(.title3)
