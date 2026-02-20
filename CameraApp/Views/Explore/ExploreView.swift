@@ -369,12 +369,11 @@ struct ExploreView: View {
         Group {
             if viewModel.hasSearched {
                 if viewModel.posts.isEmpty {
-                    ContentUnavailableView(
-                        "No Posts Found",
-                        systemImage: "photo.on.rectangle.angled",
-                        description: Text("Try a different location or time range.")
+                    EmptyStateView(
+                        icon: "photo.on.rectangle.angled",
+                        title: "No Posts Found",
+                        subtitle: "Try a different location or time range."
                     )
-                    .padding(.top, 28)
                 } else {
                     PhotoGrid(
                         items: viewModel.posts,

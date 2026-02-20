@@ -11,11 +11,12 @@ struct MomentsView: View {
         NavigationStack {
             Group {
                 if store.moments.isEmpty, !store.isLoading {
-                    ContentUnavailableView(
-                        "No Moments Yet",
-                        systemImage: "clock.badge.questionmark",
-                        description: Text("Save moments from the Explore tab to see them here.")
+                    EmptyStateView(
+                        icon: "clock.badge.questionmark",
+                        title: "No Moments Yet",
+                        subtitle: "Save moments from the Explore tab to see them here."
                     )
+                    .frame(maxHeight: .infinity, alignment: .top)
                 } else if showMap {
                     MomentsMapView(
                         moments: sortedMoments,

@@ -97,8 +97,7 @@ struct ProfileView: View {
                         EmptyStateView(
                             icon: "camera",
                             title: "No photos yet",
-                            subtitle: "Your photos will appear here.",
-                            style: .compact
+                            subtitle: "Your photos will appear here."
                         )
                     }
                 )
