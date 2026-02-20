@@ -7,6 +7,7 @@ import SwiftUI
 struct PostDetailView: View {
     @Environment(MomentsStore.self) private var store
     @Environment(AuthManager.self) private var authManager
+    @Environment(UploadManager.self) private var uploadManager
     @Environment(\.dismiss) private var dismiss
 
     private let source: Source
@@ -69,6 +70,8 @@ struct PostDetailView: View {
                     locationName: post.locationName ?? "",
                     linkToProfile: false
                 )
+
+                pendingActionBar(for: post)
             }
         }
         .background(Color(.systemBackground))
@@ -250,6 +253,48 @@ struct PostDetailView: View {
         }
     }
 
+    // MARK: - Pending Action Bar
+
+    @ViewBuilder
+    private func pendingActionBar(for post: PendingPost) -> some View {
+        switch post.status {
+        case .draft, .failed:
+            Button {
+                uploadManager.retryPost(post)
+                dismiss()
+            } label: {
+                Label("Upload", systemImage: "arrow.up.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+
+        case .queued:
+            HStack(spacing: 8) {
+                Image(systemName: "clock.fill")
+                    .foregroundStyle(.secondary)
+                Text("Queued for upload")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+
+        case .uploading:
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Uploading\u{2026}")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        }
+    }
+
     // MARK: - Caption
 
     @ViewBuilder
@@ -304,4 +349,5 @@ struct PostDetailView: View {
     .environment(FriendsStore())
     .environment(MomentsStore())
     .environment(AuthManager())
+    .environment(UploadManager())
 }
