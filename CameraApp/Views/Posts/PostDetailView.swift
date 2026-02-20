@@ -48,11 +48,14 @@ struct PostDetailView: View {
                         ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
                             postPage(
                                 imageContent: { remoteImage(url: post.imageURL) },
-                                user: post.user,
-                                caption: post.caption,
-                                timestamp: post.timestamp,
-                                locationName: post.locationName,
-                                linkToProfile: true
+                                meta: PostPageMeta(
+                                    user: post.user,
+                                    caption: post.caption,
+                                    timestamp: post.timestamp,
+                                    locationName: post.locationName,
+                                    pinnedByUsername: post.pinnedByUsername,
+                                    linkToProfile: true
+                                )
                             )
                             .tag(index)
                         }
@@ -65,11 +68,14 @@ struct PostDetailView: View {
             case let .pending(post, image):
                 postPage(
                     imageContent: { localImage(uiImage: image) },
-                    user: authManager.currentProfile,
-                    caption: post.caption ?? "",
-                    timestamp: post.createdAt,
-                    locationName: post.locationName ?? "",
-                    linkToProfile: false
+                    meta: PostPageMeta(
+                        user: authManager.currentProfile,
+                        caption: post.caption ?? "",
+                        timestamp: post.createdAt,
+                        locationName: post.locationName ?? "",
+                        pinnedByUsername: nil,
+                        linkToProfile: false
+                    )
                 )
 
                 pendingActionBar(for: post)
@@ -91,33 +97,29 @@ struct PostDetailView: View {
         }
         .onAppear {
             viewModel?.mutationStore = postMutationStore
-            if let posts = viewModel?.posts {
-                Task { await postMutationStore.loadPinsAndLikes(for: posts.map(\.id)) }
-            }
         }
     }
 
     // MARK: - Post Page
 
+    private struct PostPageMeta {
+        let user: User?
+        let caption: String
+        let timestamp: Date
+        let locationName: String
+        let pinnedByUsername: String?
+        let linkToProfile: Bool
+    }
+
     private func postPage(
         @ViewBuilder imageContent: @escaping () -> some View,
-        user: User?,
-        caption: String,
-        timestamp: Date,
-        locationName: String,
-        linkToProfile: Bool
+        meta: PostPageMeta
     ) -> some View {
         GeometryReader { geo in
             ScrollView {
                 VStack(alignment: .leading, spacing: AppStyle.Spacing.medium) {
                     imageContent()
-                    postInfo(
-                        user: user,
-                        caption: caption,
-                        timestamp: timestamp,
-                        locationName: locationName,
-                        linkToProfile: linkToProfile
-                    )
+                    postInfo(meta: meta)
                 }
                 .frame(minHeight: geo.size.height)
                 .frame(maxWidth: .infinity)
@@ -155,16 +157,10 @@ struct PostDetailView: View {
 
     // MARK: - Post Info
 
-    private func postInfo(
-        user: User?,
-        caption: String,
-        timestamp: Date,
-        locationName: String,
-        linkToProfile: Bool
-    ) -> some View {
+    private func postInfo(meta: PostPageMeta) -> some View {
         VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
-            if let user {
-                if linkToProfile {
+            if let user = meta.user {
+                if meta.linkToProfile {
                     NavigationLink(destination: FriendProfileView(user: user)) {
                         Text(user.displayName)
                             .font(.subheadline.weight(.semibold))
@@ -178,8 +174,14 @@ struct PostDetailView: View {
                 }
             }
 
-            captionSection(caption: caption)
-            metadataSection(timestamp: timestamp, locationName: locationName)
+            if let pinnedBy = meta.pinnedByUsername {
+                Label("Pinned by @\(pinnedBy)", systemImage: "pin.fill")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.orange)
+            }
+
+            captionSection(caption: meta.caption)
+            metadataSection(timestamp: meta.timestamp, locationName: meta.locationName)
         }
         .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }

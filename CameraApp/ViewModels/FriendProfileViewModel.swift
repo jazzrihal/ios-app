@@ -24,7 +24,7 @@ final class FriendProfileViewModel {
     private let pageSize = 20
 
     var ownPostCount: Int {
-        userPosts.filter(\.isOwn).count
+        userPosts.filter(\.isOwnPost).count
     }
 
     /// Set to `true` when the view should dismiss (e.g. after removing a friend).
@@ -78,7 +78,13 @@ final class FriendProfileViewModel {
                 .execute()
                 .value
 
-            userPosts = rows.map { ImagePost(from: $0) }
+            userPosts = rows.map { row in
+                var post = ImagePost(from: row)
+                if row.isPinnedByUser {
+                    post.pinnedByUsername = user.username
+                }
+                return post
+            }
             if let total = rows.first?.totalCount {
                 hasMorePages = userPosts.count < total
             } else {
@@ -106,7 +112,13 @@ final class FriendProfileViewModel {
                 .execute()
                 .value
 
-            let newPosts = rows.map { ImagePost(from: $0) }
+            let newPosts = rows.map { row in
+                var post = ImagePost(from: row)
+                if row.isPinnedByUser {
+                    post.pinnedByUsername = user.username
+                }
+                return post
+            }
             userPosts.append(contentsOf: newPosts)
             if let total = rows.first?.totalCount {
                 hasMorePages = userPosts.count < total

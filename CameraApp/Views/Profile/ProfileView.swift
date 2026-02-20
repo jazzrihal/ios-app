@@ -69,7 +69,7 @@ struct ProfileView: View {
                 ProfileHeaderView(user: user) {
                     HStack(spacing: AppStyle.Padding.screenHorizontal) {
                         ProfileStatItem(
-                            value: userPosts.filter(\.isOwn).count + currentUserPendingCount,
+                            value: userPosts.filter(\.isOwnPost).count + currentUserPendingCount,
                             label: "Posts"
                         )
                         ProfileStatItem(value: friendsStore.friends.count, label: "Friends")
@@ -151,7 +151,7 @@ struct ProfileView: View {
                 .value
 
             userPosts = rows.map { ImagePost(from: $0) }
-            postMutationStore.seedPins(from: userPosts)
+            postMutationStore.seedFromPosts(userPosts)
             if let total = rows.first?.totalCount {
                 hasMorePages = userPosts.count < total
             } else {
@@ -176,7 +176,7 @@ struct ProfileView: View {
                 .value
 
             let newPosts = rows.map { ImagePost(from: $0) }
-            postMutationStore.seedPins(from: newPosts)
+            postMutationStore.seedFromPosts(newPosts)
             userPosts.append(contentsOf: newPosts)
             if let total = rows.first?.totalCount {
                 hasMorePages = userPosts.count < total

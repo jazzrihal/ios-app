@@ -60,11 +60,16 @@ class PostMutationStore {
         }
     }
 
-    /// Seeds pin state from already-fetched posts (e.g. from `get_user_posts_and_pins`).
-    /// Avoids an extra network round-trip when the server response already includes pin info.
-    func seedPins(from posts: [ImagePost]) {
+    /// Seeds like and pin state from already-fetched posts whose `hasViewerState` is true.
+    /// Avoids extra network round-trips when the RPC response includes viewer fields.
+    func seedFromPosts(_ posts: [ImagePost]) {
         for post in posts {
-            if post.isPinned {
+            if post.isLikedByViewer {
+                likedPostIDs.insert(post.id)
+            } else {
+                likedPostIDs.remove(post.id)
+            }
+            if post.isPinnedByViewer {
                 pinnedPostIDs.insert(post.id)
             } else {
                 pinnedPostIDs.remove(post.id)

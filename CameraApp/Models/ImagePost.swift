@@ -12,8 +12,12 @@ struct ImagePost: Identifiable {
     let timestamp: Date
     let distanceMeters: Double
     let scope: PostScope
-    var isPinned: Bool = false
-    var isOwn: Bool = false
+    var isPinnedByUser: Bool = false
+    var isOwnPost: Bool = false
+    var isLikedByViewer: Bool = false
+    var isPinnedByViewer: Bool = false
+    var pinnedByUsername: String?
+    var hasViewerState: Bool = false
 
     var username: String {
         user.username
@@ -95,6 +99,8 @@ struct NearbyPostRow: Codable {
     let createdAt: String
     let distanceMeters: Double
     let totalCount: Int?
+    let isLikedByViewer: Bool
+    let isPinnedByViewer: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, username, caption, longitude, latitude, scope
@@ -106,6 +112,8 @@ struct NearbyPostRow: Codable {
         case createdAt = "created_at"
         case distanceMeters = "distance_meters"
         case totalCount = "total_count"
+        case isLikedByViewer = "is_liked_by_viewer"
+        case isPinnedByViewer = "is_pinned_by_viewer"
     }
 }
 
@@ -138,8 +146,10 @@ struct UserPostWithPinRow: Codable {
     let locationName: String?
     let scope: String
     let createdAt: String
-    let isOwn: Bool
-    let isPinned: Bool
+    let isOwnPost: Bool
+    let isPinnedByUser: Bool
+    let isLikedByViewer: Bool
+    let isPinnedByViewer: Bool
     let totalCount: Int
 
     enum CodingKeys: String, CodingKey {
@@ -150,8 +160,10 @@ struct UserPostWithPinRow: Codable {
         case imagePath = "image_path"
         case locationName = "location_name"
         case createdAt = "created_at"
-        case isOwn = "is_own"
-        case isPinned = "is_pinned"
+        case isOwnPost = "is_own_post"
+        case isPinnedByUser = "is_pinned_by_user"
+        case isLikedByViewer = "is_liked_by_viewer"
+        case isPinnedByViewer = "is_pinned_by_viewer"
         case totalCount = "total_count"
     }
 }
@@ -178,8 +190,11 @@ extension ImagePost {
         timestamp = Self.parseISO8601(row.createdAt) ?? Date()
         distanceMeters = 0
         scope = PostScope(serverValue: row.scope)
-        isPinned = row.isPinned
-        isOwn = row.isOwn
+        isPinnedByUser = row.isPinnedByUser
+        isOwnPost = row.isOwnPost
+        isLikedByViewer = row.isLikedByViewer
+        isPinnedByViewer = row.isPinnedByViewer
+        hasViewerState = true
     }
 }
 
@@ -205,6 +220,9 @@ extension ImagePost {
         timestamp = Self.parseISO8601(row.createdAt) ?? Date()
         distanceMeters = row.distanceMeters
         scope = PostScope(serverValue: row.scope)
+        isLikedByViewer = row.isLikedByViewer
+        isPinnedByViewer = row.isPinnedByViewer
+        hasViewerState = true
     }
 
     /// Creates an `ImagePost` from a `PostsSelect` row + an owning `User`.

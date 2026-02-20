@@ -50,7 +50,7 @@ struct FriendProfileView: View {
         }
         .refreshable {
             await viewModel.refreshPosts()
-            await postMutationStore.loadPinsAndLikes(for: viewModel.userPosts.map(\.id))
+            postMutationStore.seedFromPosts(viewModel.userPosts)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -74,13 +74,13 @@ struct FriendProfileView: View {
             viewModel.loadFullProfile()
             Task {
                 await viewModel.loadPosts()
-                await postMutationStore.loadPinsAndLikes(for: viewModel.userPosts.map(\.id))
+                postMutationStore.seedFromPosts(viewModel.userPosts)
             }
         }
         .onChange(of: store.status(for: viewModel.user)) { _, _ in
             Task {
                 await viewModel.loadPosts()
-                await postMutationStore.loadPinsAndLikes(for: viewModel.userPosts.map(\.id))
+                postMutationStore.seedFromPosts(viewModel.userPosts)
             }
         }
         .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in

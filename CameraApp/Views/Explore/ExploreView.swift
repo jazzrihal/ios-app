@@ -7,6 +7,7 @@ struct ExploreView: View {
     // MARK: - Dependencies
 
     @Environment(MomentsStore.self) private var store
+    @Environment(PostMutationStore.self) private var postMutationStore
     @State private var viewModel = ExploreViewModel()
     @State private var prefetcher = ImagePrefetcher()
     @FocusState private var isSearchFieldFocused: Bool
@@ -59,6 +60,7 @@ struct ExploreView: View {
             .onChange(of: viewModel.posts.map(\.id)) { _, _ in
                 let urls = viewModel.posts.map(\.imageURL)
                 prefetcher.startPrefetching(with: urls)
+                postMutationStore.seedFromPosts(viewModel.posts)
             }
         }
     }
