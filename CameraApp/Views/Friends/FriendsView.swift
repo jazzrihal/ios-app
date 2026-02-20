@@ -186,11 +186,30 @@ struct FriendsView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    if feedViewModel.hasMorePages {
+                        Color.clear
+                            .frame(height: 44)
+                            .overlay {
+                                if feedViewModel.isLoadingMore {
+                                    ProgressView()
+                                }
+                            }
+                            .gridCellColumns(2)
+                            .onAppear {
+                                Task {
+                                    await feedViewModel.loadNextPage(friends: store.friends)
+                                }
+                            }
+                    }
                 }
             }
         }
+        .refreshable {
+            await feedViewModel.loadPosts(friends: store.friends)
+        }
         .task(id: store.friends.map(\.id)) {
-            feedViewModel.loadPosts(friends: store.friends)
+            await feedViewModel.loadPosts(friends: store.friends)
         }
     }
 

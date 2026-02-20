@@ -25,7 +25,11 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
     var posts: [ImagePost] = []
     var hasSearched = false
     var isSearching = false
+    var isLoadingMore = false
+    var hasMorePages = true
     var searchError: String?
+
+    private let pageSize = 20
 
     // MARK: - UI Toggles
 
@@ -88,7 +92,7 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
                 )
             }
             reverseGeocode(coord)
-            performSearch()
+            Task { await performSearch() }
         } else {
             isFetchingLocation = true
             locationManager.requestLocation()
@@ -128,7 +132,7 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         }
 
         reverseGeocode(coord)
-        performSearch()
+        Task { await performSearch() }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError _: Error) {
@@ -316,16 +320,18 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         )
 
         store.pendingMoment = nil
-        performSearch()
+        Task { await performSearch() }
     }
 
     // MARK: - Search
 
-    func performSearch() {
+    @MainActor
+    func performSearch() async {
         guard let coord = pinnedCoordinate else { return }
         isSearching = true
         momentSaved = false
         searchError = nil
+        hasMorePages = true
 
         // Collapse all expanded UI elements
         withAnimation(.spring(duration: 0.3)) {
@@ -334,33 +340,73 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         }
         dismissPlaceSearch()
 
-        Task { @MainActor in
-            do {
-                let params = NearbyPostsParams(
-                    lng: coord.longitude,
-                    lat: coord.latitude,
-                    searchDate: Self.iso8601String(from: selectedDate),
-                    radiusMeters: 5000
-                )
+        do {
+            var params = NearbyPostsParams(
+                lng: coord.longitude,
+                lat: coord.latitude,
+                searchDate: Self.iso8601String(from: selectedDate),
+                radiusMeters: 5000
+            )
+            params.pageSize = pageSize
+            params.pageOffset = 0
 
-                let rows: [NearbyPostRow] = try await SupabaseManager.client
-                    .rpc("nearby_posts", params: params)
-                    .execute()
-                    .value
+            let rows: [NearbyPostRow] = try await SupabaseManager.client
+                .rpc("nearby_posts", params: params)
+                .execute()
+                .value
 
-                withAnimation(.spring(duration: 0.4)) {
-                    posts = rows.map { ImagePost(from: $0) }
-                    hasSearched = true
-                    isSearching = false
-                }
-            } catch {
-                withAnimation(.spring(duration: 0.4)) {
-                    searchError = error.localizedDescription
-                    hasSearched = true
-                    isSearching = false
+            withAnimation(.spring(duration: 0.4)) {
+                posts = rows.map { ImagePost(from: $0) }
+                hasSearched = true
+                isSearching = false
+                if let total = rows.first?.totalCount {
+                    hasMorePages = posts.count < total
+                } else {
+                    hasMorePages = rows.count == pageSize
                 }
             }
+        } catch {
+            withAnimation(.spring(duration: 0.4)) {
+                searchError = error.localizedDescription
+                hasSearched = true
+                isSearching = false
+            }
         }
+    }
+
+    @MainActor
+    func loadNextPage() async {
+        guard hasMorePages, !isLoadingMore, let coord = pinnedCoordinate else { return }
+
+        isLoadingMore = true
+
+        do {
+            var params = NearbyPostsParams(
+                lng: coord.longitude,
+                lat: coord.latitude,
+                searchDate: Self.iso8601String(from: selectedDate),
+                radiusMeters: 5000
+            )
+            params.pageSize = pageSize
+            params.pageOffset = posts.count
+
+            let rows: [NearbyPostRow] = try await SupabaseManager.client
+                .rpc("nearby_posts", params: params)
+                .execute()
+                .value
+
+            let newPosts = rows.map { ImagePost(from: $0) }
+            posts.append(contentsOf: newPosts)
+            if let total = rows.first?.totalCount {
+                hasMorePages = posts.count < total
+            } else {
+                hasMorePages = rows.count == pageSize
+            }
+        } catch {
+            searchError = error.localizedDescription
+        }
+
+        isLoadingMore = false
     }
 
     private static func iso8601String(from date: Date) -> String {

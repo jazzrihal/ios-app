@@ -37,12 +37,18 @@ struct FriendProfileView: View {
                     isLoading: viewModel.isLoadingPosts,
                     items: viewModel.userPosts.map { .uploaded($0) },
                     uploadedPosts: viewModel.userPosts,
+                    hasMorePages: viewModel.hasMorePages,
+                    isLoadingMore: viewModel.isLoadingMore,
+                    onLoadMore: { Task { await viewModel.loadMorePosts() } },
                     emptyContent: {
                         friendPostsEmptyState
                     }
                 )
                 .padding(.top, AppStyle.Padding.screenHorizontal)
             }
+        }
+        .refreshable {
+            await viewModel.refreshPosts()
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -64,9 +70,11 @@ struct FriendProfileView: View {
         }
         .onAppear {
             viewModel.loadFullProfile()
-            viewModel.loadPosts()
+            Task { await viewModel.loadPosts() }
         }
-        .onChange(of: store.status(for: viewModel.user)) { _, _ in viewModel.loadPosts() }
+        .onChange(of: store.status(for: viewModel.user)) { _, _ in
+            Task { await viewModel.loadPosts() }
+        }
         .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }

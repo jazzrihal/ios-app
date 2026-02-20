@@ -119,6 +119,9 @@ struct ProfilePhotoGrid: View {
     let uploadedPosts: [ImagePost]
     var onRetry: ((PendingPost) -> Void)?
     var onRemove: ((PendingPost) -> Void)?
+    var hasMorePages: Bool = false
+    var isLoadingMore: Bool = false
+    var onLoadMore: (() -> Void)?
 
     private let columns = [
         GridItem(.flexible(), spacing: AppStyle.Spacing.grid),
@@ -130,6 +133,18 @@ struct ProfilePhotoGrid: View {
         LazyVGrid(columns: columns, spacing: AppStyle.Spacing.grid) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 gridItemView(item: item, globalIndex: index)
+            }
+
+            if hasMorePages, let onLoadMore {
+                Color.clear
+                    .frame(height: 44)
+                    .overlay {
+                        if isLoadingMore {
+                            ProgressView()
+                        }
+                    }
+                    .gridCellColumns(3)
+                    .onAppear(perform: onLoadMore)
             }
         }
     }
@@ -246,6 +261,9 @@ struct ProfilePostsSection<EmptyContent: View>: View {
     let uploadedPosts: [ImagePost]
     var onRetry: ((PendingPost) -> Void)?
     var onRemove: ((PendingPost) -> Void)?
+    var hasMorePages: Bool = false
+    var isLoadingMore: Bool = false
+    var onLoadMore: (() -> Void)?
     @ViewBuilder let emptyContent: () -> EmptyContent
 
     var body: some View {
@@ -263,7 +281,10 @@ struct ProfilePostsSection<EmptyContent: View>: View {
                     items: items,
                     uploadedPosts: uploadedPosts,
                     onRetry: onRetry,
-                    onRemove: onRemove
+                    onRemove: onRemove,
+                    hasMorePages: hasMorePages,
+                    isLoadingMore: isLoadingMore,
+                    onLoadMore: onLoadMore
                 )
             }
         }

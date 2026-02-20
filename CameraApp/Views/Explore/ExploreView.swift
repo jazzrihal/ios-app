@@ -28,6 +28,9 @@ struct ExploreView: View {
                 ScrollView {
                     resultsSection
                 }
+                .refreshable {
+                    await viewModel.performSearch()
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: Binding(
@@ -328,7 +331,7 @@ struct ExploreView: View {
                 }
 
                 Button {
-                    viewModel.performSearch()
+                    Task { await viewModel.performSearch() }
                 } label: {
                     VStack(spacing: AppStyle.Spacing.tight) {
                         ZStack {
@@ -384,6 +387,22 @@ struct ExploreView: View {
                                     .clipped()
                             }
                             .buttonStyle(.plain)
+                        }
+
+                        if viewModel.hasMorePages {
+                            Color.clear
+                                .frame(height: 44)
+                                .overlay {
+                                    if viewModel.isLoadingMore {
+                                        ProgressView()
+                                    }
+                                }
+                                .gridCellColumns(2)
+                                .onAppear {
+                                    Task {
+                                        await viewModel.loadNextPage()
+                                    }
+                                }
                         }
                     }
                 }

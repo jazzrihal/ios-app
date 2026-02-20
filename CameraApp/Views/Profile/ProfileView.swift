@@ -7,7 +7,11 @@ struct ProfileView: View {
 
     @State private var userPosts: [ImagePost] = []
     @State private var isLoadingPosts = false
+    @State private var isLoadingMore = false
+    @State private var hasMorePages = true
     @State private var showSignOutAlert = false
+
+    private let pageSize = 20
 
     var body: some View {
         NavigationStack {
@@ -85,6 +89,9 @@ struct ProfileView: View {
                     uploadedPosts: userPosts,
                     onRetry: { post in uploadManager.retryPost(post) },
                     onRemove: { post in uploadManager.removePost(post) },
+                    hasMorePages: hasMorePages,
+                    isLoadingMore: isLoadingMore,
+                    onLoadMore: { Task { await loadNextPage() } },
                     emptyContent: {
                         EmptyStateView(
                             icon: "camera",
@@ -96,6 +103,9 @@ struct ProfileView: View {
                 )
                 .padding(.top, AppStyle.Padding.screenHorizontal)
             }
+        }
+        .refreshable {
+            await loadPosts()
         }
     }
 
@@ -129,9 +139,10 @@ struct ProfileView: View {
     private func loadPosts() async {
         guard let userId = authManager.userId else { return }
         isLoadingPosts = true
+        hasMorePages = true
         do {
             let params = GetUserPostsAndPinsParams(
-                targetUserId: userId, pageSize: 1000, pageOffset: 0
+                targetUserId: userId, pageSize: pageSize, pageOffset: 0
             )
             let rows: [UserPostWithPinRow] = try await SupabaseManager.client
                 .rpc("get_user_posts_and_pins", params: params)
@@ -139,10 +150,40 @@ struct ProfileView: View {
                 .value
 
             userPosts = rows.map { ImagePost(from: $0) }
+            if let total = rows.first?.totalCount {
+                hasMorePages = userPosts.count < total
+            } else {
+                hasMorePages = rows.count == pageSize
+            }
         } catch {
             print("[ProfileView] Failed to load posts: \(error)")
         }
         isLoadingPosts = false
+    }
+
+    private func loadNextPage() async {
+        guard hasMorePages, !isLoadingMore, let userId = authManager.userId else { return }
+        isLoadingMore = true
+        do {
+            let params = GetUserPostsAndPinsParams(
+                targetUserId: userId, pageSize: pageSize, pageOffset: userPosts.count
+            )
+            let rows: [UserPostWithPinRow] = try await SupabaseManager.client
+                .rpc("get_user_posts_and_pins", params: params)
+                .execute()
+                .value
+
+            let newPosts = rows.map { ImagePost(from: $0) }
+            userPosts.append(contentsOf: newPosts)
+            if let total = rows.first?.totalCount {
+                hasMorePages = userPosts.count < total
+            } else {
+                hasMorePages = rows.count == pageSize
+            }
+        } catch {
+            print("[ProfileView] Failed to load more posts: \(error)")
+        }
+        isLoadingMore = false
     }
 }
 

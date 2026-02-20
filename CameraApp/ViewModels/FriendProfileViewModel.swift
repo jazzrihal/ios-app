@@ -17,7 +17,11 @@ final class FriendProfileViewModel {
     var showRemoveConfirmation = false
     var userPosts: [ImagePost] = []
     var isLoadingPosts = false
+    var isLoadingMore = false
+    var hasMorePages = true
     var postsError: String?
+
+    private let pageSize = 20
 
     var ownPostCount: Int {
         userPosts.filter(\.isOwn).count
@@ -58,28 +62,68 @@ final class FriendProfileViewModel {
 
     // MARK: - Posts Loading
 
-    /// Fetches the user's posts and pinned posts from Supabase. RLS handles scope filtering.
-    func loadPosts() {
+    /// Fetches the first page of the user's posts and pinned posts. RLS handles scope filtering.
+    @MainActor
+    func loadPosts() async {
         isLoadingPosts = true
         postsError = nil
+        hasMorePages = true
 
-        Task { @MainActor in
-            do {
-                let params = GetUserPostsAndPinsParams(
-                    targetUserId: user.id, pageSize: 1000, pageOffset: 0
-                )
-                let rows: [UserPostWithPinRow] = try await SupabaseManager.client
-                    .rpc("get_user_posts_and_pins", params: params)
-                    .execute()
-                    .value
+        do {
+            let params = GetUserPostsAndPinsParams(
+                targetUserId: user.id, pageSize: pageSize, pageOffset: 0
+            )
+            let rows: [UserPostWithPinRow] = try await SupabaseManager.client
+                .rpc("get_user_posts_and_pins", params: params)
+                .execute()
+                .value
 
-                userPosts = rows.map { ImagePost(from: $0) }
-            } catch {
-                postsError = error.localizedDescription
+            userPosts = rows.map { ImagePost(from: $0) }
+            if let total = rows.first?.totalCount {
+                hasMorePages = userPosts.count < total
+            } else {
+                hasMorePages = rows.count == pageSize
             }
-
-            isLoadingPosts = false
+        } catch {
+            postsError = error.localizedDescription
         }
+
+        isLoadingPosts = false
+    }
+
+    /// Appends the next page of posts.
+    @MainActor
+    func loadMorePosts() async {
+        guard hasMorePages, !isLoadingMore else { return }
+        isLoadingMore = true
+
+        do {
+            let params = GetUserPostsAndPinsParams(
+                targetUserId: user.id, pageSize: pageSize, pageOffset: userPosts.count
+            )
+            let rows: [UserPostWithPinRow] = try await SupabaseManager.client
+                .rpc("get_user_posts_and_pins", params: params)
+                .execute()
+                .value
+
+            let newPosts = rows.map { ImagePost(from: $0) }
+            userPosts.append(contentsOf: newPosts)
+            if let total = rows.first?.totalCount {
+                hasMorePages = userPosts.count < total
+            } else {
+                hasMorePages = rows.count == pageSize
+            }
+        } catch {
+            postsError = error.localizedDescription
+        }
+
+        isLoadingMore = false
+    }
+
+    /// Resets and reloads from the first page (for pull-to-refresh).
+    @MainActor
+    func refreshPosts() async {
+        await loadPosts()
     }
 
     func sendRequest(store: FriendsStore) {

@@ -67,11 +67,15 @@ struct NearbyPostsParams: Encodable, Sendable {
     let lat: Double
     let searchDate: String
     let radiusMeters: Double
+    var pageSize: Int?
+    var pageOffset: Int?
 
     enum CodingKeys: String, CodingKey {
         case lng, lat
         case searchDate = "search_date"
         case radiusMeters = "radius_meters"
+        case pageSize = "page_size"
+        case pageOffset = "page_offset"
     }
 }
 
@@ -90,6 +94,7 @@ struct NearbyPostRow: Codable {
     let scope: String
     let createdAt: String
     let distanceMeters: Double
+    let totalCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, username, caption, longitude, latitude, scope
@@ -100,6 +105,7 @@ struct NearbyPostRow: Codable {
         case locationName = "location_name"
         case createdAt = "created_at"
         case distanceMeters = "distance_meters"
+        case totalCount = "total_count"
     }
 }
 
