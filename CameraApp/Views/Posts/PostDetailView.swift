@@ -9,9 +9,17 @@ struct PostDetailView: View {
     @Environment(AuthManager.self) private var authManager
     @Environment(\.dismiss) private var dismiss
 
-    @State private var viewModel: PostDetailViewModel
+    private let source: Source
+
+    @State private var viewModel: PostDetailViewModel?
+
+    enum Source {
+        case uploaded(posts: [ImagePost], initialIndex: Int, queryDate: Date)
+        case pending(post: PendingPost, image: UIImage)
+    }
 
     init(posts: [ImagePost], initialIndex: Int, queryDate: Date) {
+        source = .uploaded(posts: posts, initialIndex: initialIndex, queryDate: queryDate)
         _viewModel = State(initialValue: PostDetailViewModel(
             posts: posts,
             initialIndex: initialIndex,
@@ -19,43 +27,91 @@ struct PostDetailView: View {
         ))
     }
 
+    init(pendingPost: PendingPost, image: UIImage) {
+        source = .pending(post: pendingPost, image: image)
+        _viewModel = State(initialValue: nil)
+    }
+
     // MARK: - Body
 
     var body: some View {
         VStack(spacing: 0) {
-            TabView(selection: $viewModel.currentIndex) {
-                ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
-                    postPage(for: post)
-                        .tag(index)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            switch source {
+            case .uploaded:
+                if let viewModel {
+                    TabView(selection: Binding(
+                        get: { viewModel.currentIndex },
+                        set: { viewModel.currentIndex = $0 }
+                    )) {
+                        ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
+                            postPage(
+                                imageContent: { remoteImage(url: post.imageURL) },
+                                user: post.user,
+                                caption: post.caption,
+                                timestamp: post.timestamp,
+                                locationName: post.locationName,
+                                linkToProfile: true
+                            )
+                            .tag(index)
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
 
-            actionBar
+                    actionBar(viewModel: viewModel)
+                }
+
+            case let .pending(post, image):
+                postPage(
+                    imageContent: { localImage(uiImage: image) },
+                    user: authManager.currentProfile,
+                    caption: post.caption ?? "",
+                    timestamp: post.createdAt,
+                    locationName: post.locationName ?? "",
+                    linkToProfile: false
+                )
+            }
         }
         .background(Color(.systemBackground))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .sheet(isPresented: $viewModel.showShareSheet) {
-            ShareSheet(items: [viewModel.post.imageURL])
+        .sheet(isPresented: Binding(
+            get: { viewModel?.showShareSheet ?? false },
+            set: { viewModel?.showShareSheet = $0 }
+        )) {
+            if let viewModel {
+                ShareSheet(items: [viewModel.post.imageURL])
+            }
         }
-        .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
-            if shouldDismiss { dismiss() }
+        .onChange(of: viewModel?.shouldDismiss) { _, shouldDismiss in
+            if shouldDismiss == true { dismiss() }
         }
         .onAppear {
-            viewModel.userId = authManager.userId
-            viewModel.loadLikesAndPins()
+            viewModel?.userId = authManager.userId
+            viewModel?.loadLikesAndPins()
         }
     }
 
     // MARK: - Post Page
 
-    private func postPage(for post: ImagePost) -> some View {
+    private func postPage(
+        @ViewBuilder imageContent: @escaping () -> some View,
+        user: User?,
+        caption: String,
+        timestamp: Date,
+        locationName: String,
+        linkToProfile: Bool
+    ) -> some View {
         GeometryReader { geo in
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    postImage(for: post)
-                    postInfo(for: post)
+                    imageContent()
+                    postInfo(
+                        user: user,
+                        caption: caption,
+                        timestamp: timestamp,
+                        locationName: locationName,
+                        linkToProfile: linkToProfile
+                    )
                 }
                 .frame(minHeight: geo.size.height)
                 .frame(maxWidth: .infinity)
@@ -63,10 +119,10 @@ struct PostDetailView: View {
         }
     }
 
-    // MARK: - Post Image
+    // MARK: - Remote Image
 
-    private func postImage(for post: ImagePost) -> some View {
-        LazyImage(url: post.imageURL) { state in
+    private func remoteImage(url: URL) -> some View {
+        LazyImage(url: url) { state in
             if let image = state.image {
                 image
                     .resizable()
@@ -96,48 +152,72 @@ struct PostDetailView: View {
             }
         }
         .overlay {
-            if let icon = viewModel.overlayIcon {
+            if let icon = viewModel?.overlayIcon {
                 Image(systemName: icon)
                     .font(.system(size: 80))
-                    .foregroundStyle(viewModel.overlayColor)
-                    .scaleEffect(viewModel.overlayScale)
-                    .opacity(viewModel.overlayOpacity)
-                    .animation(.easeOut(duration: 0.3), value: viewModel.overlayScale)
-                    .animation(.easeInOut(duration: 0.4), value: viewModel.overlayOpacity)
+                    .foregroundStyle(viewModel?.overlayColor ?? .clear)
+                    .scaleEffect(viewModel?.overlayScale ?? 0)
+                    .opacity(viewModel?.overlayOpacity ?? 0)
+                    .animation(.easeOut(duration: 0.3), value: viewModel?.overlayScale)
+                    .animation(.easeInOut(duration: 0.4), value: viewModel?.overlayOpacity)
                     .allowsHitTesting(false)
             }
         }
     }
 
+    // MARK: - Local Image
+
+    private func localImage(uiImage: UIImage) -> some View {
+        Image(uiImage: uiImage)
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity)
+            .clipped()
+    }
+
     // MARK: - Post Info
 
-    private func postInfo(for post: ImagePost) -> some View {
+    private func postInfo(
+        user: User?,
+        caption: String,
+        timestamp: Date,
+        locationName: String,
+        linkToProfile: Bool
+    ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            NavigationLink(destination: FriendProfileView(user: post.user)) {
-                Text(post.user.displayName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+            if let user {
+                if linkToProfile {
+                    NavigationLink(destination: FriendProfileView(user: user)) {
+                        Text(user.displayName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text(user.displayName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                }
             }
-            .buttonStyle(.plain)
 
-            captionSection(for: post)
-            metadataSection(for: post)
+            captionSection(caption: caption)
+            metadataSection(timestamp: timestamp, locationName: locationName)
         }
         .padding(.horizontal, 16)
     }
 
     // MARK: - Action Bar
 
-    private var actionBar: some View {
+    private func actionBar(viewModel: PostDetailViewModel) -> some View {
         HStack(spacing: 0) {
             ForEach(PostAction.allCases, id: \.self) { action in
-                actionButton(for: action)
+                actionButton(for: action, viewModel: viewModel)
             }
         }
         .background(Color(.systemBackground))
     }
 
-    private func actionButton(for action: PostAction) -> some View {
+    private func actionButton(for action: PostAction, viewModel: PostDetailViewModel) -> some View {
         Button {
             viewModel.performAction(action, store: store)
         } label: {
@@ -149,7 +229,7 @@ struct PostDetailView: View {
                     .contentTransition(.identity)
                     .font(.caption2.weight(.medium))
             }
-            .foregroundStyle(actionColor(for: action))
+            .foregroundStyle(actionColor(for: action, viewModel: viewModel))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
             .contentShape(Rectangle())
@@ -159,7 +239,7 @@ struct PostDetailView: View {
         .accessibilityHint(viewModel.accessibilityHint(for: action))
     }
 
-    private func actionColor(for action: PostAction) -> Color {
+    private func actionColor(for action: PostAction, viewModel: PostDetailViewModel) -> Color {
         switch action {
         case .like:
             viewModel.isLiked ? .red : .primary
@@ -173,9 +253,9 @@ struct PostDetailView: View {
     // MARK: - Caption
 
     @ViewBuilder
-    private func captionSection(for post: ImagePost) -> some View {
-        if !post.caption.isEmpty {
-            Text(post.caption)
+    private func captionSection(caption: String) -> some View {
+        if !caption.isEmpty {
+            Text(caption)
                 .font(.subheadline)
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -184,19 +264,19 @@ struct PostDetailView: View {
 
     // MARK: - Metadata
 
-    private func metadataSection(for post: ImagePost) -> some View {
+    private func metadataSection(timestamp: Date, locationName: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Label {
-                Text(post.timestamp.formatted(
+                Text(timestamp.formatted(
                     .dateTime.month(.abbreviated).day().year().hour().minute()
                 ))
             } icon: {
                 Image(systemName: "clock")
             }
 
-            if !post.locationName.isEmpty {
+            if !locationName.isEmpty {
                 Label {
-                    Text(post.locationName)
+                    Text(locationName)
                 } icon: {
                     Image(systemName: "mappin.and.ellipse")
                 }

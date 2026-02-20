@@ -152,7 +152,19 @@ struct ProfilePhotoGrid: View {
             .buttonStyle(.plain)
 
         case let .pending(post, image):
-            pendingGridCell(post: post, image: image)
+            if post.status == .failed {
+                pendingGridCell(post: post, image: image)
+                    .onTapGesture { onRetry?(post) }
+            } else if let image {
+                NavigationLink(
+                    destination: PostDetailView(pendingPost: post, image: image)
+                ) {
+                    pendingGridCell(post: post, image: image)
+                }
+                .buttonStyle(.plain)
+            } else {
+                pendingGridCell(post: post, image: image)
+            }
         }
     }
 
@@ -209,11 +221,6 @@ struct ProfilePhotoGrid: View {
         }
         .aspectRatio(1, contentMode: .fill)
         .clipped()
-        .onTapGesture {
-            if post.status == .failed {
-                onRetry?(post)
-            }
-        }
     }
 
     @ViewBuilder
