@@ -31,6 +31,7 @@ struct CameraAppApp: App {
                 if authManager.isAuthenticated, let uid = authManager.userId {
                     friendsStore.currentUserId = uid
                     momentsStore.currentUserId = uid
+                    uploadManager.removeOrphanedPosts()
                     Task { await friendsStore.loadAll() }
                     Task { await momentsStore.loadMoments() }
                 }

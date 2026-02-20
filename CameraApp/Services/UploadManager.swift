@@ -227,7 +227,23 @@ final class UploadManager {
         }
     }
 
-    /// Call when the app enters foreground. Retries failed items.
+    /// Removes pending posts that belong to a different user than the
+    /// current session. These are orphaned leftovers from a previous login.
+    func removeOrphanedPosts() {
+        guard let currentUserId = SupabaseManager.client.auth.currentSession?.user.id
+        else { return }
+        let orphaned = pendingPosts.filter { $0.userId != currentUserId }
+        for post in orphaned {
+            deleteImage(fileName: post.localImageFileName)
+        }
+        if !orphaned.isEmpty {
+            pendingPosts.removeAll { $0.userId != currentUserId }
+            persistQueue()
+        }
+    }
+
+    /// Call when the app enters foreground. Cleans orphaned posts, retries
+    /// failed items, then processes the queue.
     func handleForeground() {
         for index in pendingPosts.indices where pendingPosts[index].status == .failed {
             if pendingPosts[index].retryCount < Self.maxRetries {

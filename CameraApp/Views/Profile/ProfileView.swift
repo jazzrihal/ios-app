@@ -8,6 +8,7 @@ struct ProfileView: View {
 
     @State private var userPosts: [ImagePost] = []
     @State private var isLoadingPosts = false
+    @State private var showSignOutAlert = false
 
     var body: some View {
         NavigationStack {
@@ -23,13 +24,31 @@ struct ProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        Task { await authManager.signOut() }
+                        if currentUserPendingCount > 0 {
+                            showSignOutAlert = true
+                        } else {
+                            Task { await authManager.signOut() }
+                        }
                     } label: {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+            .alert(
+                "Unsaved uploads",
+                isPresented: $showSignOutAlert
+            ) {
+                Button("Sign Out", role: .destructive) {
+                    Task { await authManager.signOut() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    "You have \(currentUserPendingCount) photo\(currentUserPendingCount == 1 ? "" : "s") that"
+                        + " haven't been uploaded yet. Signing out will discard them."
+                )
             }
             .task { await loadPosts() }
             .onChange(of: uploadManager.completedUploadCount) {
@@ -46,7 +65,7 @@ struct ProfileView: View {
                 ProfileHeaderView(user: user) {
                     HStack(spacing: 16) {
                         ProfileStatItem(
-                            value: userPosts.count + uploadManager.pendingPosts.count,
+                            value: userPosts.count + currentUserPendingCount,
                             label: "Posts"
                         )
                         ProfileStatItem(value: friendsStore.friends.count, label: "Friends")
@@ -82,17 +101,25 @@ struct ProfileView: View {
 
     // MARK: - Grid Items
 
+    private var currentUserPendingCount: Int {
+        let uid = authManager.userId
+        return uploadManager.pendingPosts.filter { uid == nil || $0.userId == uid }.count
+    }
+
     /// Pending uploads first (newest at top), then server-side posts.
+    /// Only includes pending posts belonging to the current user.
     private var gridItems: [ProfileGridItem] {
-        let pendingItems: [ProfileGridItem] = uploadManager.pendingPosts.map { post in
-            let image: UIImage? = {
-                guard let data = uploadManager.loadImage(fileName: post.localImageFileName) else {
-                    return nil
-                }
-                return UIImage(data: data)
-            }()
-            return .pending(post, image)
-        }
+        let currentUserId = authManager.userId
+        let pendingItems: [ProfileGridItem] = uploadManager.pendingPosts
+            .filter { currentUserId == nil || $0.userId == currentUserId }
+            .map { post in
+                let image: UIImage? = {
+                    guard let data = uploadManager.loadImage(fileName: post.localImageFileName)
+                    else { return nil }
+                    return UIImage(data: data)
+                }()
+                return .pending(post, image)
+            }
         let uploadedItems: [ProfileGridItem] = userPosts.map { .uploaded($0) }
         return pendingItems + uploadedItems
     }
