@@ -1,0 +1,8 @@
+---
+description: Default iOS simulator and build settings
+alwaysApply: true
+---
+
+# iOS Build & Simulator
+
+Always use `make build`, `make test`, and `make run` instead of raw `xcodebuild` commands. The `Makefile` defines the correct simulator device, scheme, and destination.
