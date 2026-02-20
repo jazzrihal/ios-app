@@ -1,9 +1,11 @@
+import NukeUI
 import SwiftUI
 
 // MARK: - Friends Tab Sections
 
 enum FriendsSection: String, CaseIterable {
     case friends = "Friends"
+    case feed = "Feed"
     case addFriend = "Add Friend"
 }
 
@@ -14,6 +16,8 @@ struct FriendsView: View {
     @State private var selectedSection: FriendsSection = .friends
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
+    @State private var feedViewModel = FriendsFeedViewModel()
+    @State private var feedNavigateToIndex: Int?
 
     var body: some View {
         NavigationStack {
@@ -25,12 +29,22 @@ struct FriendsView: View {
                 switch selectedSection {
                 case .friends:
                     friendsListSection
+                case .feed:
+                    friendsFeedSection
                 case .addFriend:
                     addFriendSection
                 }
             }
             .navigationTitle("Friends")
             .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(isPresented: Binding(
+                get: { feedNavigateToIndex != nil },
+                set: { if !$0 { feedNavigateToIndex = nil } }
+            )) {
+                if let index = feedNavigateToIndex {
+                    PostDetailView(posts: feedViewModel.posts, initialIndex: index, queryDate: Date())
+                }
+            }
         }
     }
 
@@ -65,7 +79,7 @@ struct FriendsView: View {
                     .foregroundStyle(selectedSection == section ? .primary : .secondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier(section == .friends ? "FriendsSectionButton" : "AddFriendSectionButton")
+                .accessibilityIdentifier("\(section.rawValue)SectionButton")
             }
         }
         .padding(.horizontal, 16)
@@ -146,6 +160,64 @@ struct FriendsView: View {
             Divider()
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
+        }
+    }
+
+    // MARK: - Friends Feed Section
+
+    private var friendsFeedSection: some View {
+        ScrollView {
+            if feedViewModel.isLoading, feedViewModel.posts.isEmpty {
+                ProgressView()
+                    .padding(.top, 60)
+            } else if feedViewModel.posts.isEmpty {
+                emptyState(
+                    icon: "photo.on.rectangle",
+                    title: "No Posts Yet",
+                    subtitle: "When your friends share photos, they'll show up here"
+                )
+            } else {
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)],
+                    spacing: 2
+                ) {
+                    ForEach(Array(feedViewModel.posts.enumerated()), id: \.element.id) { index, post in
+                        Button {
+                            feedNavigateToIndex = index
+                        } label: {
+                            LazyImage(url: post.imageURL) { state in
+                                if let image = state.image {
+                                    Color.clear
+                                        .overlay {
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        }
+                                        .clipped()
+                                } else if state.error != nil {
+                                    Rectangle()
+                                        .fill(Color(.systemGray5))
+                                        .overlay {
+                                            Image(systemName: "photo.badge.exclamationmark")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                } else {
+                                    Rectangle()
+                                        .fill(Color(.systemGray5))
+                                        .overlay { ProgressView() }
+                                }
+                            }
+                            .aspectRatio(1, contentMode: .fill)
+                            .clipped()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .task(id: store.friends.map(\.id)) {
+            feedViewModel.loadPosts(friends: store.friends)
         }
     }
 
