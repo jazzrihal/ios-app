@@ -106,7 +106,7 @@ struct PostDetailView: View {
     ) -> some View {
         GeometryReader { geo in
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: AppStyle.Spacing.medium) {
                     imageContent()
                     postInfo(
                         user: user,
@@ -125,47 +125,19 @@ struct PostDetailView: View {
     // MARK: - Remote Image
 
     private func remoteImage(url: URL) -> some View {
-        LazyImage(url: url) { state in
-            if let image = state.image {
-                image
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-            } else if state.error != nil {
-                ZStack {
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                        .frame(height: 300)
-                    VStack(spacing: 6) {
-                        Image(systemName: "photo.badge.exclamationmark")
-                            .font(.title2)
-                        Text("Failed to load")
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.secondary)
-                }
-            } else {
-                ZStack {
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                        .frame(height: 300)
-                    ProgressView()
+        RemoteImage(url: url, contentMode: .fit)
+            .overlay {
+                if let icon = viewModel?.overlayIcon {
+                    Image(systemName: icon)
+                        .font(.system(size: 80))
+                        .foregroundStyle(viewModel?.overlayColor ?? .clear)
+                        .scaleEffect(viewModel?.overlayScale ?? 0)
+                        .opacity(viewModel?.overlayOpacity ?? 0)
+                        .animation(.easeOut(duration: 0.3), value: viewModel?.overlayScale)
+                        .animation(.easeInOut(duration: 0.4), value: viewModel?.overlayOpacity)
+                        .allowsHitTesting(false)
                 }
             }
-        }
-        .overlay {
-            if let icon = viewModel?.overlayIcon {
-                Image(systemName: icon)
-                    .font(.system(size: 80))
-                    .foregroundStyle(viewModel?.overlayColor ?? .clear)
-                    .scaleEffect(viewModel?.overlayScale ?? 0)
-                    .opacity(viewModel?.overlayOpacity ?? 0)
-                    .animation(.easeOut(duration: 0.3), value: viewModel?.overlayScale)
-                    .animation(.easeInOut(duration: 0.4), value: viewModel?.overlayOpacity)
-                    .allowsHitTesting(false)
-            }
-        }
     }
 
     // MARK: - Local Image
@@ -187,7 +159,7 @@ struct PostDetailView: View {
         locationName: String,
         linkToProfile: Bool
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
             if let user {
                 if linkToProfile {
                     NavigationLink(destination: FriendProfileView(user: user)) {
@@ -206,7 +178,7 @@ struct PostDetailView: View {
             captionSection(caption: caption)
             metadataSection(timestamp: timestamp, locationName: locationName)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 
     // MARK: - Action Bar
@@ -224,7 +196,7 @@ struct PostDetailView: View {
         Button {
             viewModel.performAction(action, store: store)
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: AppStyle.Spacing.tight) {
                 Image(systemName: viewModel.iconName(for: action))
                     .contentTransition(.identity)
                     .font(.title3)
@@ -234,7 +206,7 @@ struct PostDetailView: View {
             }
             .foregroundStyle(actionColor(for: action, viewModel: viewModel))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, AppStyle.Spacing.row)
             .contentShape(Rectangle())
         }
         .animation(.none, value: viewModel.isActionActive(action))
@@ -264,16 +236,13 @@ struct PostDetailView: View {
                 dismiss()
             } label: {
                 Label("Upload", systemImage: "arrow.up.circle.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
             }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .buttonStyle(.appPrimary)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+            .padding(.vertical, AppStyle.Spacing.small)
 
         case .queued:
-            HStack(spacing: 8) {
+            HStack(spacing: AppStyle.Spacing.small) {
                 Image(systemName: "clock.fill")
                     .foregroundStyle(.secondary)
                 Text("Queued for upload")
@@ -281,17 +250,17 @@ struct PostDetailView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, AppStyle.Padding.cardInner)
 
         case .uploading:
-            HStack(spacing: 8) {
+            HStack(spacing: AppStyle.Spacing.small) {
                 ProgressView()
                 Text("Uploading\u{2026}")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, AppStyle.Padding.cardInner)
         }
     }
 
@@ -310,7 +279,7 @@ struct PostDetailView: View {
     // MARK: - Metadata
 
     private func metadataSection(timestamp: Date, locationName: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: AppStyle.Spacing.tight) {
             Label {
                 Text(timestamp.formatted(
                     .dateTime.month(.abbreviated).day().year().hour().minute()

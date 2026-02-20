@@ -11,7 +11,7 @@ struct AuthView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
+            VStack(spacing: AppStyle.Spacing.large) {
                 Spacer()
 
                 // App branding
@@ -24,14 +24,14 @@ struct AuthView: View {
                 Spacer()
 
                 // Form fields
-                VStack(spacing: 12) {
+                VStack(spacing: AppStyle.Spacing.medium) {
                     if isSignUp {
                         TextField("Username", text: $username)
                             .textContentType(.username)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .padding()
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
                     }
 
                     TextField("Email", text: $email)
@@ -39,12 +39,12 @@ struct AuthView: View {
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
                         .padding()
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
 
                     SecureField("Password", text: $password)
                         .textContentType(isSignUp ? .newPassword : .password)
                         .padding()
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
                 }
 
                 // Error
@@ -67,21 +67,14 @@ struct AuthView: View {
                         }
                     }
                 } label: {
-                    Group {
-                        if auth.isLoading {
-                            ProgressView()
-                                .tint(Color(.systemGray))
-                        } else {
-                            Text(isSignUp ? "Create Account" : "Sign In")
-                                .fontWeight(.semibold)
-                        }
+                    if auth.isLoading {
+                        ProgressView()
+                            .tint(Color(.systemGray))
+                    } else {
+                        Text(isSignUp ? "Create Account" : "Sign In")
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .foregroundStyle(authDisabled ? Color(.systemGray) : Color(.systemBackground))
-                    .background(authDisabled ? Color(.systemGray5) : Color.primary, in: RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.appPrimary)
                 .disabled(authDisabled)
                 .accessibilityIdentifier("AuthActionButton")
 
@@ -98,7 +91,7 @@ struct AuthView: View {
 
                 Spacer()
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, AppStyle.Spacing.large)
         }
     }
 }

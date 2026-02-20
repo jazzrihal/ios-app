@@ -11,12 +11,11 @@ struct PostCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // User header (above photo) — navigates to profile
             Button {
                 onTapProfile()
             } label: {
-                HStack(spacing: 10) {
-                    AvatarView(user: post.user, size: 32)
+                HStack(spacing: AppStyle.Spacing.row) {
+                    AvatarView(user: post.user, size: AppStyle.IconSize.avatarSmall)
 
                     Text(post.user.displayName)
                         .font(.callout.weight(.medium))
@@ -31,53 +30,22 @@ struct PostCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+            .padding(.vertical, AppStyle.Spacing.small)
 
-            // Image — tappable to open post detail
             Button {
                 onTapPost()
             } label: {
-                LazyImage(url: post.imageURL) { state in
-                    if let image = state.image {
-                        Color.clear
-                            .overlay {
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            }
-                            .clipped()
-                    } else if state.error != nil {
-                        ZStack {
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                            VStack(spacing: 6) {
-                                Image(systemName: "photo.badge.exclamationmark")
-                                    .font(.title2)
-                                Text("Failed to load")
-                                    .font(.caption)
-                            }
-                            .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        ZStack {
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                            ProgressView()
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 260)
-                .clipped()
-                .contentShape(Rectangle())
+                RemoteImage(url: post.imageURL)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 260)
+                    .clipped()
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            // Info below photo
-            VStack(alignment: .leading, spacing: 6) {
-                // Metadata row (closest to photo)
-                HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: AppStyle.Spacing.compact) {
+                HStack(spacing: AppStyle.Padding.screenHorizontal) {
                     Label(post.timeAgoFormatted, systemImage: "clock")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -87,8 +55,8 @@ struct PostCard: View {
                     Spacer()
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+            .padding(.vertical, AppStyle.Spacing.small)
         }
         .background(.background)
     }

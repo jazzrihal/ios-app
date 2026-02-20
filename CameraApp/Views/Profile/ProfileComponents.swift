@@ -39,11 +39,11 @@ struct ProfileHeaderView<Stats: View>: View {
     @ViewBuilder let stats: () -> Stats
 
     var body: some View {
-        HStack(spacing: 16) {
-            AvatarView(user: user, size: 72)
+        HStack(spacing: AppStyle.Padding.screenHorizontal) {
+            AvatarView(user: user, size: AppStyle.IconSize.avatarLarge)
                 .shadow(color: user.gradientColors.first?.opacity(0.25) ?? .clear, radius: 8, y: 3)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(user.displayName)
                         .font(.title3.weight(.bold))
@@ -69,7 +69,7 @@ struct ProfileStatItem: View {
     let label: String
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: AppStyle.Spacing.tight) {
             Text("\(value)")
                 .font(.subheadline.weight(.bold))
             Text(label)
@@ -120,16 +120,14 @@ struct ProfilePhotoGrid: View {
     var onRetry: ((PendingPost) -> Void)?
     var onRemove: ((PendingPost) -> Void)?
 
-    private let spacing: CGFloat = 2
-
     private let columns = [
-        GridItem(.flexible(), spacing: 2),
-        GridItem(.flexible(), spacing: 2),
-        GridItem(.flexible(), spacing: 2),
+        GridItem(.flexible(), spacing: AppStyle.Spacing.grid),
+        GridItem(.flexible(), spacing: AppStyle.Spacing.grid),
+        GridItem(.flexible(), spacing: AppStyle.Spacing.grid),
     ]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: spacing) {
+        LazyVGrid(columns: columns, spacing: AppStyle.Spacing.grid) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 gridItemView(item: item, globalIndex: index)
             }
@@ -173,31 +171,9 @@ struct ProfilePhotoGrid: View {
     }
 
     private func uploadedGridCell(for post: ImagePost) -> some View {
-        LazyImage(url: post.imageURL) { state in
-            if let image = state.image {
-                Color.clear
-                    .overlay {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    }
-                    .clipped()
-            } else if state.error != nil {
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .overlay {
-                        Image(systemName: "photo.badge.exclamationmark")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-            } else {
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .overlay { ProgressView() }
-            }
-        }
-        .aspectRatio(1, contentMode: .fill)
-        .clipped()
+        RemoteImage(url: post.imageURL)
+            .aspectRatio(1, contentMode: .fill)
+            .clipped()
     }
 
     private func pendingGridCell(post: PendingPost, image: UIImage?) -> some View {
@@ -238,7 +214,7 @@ struct ProfilePhotoGrid: View {
             ProgressView()
                 .tint(.white)
         case .failed:
-            VStack(spacing: 4) {
+            VStack(spacing: AppStyle.Spacing.tight) {
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.title3)
                     .foregroundStyle(.red)
@@ -281,35 +257,5 @@ struct ProfilePostsSection<EmptyContent: View>: View {
                 )
             }
         }
-    }
-}
-
-// MARK: - Posts Empty State
-
-/// Configurable empty-state placeholder for the posts section.
-struct ProfilePostsEmptyState: View {
-    let icon: String
-    let title: String
-    var subtitle: String?
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 28))
-                .foregroundStyle(.tertiary)
-
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            if let subtitle {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
     }
 }

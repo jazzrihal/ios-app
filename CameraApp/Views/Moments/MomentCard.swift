@@ -11,19 +11,17 @@ struct MomentCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 0) {
-                // Photo mosaic
                 if !posts.isEmpty {
                     photoMosaic
                 }
 
-                // Info footer
                 HStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: AppStyle.Spacing.tight) {
                         Text(moment.locationName)
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
 
-                        HStack(spacing: 10) {
+                        HStack(spacing: AppStyle.Spacing.row) {
                             Label(moment.dateFormatted, systemImage: "calendar")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -37,20 +35,20 @@ struct MomentCard: View {
                         }
                     }
 
-                    Spacer(minLength: 8)
+                    Spacer(minLength: AppStyle.Spacing.small)
 
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+                .padding(.horizontal, AppStyle.Padding.cardInner)
+                .padding(.vertical, AppStyle.Padding.cardInner)
             }
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
+            .clipShape(RoundedRectangle(cornerRadius: AppStyle.CornerRadius.card, style: .continuous))
+            .cardShadow()
         }
-        .buttonStyle(MomentCardButtonStyle())
+        .buttonStyle(.momentCard)
     }
 
     // MARK: - Photo Mosaic
@@ -65,18 +63,18 @@ struct MomentCard: View {
                 .frame(maxWidth: .infinity)
                 .clipped()
         } else if count == 2 {
-            HStack(spacing: 2) {
+            HStack(spacing: AppStyle.Spacing.grid) {
                 thumbnailImage(for: posts[0])
                 thumbnailImage(for: posts[1])
             }
             .frame(height: height)
             .clipped()
         } else {
-            HStack(spacing: 2) {
+            HStack(spacing: AppStyle.Spacing.grid) {
                 thumbnailImage(for: posts[0])
                     .frame(maxWidth: .infinity)
 
-                VStack(spacing: 2) {
+                VStack(spacing: AppStyle.Spacing.grid) {
                     ForEach(posts[1 ..< count]) { post in
                         thumbnailImage(for: post)
                     }
@@ -89,40 +87,7 @@ struct MomentCard: View {
     }
 
     private func thumbnailImage(for post: ImagePost) -> some View {
-        LazyImage(url: post.imageURL) { state in
-            if let image = state.image {
-                Color.clear
-                    .overlay {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    }
-                    .clipped()
-            } else if state.error != nil {
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .overlay {
-                        Image(systemName: "photo")
-                            .foregroundStyle(.quaternary)
-                    }
-            } else {
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .overlay { ProgressView().tint(.secondary) }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-// MARK: - Card Button Style
-
-/// Provides a subtle scale + opacity press effect for the moment card.
-struct MomentCardButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.85 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+        RemoteImage(url: post.imageURL)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

@@ -20,7 +20,7 @@ struct PostPreviewView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: AppStyle.Spacing.large) {
                     imageSection
                     quickActionsSection
                     offlineBanner
@@ -33,7 +33,7 @@ struct PostPreviewView: View {
                         Text(enqueueError)
                             .font(.caption)
                             .foregroundStyle(.red)
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
                     }
 
                     postButton
@@ -71,41 +71,31 @@ struct PostPreviewView: View {
     // MARK: - Quick Actions
 
     private var quickActionsSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: AppStyle.Spacing.medium) {
             Button {
                 enqueueWithDefaults()
             } label: {
                 Label("Post Without Editing", systemImage: "paperplane.fill")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(Color(.systemBackground))
-                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
             }
             .accessibilityIdentifier("PostWithoutEditingButton")
-            .buttonStyle(.plain)
+            .buttonStyle(.appPrimary)
 
             Button {
                 saveDraft()
             } label: {
                 Label("Save Without Uploading", systemImage: "square.and.arrow.down")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(.primary)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
             }
             .accessibilityIdentifier("SaveWithoutUploadingButton")
-            .buttonStyle(.plain)
+            .buttonStyle(.appSecondary)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 
     // MARK: - Offline Banner
 
     @ViewBuilder private var offlineBanner: some View {
         if !networkMonitor.isConnected {
-            HStack(spacing: 10) {
+            HStack(spacing: AppStyle.Spacing.row) {
                 Image(systemName: "wifi.slash")
                     .font(.title3)
                     .foregroundStyle(.orange)
@@ -118,49 +108,47 @@ struct PostPreviewView: View {
                 }
                 Spacer()
             }
-            .padding(12)
+            .padding(AppStyle.Padding.cardInner)
             .background(
                 Color.orange.opacity(0.1),
-                in: RoundedRectangle(cornerRadius: 10)
+                in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
                     .stroke(Color.orange.opacity(0.3), lineWidth: 1)
             )
-            .padding(.horizontal, 16)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
         }
     }
 
     // MARK: - Caption
 
     private var captionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
             Label("Caption", systemImage: "text.bubble")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .sectionLabel()
 
             TextField("Write a caption…", text: $caption, axis: .vertical)
                 .accessibilityIdentifier("CaptionTextField")
                 .lineLimit(3 ... 6)
-                .padding(12)
+                .padding(AppStyle.Padding.cardInner)
                 .background(
                     .ultraThinMaterial,
-                    in: RoundedRectangle(cornerRadius: 10)
+                    in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
                 )
                 .focused($captionFocused)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 
     // MARK: - Date & Time
 
     private var dateTimeSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
             Label("Date & Time", systemImage: "calendar.badge.clock")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .sectionLabel()
 
-            HStack(spacing: 10) {
+            HStack(spacing: AppStyle.Spacing.row) {
                 Image(systemName: "clock.fill")
                     .foregroundStyle(.primary)
                     .font(.title3)
@@ -175,34 +163,33 @@ struct PostPreviewView: View {
 
                 Spacer()
             }
-            .padding(12)
+            .padding(AppStyle.Padding.cardInner)
             .background(
                 .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: 10)
+                in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
             )
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 
     // MARK: - Location
 
     private var locationSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
             Label("Location", systemImage: "location.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .sectionLabel()
 
-            HStack(spacing: 10) {
+            HStack(spacing: AppStyle.Spacing.row) {
                 locationContent
                 Spacer()
             }
-            .padding(12)
+            .padding(AppStyle.Padding.cardInner)
             .background(
                 .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: 10)
+                in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
             )
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 
     @ViewBuilder private var locationContent: some View {
@@ -231,10 +218,9 @@ struct PostPreviewView: View {
     // MARK: - Scope
 
     private var scopeSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
             Label("Who can see this?", systemImage: "eye")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .sectionLabel()
 
             HStack(spacing: 0) {
                 ForEach(PostScope.allCases) { option in
@@ -242,19 +228,19 @@ struct PostPreviewView: View {
                         option: option,
                         isSelected: scope == option
                     ) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        withAnimation(AppStyle.Animation.transition) {
                             scope = option
                         }
                     }
                 }
             }
-            .padding(4)
+            .padding(AppStyle.Spacing.tight)
             .background(
                 .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: 10)
+                in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
             )
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 
     // MARK: - Post Button
@@ -264,15 +250,10 @@ struct PostPreviewView: View {
             enqueueWithSettings()
         } label: {
             Text("Post")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .foregroundStyle(Color(.systemBackground))
-                .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
         }
         .accessibilityIdentifier("PostButton")
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
+        .buttonStyle(.appPrimary)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
         .padding(.bottom, 32)
     }
 
@@ -359,7 +340,7 @@ struct ScopeOptionButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 6) {
+            VStack(spacing: AppStyle.Spacing.compact) {
                 Image(systemName: option.icon)
                     .font(.title3)
                 Text(option.rawValue)
@@ -371,10 +352,10 @@ struct ScopeOptionButton: View {
                     )
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, AppStyle.Padding.cardInner)
             .background(
                 isSelected ? Color.primary.opacity(0.12) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 10)
+                in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
             )
             .foregroundStyle(isSelected ? .primary : .secondary)
         }

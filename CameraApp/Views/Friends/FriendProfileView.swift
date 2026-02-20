@@ -14,24 +14,24 @@ struct FriendProfileView: View {
         ScrollView {
             VStack(spacing: 0) {
                 ProfileHeaderView(user: viewModel.user) {
-                    HStack(spacing: 16) {
+                    HStack(spacing: AppStyle.Padding.screenHorizontal) {
                         ProfileStatItem(value: viewModel.userPosts.count, label: "Posts")
                         ProfileStatItem(value: viewModel.user.friendCount, label: "Friends")
                         ProfileStatItem(value: viewModel.user.mutualFriendCount, label: "Mutual")
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                .padding(.top, AppStyle.Spacing.medium)
 
                 if !viewModel.user.bio.isEmpty {
                     ProfileBioView(bio: viewModel.user.bio)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
+                        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                        .padding(.top, AppStyle.Spacing.row)
                 }
 
                 actionButtons
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
+                    .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                    .padding(.top, AppStyle.Spacing.medium)
 
                 ProfilePostsSection(
                     isLoading: viewModel.isLoadingPosts,
@@ -41,7 +41,7 @@ struct FriendProfileView: View {
                         friendPostsEmptyState
                     }
                 )
-                .padding(.top, 16)
+                .padding(.top, AppStyle.Padding.screenHorizontal)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -91,73 +91,49 @@ struct FriendProfileView: View {
                 Button {
                     viewModel.sendRequest(store: store)
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: AppStyle.Spacing.compact) {
                         Image(systemName: "person.badge.plus")
-                            .font(.subheadline)
                         Text("Add Friend")
-                            .font(.subheadline.weight(.semibold))
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(Color(.systemBackground))
-                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.appPrimary)
 
             case .pendingSent:
                 Button {
                     viewModel.cancelRequest(store: store)
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: AppStyle.Spacing.compact) {
                         Image(systemName: "clock")
-                            .font(.subheadline)
                         Text("Request Pending")
-                            .font(.subheadline.weight(.semibold))
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(.secondary)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.appSecondary)
 
             case .pendingReceived:
-                HStack(spacing: 10) {
+                HStack(spacing: AppStyle.Spacing.row) {
                     Button {
                         viewModel.acceptRequest(store: store)
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: AppStyle.Spacing.compact) {
                             Image(systemName: "checkmark")
-                                .font(.subheadline)
                             Text("Accept")
-                                .font(.subheadline.weight(.semibold))
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .foregroundStyle(Color(.systemBackground))
-                        .background(Color.primary, in: RoundedRectangle(cornerRadius: 10))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.appPrimary)
 
                     Button {
                         viewModel.declineRequest(store: store)
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: AppStyle.Spacing.compact) {
                             Image(systemName: "xmark")
-                                .font(.subheadline)
                             Text("Decline")
-                                .font(.subheadline.weight(.semibold))
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .foregroundStyle(.secondary)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.appSecondary)
                 }
 
             case .friends:
-                HStack(spacing: 6) {
+                HStack(spacing: AppStyle.Spacing.compact) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.subheadline)
                     Text("Friends")
@@ -165,8 +141,8 @@ struct FriendProfileView: View {
                 }
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                .padding(.vertical, AppStyle.Padding.buttonVertical)
+                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
             }
         }
     }
@@ -176,15 +152,17 @@ struct FriendProfileView: View {
     private var friendPostsEmptyState: some View {
         Group {
             if store.status(for: viewModel.user) == .friends {
-                ProfilePostsEmptyState(
+                EmptyStateView(
                     icon: "photo.on.rectangle.angled",
-                    title: "No posts yet"
+                    title: "No posts yet",
+                    style: .compact
                 )
             } else {
-                ProfilePostsEmptyState(
+                EmptyStateView(
                     icon: "photo.on.rectangle.angled",
                     title: "No public posts",
-                    subtitle: "Add \(viewModel.user.displayName) as a friend to see more."
+                    subtitle: "Add \(viewModel.user.displayName) as a friend to see more.",
+                    style: .compact
                 )
             }
         }

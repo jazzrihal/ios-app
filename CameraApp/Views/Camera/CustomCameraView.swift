@@ -42,15 +42,15 @@ struct CustomCameraView: View {
                     Image(systemName: "xmark")
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
+                        .frame(width: AppStyle.IconSize.tapTarget, height: AppStyle.IconSize.tapTarget)
                         .background(.white.opacity(0.2), in: Circle())
                 }
                 .accessibilityIdentifier("CameraCloseButton")
 
                 Spacer()
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+            .padding(.top, AppStyle.Spacing.medium)
 
             Spacer()
 
@@ -66,7 +66,7 @@ struct CustomCameraView: View {
             ZStack {
                 Circle()
                     .stroke(.white, lineWidth: 4)
-                    .frame(width: 72, height: 72)
+                    .frame(width: AppStyle.IconSize.avatarLarge, height: AppStyle.IconSize.avatarLarge)
                 Circle()
                     .fill(.white)
                     .frame(width: 60, height: 60)
@@ -78,7 +78,7 @@ struct CustomCameraView: View {
 
     #if targetEnvironment(simulator)
         private var simulatorPlaceholder: some View {
-            VStack(spacing: 12) {
+            VStack(spacing: AppStyle.Spacing.medium) {
                 Image(systemName: "camera")
                     .font(.system(size: 48))
                     .foregroundStyle(.white.opacity(0.3))

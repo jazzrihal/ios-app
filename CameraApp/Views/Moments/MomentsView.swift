@@ -39,7 +39,12 @@ struct MomentsView: View {
                                 }
                             }
                             .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowInsets(EdgeInsets(
+                                top: AppStyle.Spacing.small,
+                                leading: AppStyle.Padding.screenHorizontal,
+                                bottom: AppStyle.Spacing.small,
+                                trailing: AppStyle.Padding.screenHorizontal
+                            ))
                             .listRowBackground(Color.clear)
                         }
                     }
@@ -77,14 +82,13 @@ struct MomentsView: View {
 
     // MARK: - Helpers
 
-    /// Sorted by addedAt descending (most recently added first)
     private var sortedMoments: [Moment] {
         store.moments.sorted { $0.addedAt > $1.addedAt }
     }
 
     private func navigateToExplore(_ moment: Moment) {
         store.pendingMoment = moment
-        store.selectedTab = 0 // Explore tab
+        store.selectedTab = 0
     }
 }
 
@@ -107,7 +111,7 @@ struct MomentsMapView: View {
                         anchor: .bottom
                     ) {
                         Button {
-                            withAnimation(.spring(duration: 0.3)) {
+                            withAnimation(AppStyle.Animation.spring) {
                                 selectedMoment = selectedMoment?.id == moment.id ? nil : moment
                             }
                         } label: {
@@ -123,7 +127,6 @@ struct MomentsMapView: View {
                                         .foregroundStyle(Color(.systemBackground))
                                 }
 
-                                // Triangle pointer
                                 Triangle()
                                     .fill(Color.primary.opacity(0.9))
                                     .frame(width: 12, height: 8)
@@ -143,18 +146,17 @@ struct MomentsMapView: View {
                 fitToMoments()
             }
 
-            // Selected moment detail card
             if let moment = selectedMoment {
                 MomentDetailCard(moment: moment) {
                     onNavigate(moment)
                 } onDismiss: {
-                    withAnimation(.spring(duration: 0.3)) {
+                    withAnimation(AppStyle.Animation.spring) {
                         selectedMoment = nil
                     }
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+                .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                .padding(.bottom, AppStyle.Padding.screenHorizontal)
             }
         }
     }
@@ -194,8 +196,7 @@ struct MomentDetailCard: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Header with dismiss
+        VStack(spacing: AppStyle.Spacing.medium) {
             HStack {
                 Image(systemName: "mappin.and.ellipse")
                     .font(.title3)
@@ -219,9 +220,8 @@ struct MomentDetailCard: View {
 
             Divider()
 
-            // Details
-            HStack(spacing: 16) {
-                HStack(spacing: 4) {
+            HStack(spacing: AppStyle.Padding.screenHorizontal) {
+                HStack(spacing: AppStyle.Spacing.tight) {
                     Image(systemName: "calendar")
                         .font(.caption2)
                     Text(moment.dateFormatted)
@@ -229,7 +229,7 @@ struct MomentDetailCard: View {
                 }
                 .foregroundStyle(.secondary)
 
-                HStack(spacing: 4) {
+                HStack(spacing: AppStyle.Spacing.tight) {
                     Image(systemName: "clock")
                         .font(.caption2)
                     Text("Saved \(moment.addedAtFormatted)")
@@ -240,28 +240,19 @@ struct MomentDetailCard: View {
                 Spacer()
             }
 
-            // Explore button
             Button {
                 onExplore()
             } label: {
                 HStack {
                     Image(systemName: "safari")
                     Text("View in Explore")
-                        .font(.subheadline.weight(.medium))
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    Color.primary,
-                    in: RoundedRectangle(cornerRadius: 10)
-                )
-                .foregroundStyle(Color(.systemBackground))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.appPrimary)
         }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
+        .padding(AppStyle.Padding.screenHorizontal)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.overlay))
+        .overlayShadow()
     }
 }
 

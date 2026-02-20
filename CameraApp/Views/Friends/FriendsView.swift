@@ -22,10 +22,8 @@ struct FriendsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // ── Segmented Picker ──
                 sectionPicker
 
-                // ── Content ──
                 switch selectedSection {
                 case .friends:
                     friendsListSection
@@ -54,15 +52,15 @@ struct FriendsView: View {
         HStack(spacing: 0) {
             ForEach(FriendsSection.allCases, id: \.self) { section in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(AppStyle.Animation.transition) {
                         selectedSection = section
                         searchText = ""
                         searchTask?.cancel()
                         store.clearSearchResults()
                     }
                 } label: {
-                    VStack(spacing: 6) {
-                        HStack(spacing: 4) {
+                    VStack(spacing: AppStyle.Spacing.compact) {
+                        HStack(spacing: AppStyle.Spacing.tight) {
                             Text(section.rawValue)
                                 .font(.subheadline.weight(.semibold))
 
@@ -82,17 +80,17 @@ struct FriendsView: View {
                 .accessibilityIdentifier("\(section.rawValue)SectionButton")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 4)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+        .padding(.top, AppStyle.Spacing.tight)
     }
 
     private func badgeView(count: Int) -> some View {
         Text("\(count)")
             .font(.caption2.weight(.bold))
             .foregroundStyle(.white)
-            .padding(.horizontal, 6)
+            .padding(.horizontal, AppStyle.Spacing.compact)
             .padding(.vertical, 2)
-            .background(Color.primary, in: RoundedRectangle(cornerRadius: 6))
+            .background(Color.primary, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.badge))
     }
 
     // MARK: - Friends List Section
@@ -100,20 +98,17 @@ struct FriendsView: View {
     private var friendsListSection: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                // ── Search ──
-                searchBar(placeholder: "Search friends…")
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
+                AppSearchBar(text: $searchText, placeholder: "Search friends…")
+                    .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                    .padding(.top, AppStyle.Spacing.medium)
 
-                // ── Incoming Requests ──
                 if !store.incomingRequests.isEmpty, searchText.isEmpty {
                     incomingRequestsSection
                 }
 
-                // ── Friends List ──
                 let filtered = store.searchFriends(query: searchText)
                 if filtered.isEmpty {
-                    emptyState(
+                    EmptyStateView(
                         icon: searchText.isEmpty ? "person.2" : "magnifyingglass",
                         title: searchText.isEmpty ? "No Friends Yet" : "No Results",
                         subtitle: searchText.isEmpty
@@ -127,15 +122,15 @@ struct FriendsView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, AppStyle.Padding.screenHorizontal)
                 }
             }
-            .padding(.bottom, 24)
+            .padding(.bottom, AppStyle.Spacing.large)
         }
     }
 
     private var incomingRequestsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
             HStack {
                 Image(systemName: "person.badge.plus")
                     .foregroundStyle(.primary)
@@ -145,21 +140,21 @@ struct FriendsView: View {
                 Text("\(store.incomingRequests.count)")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, AppStyle.Spacing.small)
                     .padding(.vertical, 3)
-                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 6))
+                    .background(Color.primary, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.badge))
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+            .padding(.top, AppStyle.Padding.screenHorizontal)
 
             ForEach(store.incomingRequests) { user in
                 IncomingRequestRow(user: user)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
 
             Divider()
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
+                .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                .padding(.top, AppStyle.Spacing.tight)
         }
     }
 
@@ -169,47 +164,25 @@ struct FriendsView: View {
         ScrollView {
             if feedViewModel.isLoading, feedViewModel.posts.isEmpty {
                 ProgressView()
-                    .padding(.top, 60)
+                    .padding(.top, AppStyle.Padding.emptyStateTop)
             } else if feedViewModel.posts.isEmpty {
-                emptyState(
+                EmptyStateView(
                     icon: "photo.on.rectangle",
                     title: "No Posts Yet",
                     subtitle: "When your friends share photos, they'll show up here"
                 )
             } else {
                 LazyVGrid(
-                    columns: [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)],
-                    spacing: 2
+                    columns: [GridItem(.flexible(), spacing: AppStyle.Spacing.grid), GridItem(.flexible(), spacing: AppStyle.Spacing.grid)],
+                    spacing: AppStyle.Spacing.grid
                 ) {
                     ForEach(Array(feedViewModel.posts.enumerated()), id: \.element.id) { index, post in
                         Button {
                             feedNavigateToIndex = index
                         } label: {
-                            LazyImage(url: post.imageURL) { state in
-                                if let image = state.image {
-                                    Color.clear
-                                        .overlay {
-                                            image
-                                                .resizable()
-                                                .scaledToFill()
-                                        }
-                                        .clipped()
-                                } else if state.error != nil {
-                                    Rectangle()
-                                        .fill(Color(.systemGray5))
-                                        .overlay {
-                                            Image(systemName: "photo.badge.exclamationmark")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                } else {
-                                    Rectangle()
-                                        .fill(Color(.systemGray5))
-                                        .overlay { ProgressView() }
-                                }
-                            }
-                            .aspectRatio(1, contentMode: .fill)
-                            .clipped()
+                            RemoteImage(url: post.imageURL)
+                                .aspectRatio(1, contentMode: .fill)
+                                .clipped()
                         }
                         .buttonStyle(.plain)
                     }
@@ -226,62 +199,46 @@ struct FriendsView: View {
     private var addFriendSection: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                // ── Search ──
-                searchBar(placeholder: "Search by username or name…")
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
+                AppSearchBar(text: $searchText, placeholder: "Search by username or name…")
+                    .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                    .padding(.top, AppStyle.Spacing.medium)
 
                 if searchText.isEmpty {
-                    // ── Prompt ──
-                    VStack(spacing: 12) {
-                        Image(systemName: "person.badge.plus")
-                            .font(.system(size: 36))
-                            .foregroundStyle(.tertiary)
-                        Text("Add a Friend")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                        Text("Search by username or display name\nto find and add friends")
-                            .font(.subheadline)
-                            .foregroundStyle(.tertiary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 60)
-                    .padding(.horizontal, 32)
+                    EmptyStateView(
+                        icon: "person.badge.plus",
+                        title: "Add a Friend",
+                        subtitle: "Search by username or display name\nto find and add friends"
+                    )
                 } else if searchText.count < 2 {
-                    // ── Too short ──
-                    emptyState(
+                    EmptyStateView(
                         icon: "magnifyingglass",
                         title: "Keep Typing…",
                         subtitle: "Enter at least 2 characters to search"
                     )
                 } else if store.isSearching {
-                    // ── Loading ──
                     ProgressView()
-                        .padding(.top, 60)
+                        .padding(.top, AppStyle.Padding.emptyStateTop)
                 } else if store.searchResults.isEmpty {
-                    // ── No Results ──
-                    emptyState(
+                    EmptyStateView(
                         icon: "magnifyingglass",
                         title: "No People Found",
                         subtitle: "Try a different username or name"
                     )
                 } else {
-                    // ── Results ──
                     ForEach(store.searchResults) { user in
                         NavigationLink(destination: FriendProfileView(user: user)) {
                             DiscoverUserRow(user: user)
                         }
                         .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, AppStyle.Padding.screenHorizontal)
                 }
             }
-            .padding(.bottom, 24)
+            .padding(.bottom, AppStyle.Spacing.large)
         }
         .onChange(of: searchText) { _, newValue in
             guard selectedSection == .addFriend else { return }
 
-            // Cancel any previous debounced search
             searchTask?.cancel()
 
             let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -290,59 +247,12 @@ struct FriendsView: View {
                 return
             }
 
-            // Debounce: wait 400ms before firing the remote search
             searchTask = Task {
                 try? await Task.sleep(for: .milliseconds(400))
                 guard !Task.isCancelled else { return }
                 await store.remoteSearchUsers(query: newValue)
             }
         }
-    }
-
-    // MARK: - Shared Components
-
-    private func searchBar(placeholder: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .font(.subheadline)
-
-            TextField(placeholder, text: $searchText)
-                .font(.subheadline)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func emptyState(icon: String, title: String, subtitle: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 36))
-                .foregroundStyle(.tertiary)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.secondary)
-            Text(subtitle)
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.top, 60)
-        .padding(.horizontal, 32)
     }
 }
 
@@ -352,10 +262,10 @@ struct FriendRow: View {
     let user: User
 
     var body: some View {
-        HStack(spacing: 14) {
-            AvatarView(user: user, size: 48)
+        HStack(spacing: AppStyle.Padding.cardInner) {
+            AvatarView(user: user, size: AppStyle.IconSize.avatarMedium)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: AppStyle.Spacing.tight) {
                 Text(user.displayName)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
@@ -372,9 +282,8 @@ struct FriendRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.top, 8)
+        .cardRow()
+        .padding(.top, AppStyle.Spacing.small)
     }
 }
 
@@ -385,12 +294,12 @@ struct IncomingRequestRow: View {
     @Environment(FriendsStore.self) private var store
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: AppStyle.Spacing.medium) {
             NavigationLink(destination: FriendProfileView(user: user)) {
-                AvatarView(user: user, size: 44)
+                AvatarView(user: user, size: AppStyle.IconSize.tapTarget)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: AppStyle.Spacing.grid) {
                 NavigationLink(destination: FriendProfileView(user: user)) {
                     Text(user.displayName)
                         .font(.subheadline.weight(.semibold))
@@ -406,35 +315,25 @@ struct IncomingRequestRow: View {
             Spacer()
 
             Button {
-                withAnimation(.spring(duration: 0.3)) {
+                withAnimation(AppStyle.Animation.spring) {
                     store.acceptRequest(from: user)
                 }
             } label: {
                 Text("Accept")
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .foregroundStyle(Color(.systemBackground))
-                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.appPill)
 
             Button {
-                withAnimation(.spring(duration: 0.3)) {
+                withAnimation(AppStyle.Animation.spring) {
                     store.declineRequest(from: user)
                 }
             } label: {
                 Image(systemName: "xmark")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(8)
-                    .background(.ultraThinMaterial, in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.appIcon)
         }
-        .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.top, 4)
+        .cardRow()
+        .padding(.top, AppStyle.Spacing.tight)
     }
 }
 
@@ -445,15 +344,15 @@ struct DiscoverUserRow: View {
     @Environment(FriendsStore.self) private var store
 
     var body: some View {
-        HStack(spacing: 14) {
-            AvatarView(user: user, size: 48)
+        HStack(spacing: AppStyle.Padding.cardInner) {
+            AvatarView(user: user, size: AppStyle.IconSize.avatarMedium)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: AppStyle.Spacing.tight) {
                 Text(user.displayName)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
 
-                HStack(spacing: 4) {
+                HStack(spacing: AppStyle.Spacing.tight) {
                     Text("@\(user.username)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -473,9 +372,8 @@ struct DiscoverUserRow: View {
 
             statusButton
         }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.top, 8)
+        .cardRow()
+        .padding(.top, AppStyle.Spacing.small)
     }
 
     @ViewBuilder private var statusButton: some View {
@@ -484,96 +382,57 @@ struct DiscoverUserRow: View {
         switch friendStatus {
         case .none:
             Button {
-                withAnimation(.spring(duration: 0.3)) {
+                withAnimation(AppStyle.Animation.spring) {
                     store.sendRequest(to: user)
                 }
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: AppStyle.Spacing.tight) {
                     Image(systemName: "person.badge.plus")
                         .font(.caption2)
                     Text("Add")
-                        .font(.caption.weight(.semibold))
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .foregroundStyle(Color(.systemBackground))
-                .background(Color.primary, in: RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.appPill)
 
         case .pendingSent:
             Button {
-                withAnimation(.spring(duration: 0.3)) {
+                withAnimation(AppStyle.Animation.spring) {
                     store.cancelRequest(to: user)
                 }
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: AppStyle.Spacing.tight) {
                     Image(systemName: "clock")
                         .font(.caption2)
                     Text("Pending")
-                        .font(.caption.weight(.semibold))
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .foregroundStyle(.secondary)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.appPillSecondary)
 
         case .pendingReceived:
             Button {
-                withAnimation(.spring(duration: 0.3)) {
+                withAnimation(AppStyle.Animation.spring) {
                     store.acceptRequest(from: user)
                 }
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: AppStyle.Spacing.tight) {
                     Image(systemName: "checkmark")
                         .font(.caption2)
                     Text("Accept")
-                        .font(.caption.weight(.semibold))
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .foregroundStyle(Color(.systemBackground))
-                .background(Color.primary, in: RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.appPill)
 
         case .friends:
-            HStack(spacing: 4) {
+            HStack(spacing: AppStyle.Spacing.tight) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.caption2)
                 Text("Friends")
                     .font(.caption.weight(.semibold))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, AppStyle.Padding.pillHorizontal)
+            .padding(.vertical, AppStyle.Padding.pillVertical)
             .foregroundStyle(.primary)
         }
-    }
-}
-
-// MARK: - Avatar View
-
-struct AvatarView: View {
-    let user: User
-    let size: CGFloat
-
-    var body: some View {
-        Circle()
-            .fill(
-                LinearGradient(
-                    colors: user.gradientColors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(width: size, height: size)
-            .overlay {
-                Text(user.initials)
-                    .font(.system(size: size * 0.35, weight: .bold))
-                    .foregroundStyle(.white)
-            }
     }
 }
 

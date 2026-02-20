@@ -63,7 +63,7 @@ struct ProfileView: View {
         ScrollView {
             VStack(spacing: 0) {
                 ProfileHeaderView(user: user) {
-                    HStack(spacing: 16) {
+                    HStack(spacing: AppStyle.Padding.screenHorizontal) {
                         ProfileStatItem(
                             value: userPosts.count + currentUserPendingCount,
                             label: "Posts"
@@ -71,13 +71,13 @@ struct ProfileView: View {
                         ProfileStatItem(value: friendsStore.friends.count, label: "Friends")
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                .padding(.top, AppStyle.Spacing.medium)
 
                 if !user.bio.isEmpty {
                     ProfileBioView(bio: user.bio)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
+                        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                        .padding(.top, AppStyle.Spacing.row)
                 }
 
                 ProfilePostsSection(
@@ -87,14 +87,15 @@ struct ProfileView: View {
                     onRetry: { post in uploadManager.retryPost(post) },
                     onRemove: { post in uploadManager.removePost(post) },
                     emptyContent: {
-                        ProfilePostsEmptyState(
+                        EmptyStateView(
                             icon: "camera",
                             title: "No photos yet",
-                            subtitle: "Your photos will appear here."
+                            subtitle: "Your photos will appear here.",
+                            style: .compact
                         )
                     }
                 )
-                .padding(.top, 16)
+                .padding(.top, AppStyle.Padding.screenHorizontal)
             }
         }
     }

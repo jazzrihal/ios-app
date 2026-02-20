@@ -1,0 +1,180 @@
+---
+description: SwiftUI UI component style guide — enforces the app's established visual design language when creating or modifying Views
+globs: **/*.swift
+alwaysApply: false
+---
+
+# SwiftUI Component Style Guide
+
+Follow these conventions when creating or modifying any SwiftUI View in this project. All design tokens live in `CameraApp/Styles/AppStyle.swift`. Reusable button styles, view modifiers, and components are in `CameraApp/Styles/` and `CameraApp/Components/`.
+
+## Design Tokens — `AppStyle`
+
+Always reference `AppStyle` tokens instead of hard-coding numeric values:
+
+| Category | Token | Value | Use for |
+|----------|-------|-------|---------|
+| **Corner radius** | `.CornerRadius.badge` | 6 | Badges |
+| | `.CornerRadius.pill` | 8 | Small inline buttons |
+| | `.CornerRadius.control` | 10 | Inputs, primary buttons, form fields |
+| | `.CornerRadius.card` | 14 | Card rows, list items |
+| | `.CornerRadius.overlay` | 20 | Detail overlays, sheets |
+| **Spacing** | `.Spacing.grid` | 2 | Photo grid inter-item |
+| | `.Spacing.tight` | 4 | Tight inline |
+| | `.Spacing.compact` | 6 | Label stacks, tab pickers |
+| | `.Spacing.small` | 8 | General small gap |
+| | `.Spacing.row` | 10 | HStack rows, search bars |
+| | `.Spacing.medium` | 12 | Section content |
+| | `.Spacing.large` | 24 | Major sections |
+| **Padding** | `.Padding.screenHorizontal` | 16 | Screen-level horizontal padding |
+| | `.Padding.cardInner` | 12 | Inner card/input padding |
+| | `.Padding.buttonVertical` | 14 | Full-width CTA vertical padding |
+| | `.Padding.pillHorizontal` | 12 | Pill button horizontal padding |
+| | `.Padding.pillVertical` | 6 | Pill button vertical padding |
+| | `.Padding.emptyStateTop` | 60 | Empty state top padding |
+| | `.Padding.emptyStateHorizontal` | 32 | Empty state side padding |
+| **Icon sizes** | `.IconSize.emptyStateIcon` | 36 | SF Symbol in prominent empty states |
+| | `.IconSize.emptyStateIconCompact` | 28 | SF Symbol in compact empty states |
+| | `.IconSize.tapTarget` | 44 | Minimum tap target |
+| | `.IconSize.avatarSmall` | 32 | Small avatars |
+| | `.IconSize.avatarMedium` | 48 | Default avatars |
+| | `.IconSize.avatarLarge` | 72 | Profile header avatars |
+| **Animation** | `.Animation.transition` | easeInOut 0.2s | UI state transitions |
+| | `.Animation.spring` | spring 0.3s | Interactive / spring actions |
+| | `.Animation.press` | easeInOut 0.15s | Card press effects |
+
+## Colors — Semantic Only
+
+Use **only** semantic/system colors. Never use custom hex values, color literals, or `Color("named")`.
+
+- Text hierarchy: `.primary`, `.secondary`, `.tertiary`, `.quaternary`
+- Backgrounds: `Color(.systemBackground)`, `Color(.systemGray5)`, `Color(.secondarySystemGroupedBackground)`
+- Surfaces/inputs: `.ultraThinMaterial`
+- Semantic accents: `.red` (destructive/liked), `.orange` (pinned/offline)
+- Dark/light mode is handled automatically — never branch on `colorScheme`
+
+## Buttons
+
+**Never** use system button styles (`.borderedProminent`, `.bordered`, `.borderless`). Use the app's custom `ButtonStyle` types defined in `CameraApp/Styles/AppButtonStyles.swift`.
+
+| Style | Accessor | Use for |
+|-------|----------|---------|
+| `AppPrimaryButtonStyle` | `.appPrimary` | Full-width CTAs (Post, Sign In, Add Friend) |
+| `AppSecondaryButtonStyle` | `.appSecondary` | Full-width secondary actions (Save, Discard) |
+| `AppPillButtonStyle` | `.appPill` | Small inline primary actions (Accept, Add) |
+| `AppPillSecondaryButtonStyle` | `.appPillSecondary` | Small inline secondary actions (Pending, Cancel) |
+| `AppIconButtonStyle` | `.appIcon` | Circular icon-only buttons (close, dismiss) |
+| `MomentCardButtonStyle` | `.momentCard` | Card-level press effects (scale + opacity) |
+
+```swift
+Button("Post") { ... }
+    .buttonStyle(.appPrimary)
+
+Button("Accept") { ... }
+    .buttonStyle(.appPill)
+
+Button { ... } label: { Image(systemName: "xmark") }
+    .buttonStyle(.appIcon)
+```
+
+`AppPrimaryButtonStyle` handles disabled appearance automatically via `@Environment(\.isEnabled)`.
+
+## View Modifiers
+
+Reusable modifiers in `CameraApp/Styles/AppViewModifiers.swift`:
+
+| Modifier | Applies |
+|----------|---------|
+| `.cardRow()` | `padding(cardInner)` + `ultraThinMaterial` background + `card` corner radius |
+| `.sectionLabel()` | `.subheadline.weight(.semibold)` + `.secondary` foreground |
+| `.cardShadow()` | Card-level shadow |
+| `.overlayShadow()` | Overlay/sheet shadow |
+
+```swift
+Label("Caption", systemImage: "text.bubble")
+    .sectionLabel()
+
+HStack { ... }
+    .cardRow()
+```
+
+## Reusable Components
+
+### `RemoteImage` (`CameraApp/Components/RemoteImage.swift`)
+
+Three-state NukeUI `LazyImage` wrapper. Caller controls sizing.
+
+```swift
+RemoteImage(url: post.imageURL)
+    .aspectRatio(1, contentMode: .fill)
+    .clipped()
+
+RemoteImage(url: post.imageURL, contentMode: .fit)
+```
+
+### `AppSearchBar` (`CameraApp/Components/AppSearchBar.swift`)
+
+Reusable search bar with magnifying glass, clear button, and optional loading state.
+
+```swift
+AppSearchBar(text: $searchText, placeholder: "Search friends…")
+
+AppSearchBar(
+    text: customBinding,
+    placeholder: "Search…",
+    isLoading: viewModel.isResolving,
+    capitalization: .words,
+    focusField: $isSearchFocused,
+    onClear: { viewModel.dismissSearch() }
+)
+```
+
+### `EmptyStateView` (`CameraApp/Components/EmptyStateView.swift`)
+
+Centered icon + title + optional subtitle. Two style variants.
+
+```swift
+EmptyStateView(icon: "person.2", title: "No Friends Yet", subtitle: "Use the Add Friend tab")
+
+EmptyStateView(icon: "camera", title: "No photos yet", style: .compact)
+```
+
+### `AvatarView` (`CameraApp/Components/AvatarView.swift`)
+
+Gradient circle avatar with user initials.
+
+```swift
+AvatarView(user: user)                               // default 48pt
+AvatarView(user: user, size: AppStyle.IconSize.avatarSmall)   // 32pt
+AvatarView(user: user, size: AppStyle.IconSize.avatarLarge)   // 72pt
+```
+
+## Typography Hierarchy
+
+| Role | Font |
+|------|------|
+| Screen title | `.navigationTitle` with `.large` display mode |
+| Section header / name | `.title3.weight(.bold)` or `.title3.weight(.semibold)` |
+| Primary label | `.subheadline.weight(.semibold)` |
+| Body text | `.subheadline` |
+| Row label | `.callout.weight(.medium)` |
+| Caption / username | `.caption`, `.caption.weight(.semibold)` |
+| Tiny metadata | `.caption2`, `.footnote` |
+| Form section label | Use `.sectionLabel()` modifier on a `Label` view |
+
+## Navigation
+
+- Wrap screens in `NavigationStack`
+- Top-level tabs: `.navigationBarTitleDisplayMode(.large)`
+- Detail screens: `.navigationBarTitleDisplayMode(.inline)`
+- Row navigation: `NavigationLink(destination:)` + `.buttonStyle(.plain)`
+- Toolbar items: `.font(.subheadline).foregroundStyle(.secondary)`
+
+## Shadows
+
+Use the shadow view modifiers or `AppStyle.Shadow` functions:
+
+- Cards: `.cardShadow()` — `shadow(color: .black.opacity(0.08), radius: 8, y: 4)`
+- Overlays: `.overlayShadow()` — `shadow(color: .black.opacity(0.15), radius: 10, y: 5)`
+- Profile avatars: `shadow(color: <accent>.opacity(0.25), radius: 8, y: 3)`
+- Map annotations: `shadow(color: .black.opacity(0.2), radius: 4, y: 2)`

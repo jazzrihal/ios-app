@@ -70,7 +70,7 @@ struct ExploreView: View {
                 HStack {
                     Group {
                         if viewModel.isFetchingLocation || viewModel.isReverseGeocoding {
-                            HStack(spacing: 6) {
+                            HStack(spacing: AppStyle.Spacing.compact) {
                                 ProgressView()
                                     .controlSize(.mini)
                                 Text("Finding location…")
@@ -97,7 +97,7 @@ struct ExploreView: View {
                 }
             }
             .buttonStyle(.plain)
-            .padding(.bottom, 10)
+            .padding(.bottom, AppStyle.Spacing.row)
 
             Button {
                 viewModel.toggleDatePicker()
@@ -117,15 +117,15 @@ struct ExploreView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+        .padding(.vertical, AppStyle.Padding.cardInner)
     }
 
     // MARK: - Expanded Date Picker
 
     @ViewBuilder private var expandedDatePicker: some View {
         if viewModel.showDatePicker {
-            VStack(spacing: 12) {
+            VStack(spacing: AppStyle.Spacing.medium) {
                 dateShortcuts
 
                 HStack {
@@ -140,9 +140,9 @@ struct ExploreView: View {
 
                     Spacer()
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, AppStyle.Padding.screenHorizontal)
             }
-            .padding(.bottom, 6)
+            .padding(.bottom, AppStyle.Spacing.compact)
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
@@ -151,14 +151,14 @@ struct ExploreView: View {
 
     private var dateShortcuts: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
+            HStack(spacing: AppStyle.Spacing.row) {
                 ForEach(ExploreViewModel.DateShortcut.allCases) { shortcut in
                     Button {
                         viewModel.applyDateShortcut(shortcut)
                     } label: {
                         Text(shortcut.rawValue)
                             .font(.caption2.weight(.medium))
-                            .padding(.horizontal, 10)
+                            .padding(.horizontal, AppStyle.Spacing.row)
                             .padding(.vertical, 5)
                             .foregroundStyle(.secondary)
                             .background(Color.primary.opacity(0.04), in: Capsule())
@@ -166,9 +166,9 @@ struct ExploreView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
         }
-        .padding(.top, 8)
+        .padding(.top, AppStyle.Spacing.small)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
@@ -176,8 +176,21 @@ struct ExploreView: View {
 
     @ViewBuilder private var expandedMap: some View {
         if viewModel.showMap {
-            VStack(alignment: .leading, spacing: 8) {
-                placeSearchBar
+            VStack(alignment: .leading, spacing: AppStyle.Spacing.small) {
+                AppSearchBar(
+                    text: Binding(
+                        get: { viewModel.searchCompleter.queryFragment },
+                        set: { viewModel.searchCompleter.queryFragment = $0 }
+                    ),
+                    placeholder: "Search for a place…",
+                    isLoading: viewModel.isResolvingPlace,
+                    capitalization: .words,
+                    focusField: $isSearchFieldFocused,
+                    onClear: {
+                        isSearchFieldFocused = false
+                        viewModel.dismissPlaceSearch()
+                    }
+                )
 
                 if !viewModel.searchCompleter.results.isEmpty, !viewModel.searchCompleter.queryFragment.isEmpty {
                     placeSearchResults
@@ -190,7 +203,7 @@ struct ExploreView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, AppStyle.Spacing.tight)
 
                 MapReader { proxy in
                     Map(position: $viewModel.cameraPosition) {
@@ -199,7 +212,7 @@ struct ExploreView: View {
                                 ZStack {
                                     Circle()
                                         .fill(Color.primary.opacity(0.1))
-                                        .frame(width: 44, height: 44)
+                                        .frame(width: AppStyle.IconSize.tapTarget, height: AppStyle.IconSize.tapTarget)
                                     Circle()
                                         .fill(Color.primary.opacity(0.2))
                                         .frame(width: 28, height: 28)
@@ -224,50 +237,12 @@ struct ExploreView: View {
                     }
                 }
                 .frame(height: 180)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: AppStyle.Padding.screenHorizontal))
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+            .padding(.top, AppStyle.Spacing.small)
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
-    }
-
-    // MARK: - Place Search Bar
-
-    private var placeSearchBar: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .font(.subheadline)
-
-            TextField("Search for a place…", text: Binding(
-                get: { viewModel.searchCompleter.queryFragment },
-                set: { viewModel.searchCompleter.queryFragment = $0 }
-            ))
-            .font(.subheadline)
-            .focused($isSearchFieldFocused)
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(.words)
-            .submitLabel(.search)
-
-            if viewModel.isResolvingPlace {
-                ProgressView()
-                    .controlSize(.mini)
-            } else if !viewModel.searchCompleter.queryFragment.isEmpty {
-                Button {
-                    isSearchFieldFocused = false
-                    viewModel.dismissPlaceSearch()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Place Search Results
@@ -279,7 +254,7 @@ struct ExploreView: View {
                     isSearchFieldFocused = false
                     viewModel.selectPlace(completion)
                 } label: {
-                    HStack(spacing: 10) {
+                    HStack(spacing: AppStyle.Spacing.row) {
                         Image(systemName: "mappin.circle.fill")
                             .font(.title3)
                             .foregroundStyle(.primary)
@@ -303,18 +278,18 @@ struct ExploreView: View {
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, AppStyle.Padding.cardInner)
+                    .padding(.vertical, AppStyle.Spacing.row)
                 }
                 .buttonStyle(.plain)
 
                 if completion != viewModel.searchCompleter.results.prefix(5).last {
                     Divider()
-                        .padding(.leading, 44)
+                        .padding(.leading, AppStyle.IconSize.tapTarget)
                 }
             }
         }
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
     }
 
     // MARK: - Action Buttons
@@ -328,7 +303,7 @@ struct ExploreView: View {
                     Button {
                         viewModel.saveMoment(store: store)
                     } label: {
-                        VStack(spacing: 4) {
+                        VStack(spacing: AppStyle.Spacing.tight) {
                             Image(systemName: viewModel.momentSaved ? "checkmark" : "bookmark")
                                 .contentTransition(.identity)
                                 .font(.title2)
@@ -344,7 +319,7 @@ struct ExploreView: View {
                         }
                         .foregroundStyle(viewModel.momentSaved ? .tertiary : .primary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, AppStyle.Spacing.row)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -355,7 +330,7 @@ struct ExploreView: View {
                 Button {
                     viewModel.performSearch()
                 } label: {
-                    VStack(spacing: 4) {
+                    VStack(spacing: AppStyle.Spacing.tight) {
                         ZStack {
                             if viewModel.isSearching {
                                 ProgressView()
@@ -373,7 +348,7 @@ struct ExploreView: View {
                     }
                     .foregroundStyle(viewModel.pinnedCoordinate == nil ? .tertiary : .primary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, AppStyle.Spacing.row)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -397,38 +372,16 @@ struct ExploreView: View {
                     .padding(.top, 28)
                 } else {
                     LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)],
-                        spacing: 2
+                        columns: [GridItem(.flexible(), spacing: AppStyle.Spacing.grid), GridItem(.flexible(), spacing: AppStyle.Spacing.grid)],
+                        spacing: AppStyle.Spacing.grid
                     ) {
                         ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
                             Button {
                                 viewModel.navigateToPostIndex = index
                             } label: {
-                                LazyImage(url: post.imageURL) { state in
-                                    if let image = state.image {
-                                        Color.clear
-                                            .overlay {
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                            }
-                                            .clipped()
-                                    } else if state.error != nil {
-                                        Rectangle()
-                                            .fill(Color(.systemGray5))
-                                            .overlay {
-                                                Image(systemName: "photo.badge.exclamationmark")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                    } else {
-                                        Rectangle()
-                                            .fill(Color(.systemGray5))
-                                            .overlay { ProgressView() }
-                                    }
-                                }
-                                .aspectRatio(1, contentMode: .fill)
-                                .clipped()
+                                RemoteImage(url: post.imageURL)
+                                    .aspectRatio(1, contentMode: .fill)
+                                    .clipped()
                             }
                             .buttonStyle(.plain)
                         }
@@ -438,15 +391,10 @@ struct ExploreView: View {
                 ProgressView()
                     .padding(.top, 40)
             } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "sparkle.magnifyingglass")
-                        .font(.system(size: 36))
-                        .foregroundStyle(.tertiary)
-                    Text("Pick a date & drop a pin to explore")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 28)
+                EmptyStateView(
+                    icon: "sparkle.magnifyingglass",
+                    title: "Pick a date & drop a pin to explore"
+                )
             }
         }
     }

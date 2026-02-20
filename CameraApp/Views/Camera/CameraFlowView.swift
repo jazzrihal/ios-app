@@ -32,17 +32,17 @@ struct CameraFlowView: View {
     @ViewBuilder private var pendingBadge: some View {
         let count = uploadManager.pendingPosts.count
         if count > 0 {
-            HStack(spacing: 4) {
+            HStack(spacing: AppStyle.Spacing.tight) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.caption2)
                 Text("\(count)")
                     .font(.caption2.weight(.bold))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, AppStyle.Spacing.small)
+            .padding(.vertical, AppStyle.Spacing.tight)
             .background(.ultraThinMaterial, in: Capsule())
             .padding(.top, 60)
-            .padding(.trailing, 16)
+            .padding(.trailing, AppStyle.Padding.screenHorizontal)
         }
     }
 }
