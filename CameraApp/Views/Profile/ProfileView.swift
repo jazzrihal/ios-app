@@ -4,6 +4,7 @@ struct ProfileView: View {
     @Environment(AuthManager.self) private var authManager
     @Environment(FriendsStore.self) private var friendsStore
     @Environment(UploadManager.self) private var uploadManager
+    @Environment(PostMutationStore.self) private var postMutationStore
 
     @State private var userPosts: [ImagePost] = []
     @State private var isLoadingPosts = false
@@ -150,6 +151,7 @@ struct ProfileView: View {
                 .value
 
             userPosts = rows.map { ImagePost(from: $0) }
+            postMutationStore.seedPins(from: userPosts)
             if let total = rows.first?.totalCount {
                 hasMorePages = userPosts.count < total
             } else {
@@ -174,6 +176,7 @@ struct ProfileView: View {
                 .value
 
             let newPosts = rows.map { ImagePost(from: $0) }
+            postMutationStore.seedPins(from: newPosts)
             userPosts.append(contentsOf: newPosts)
             if let total = rows.first?.totalCount {
                 hasMorePages = userPosts.count < total
@@ -194,5 +197,6 @@ struct ProfileView: View {
         .environment(AuthManager())
         .environment(FriendsStore())
         .environment(MomentsStore())
+        .environment(PostMutationStore())
         .environment(UploadManager())
 }

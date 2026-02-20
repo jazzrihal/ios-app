@@ -115,6 +115,8 @@ enum ProfileGridItem: Identifiable {
 /// Instagram-style photo grid with navigation to post detail.
 /// Supports both uploaded posts (navigable) and pending posts (with status overlay).
 struct ProfilePhotoGrid: View {
+    @Environment(PostMutationStore.self) private var postMutationStore
+
     let items: [ProfileGridItem]
     let uploadedPosts: [ImagePost]
     var onRetry: ((PendingPost) -> Void)?
@@ -177,7 +179,7 @@ struct ProfilePhotoGrid: View {
             .aspectRatio(1, contentMode: .fill)
             .clipped()
             .overlay(alignment: .topTrailing) {
-                if post.isPinned {
+                if postMutationStore.isPinned(post.id) {
                     Image(systemName: "pin.fill")
                         .font(.caption2)
                         .foregroundStyle(.orange)

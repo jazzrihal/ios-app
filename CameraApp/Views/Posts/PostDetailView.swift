@@ -5,7 +5,8 @@ import SwiftUI
 // MARK: - Post Detail View
 
 struct PostDetailView: View {
-    @Environment(MomentsStore.self) private var store
+    @Environment(MomentsStore.self) private var momentsStore
+    @Environment(PostMutationStore.self) private var postMutationStore
     @Environment(AuthManager.self) private var authManager
     @Environment(UploadManager.self) private var uploadManager
     @Environment(\.dismiss) private var dismiss
@@ -89,8 +90,10 @@ struct PostDetailView: View {
             if shouldDismiss == true { dismiss() }
         }
         .onAppear {
-            viewModel?.userId = authManager.userId
-            viewModel?.loadLikesAndPins()
+            viewModel?.mutationStore = postMutationStore
+            if let posts = viewModel?.posts {
+                Task { await postMutationStore.loadPinsAndLikes(for: posts.map(\.id)) }
+            }
         }
     }
 
@@ -194,7 +197,7 @@ struct PostDetailView: View {
 
     private func actionButton(for action: PostAction, viewModel: PostDetailViewModel) -> some View {
         Button {
-            viewModel.performAction(action, store: store)
+            viewModel.performAction(action, momentsStore: momentsStore)
         } label: {
             VStack(spacing: AppStyle.Spacing.tight) {
                 Image(systemName: viewModel.iconName(for: action))
@@ -317,6 +320,7 @@ struct PostDetailView: View {
     }
     .environment(FriendsStore())
     .environment(MomentsStore())
+    .environment(PostMutationStore())
     .environment(AuthManager())
     .environment(UploadManager())
 }

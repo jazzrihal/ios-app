@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FriendProfileView: View {
     @Environment(FriendsStore.self) private var store
+    @Environment(PostMutationStore.self) private var postMutationStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var viewModel: FriendProfileViewModel
@@ -49,6 +50,7 @@ struct FriendProfileView: View {
         }
         .refreshable {
             await viewModel.refreshPosts()
+            await postMutationStore.loadPinsAndLikes(for: viewModel.userPosts.map(\.id))
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -70,10 +72,16 @@ struct FriendProfileView: View {
         }
         .onAppear {
             viewModel.loadFullProfile()
-            Task { await viewModel.loadPosts() }
+            Task {
+                await viewModel.loadPosts()
+                await postMutationStore.loadPinsAndLikes(for: viewModel.userPosts.map(\.id))
+            }
         }
         .onChange(of: store.status(for: viewModel.user)) { _, _ in
-            Task { await viewModel.loadPosts() }
+            Task {
+                await viewModel.loadPosts()
+                await postMutationStore.loadPinsAndLikes(for: viewModel.userPosts.map(\.id))
+            }
         }
         .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
@@ -185,5 +193,6 @@ struct FriendProfileView: View {
     }
     .environment(FriendsStore())
     .environment(MomentsStore())
+    .environment(PostMutationStore())
     .environment(AuthManager())
 }

@@ -410,6 +410,7 @@ struct ExploreView: View {
 #Preview {
     ExploreView()
         .environment(MomentsStore())
+        .environment(PostMutationStore())
         .environment(FriendsStore())
         .environment(AuthManager())
 }

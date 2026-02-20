@@ -446,4 +446,5 @@ struct DiscoverUserRow: View {
 #Preview {
     FriendsView()
         .environment(FriendsStore())
+        .environment(PostMutationStore())
 }
