@@ -174,6 +174,16 @@ struct ProfilePhotoGrid: View {
         RemoteImage(url: post.imageURL)
             .aspectRatio(1, contentMode: .fill)
             .clipped()
+            .overlay(alignment: .topTrailing) {
+                if post.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .padding(4)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .padding(4)
+                }
+            }
     }
 
     private func pendingGridCell(post: PendingPost, image: UIImage?) -> some View {

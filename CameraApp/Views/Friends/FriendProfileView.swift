@@ -15,7 +15,7 @@ struct FriendProfileView: View {
             VStack(spacing: 0) {
                 ProfileHeaderView(user: viewModel.user) {
                     HStack(spacing: AppStyle.Padding.screenHorizontal) {
-                        ProfileStatItem(value: viewModel.userPosts.count, label: "Posts")
+                        ProfileStatItem(value: viewModel.ownPostCount, label: "Posts")
                         ProfileStatItem(value: viewModel.user.friendCount, label: "Friends")
                         ProfileStatItem(value: viewModel.user.mutualFriendCount, label: "Mutual")
                     }

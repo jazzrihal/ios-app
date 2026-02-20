@@ -94,6 +94,7 @@ final class PostDetailViewModel {
         self.posts = posts
         self.queryDate = queryDate
         currentIndex = initialIndex
+        pinnedPostIDs = Set(posts.filter(\.isPinned).map(\.id))
     }
 
     // MARK: - Load Existing Likes / Pins

@@ -12,6 +12,8 @@ struct ImagePost: Identifiable {
     let timestamp: Date
     let distanceMeters: Double
     let scope: PostScope
+    var isPinned: Bool = false
+    var isOwn: Bool = false
 
     var username: String {
         user.username
@@ -98,6 +100,80 @@ struct NearbyPostRow: Codable {
         case locationName = "location_name"
         case createdAt = "created_at"
         case distanceMeters = "distance_meters"
+    }
+}
+
+// MARK: - get_user_posts_and_pins RPC Types
+
+/// Parameters for the `get_user_posts_and_pins` Supabase RPC.
+struct GetUserPostsAndPinsParams: Encodable, Sendable {
+    let targetUserId: UUID
+    let pageSize: Int
+    let pageOffset: Int
+
+    enum CodingKeys: String, CodingKey {
+        case targetUserId = "target_user_id"
+        case pageSize = "page_size"
+        case pageOffset = "page_offset"
+    }
+}
+
+/// Decoded row from the `get_user_posts_and_pins` Supabase RPC.
+struct UserPostWithPinRow: Codable {
+    let id: UUID
+    let userId: UUID
+    let username: String
+    let displayName: String
+    let gradientColors: [String]?
+    let imagePath: String
+    let caption: String?
+    let longitude: Double
+    let latitude: Double
+    let locationName: String?
+    let scope: String
+    let createdAt: String
+    let isOwn: Bool
+    let isPinned: Bool
+    let totalCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, username, caption, longitude, latitude, scope
+        case userId = "user_id"
+        case displayName = "display_name"
+        case gradientColors = "gradient_colors"
+        case imagePath = "image_path"
+        case locationName = "location_name"
+        case createdAt = "created_at"
+        case isOwn = "is_own"
+        case isPinned = "is_pinned"
+        case totalCount = "total_count"
+    }
+}
+
+extension ImagePost {
+    /// Creates an `ImagePost` from a `UserPostWithPinRow` returned by the RPC.
+    init(from row: UserPostWithPinRow) {
+        id = row.id
+        imageURL = SupabaseManager.imageURL(for: row.imagePath)
+        user = User(
+            id: row.userId,
+            username: row.username,
+            displayName: row.displayName,
+            bio: "",
+            gradientColors: User.parseGradientColors(row.gradientColors),
+            joinDate: Date(),
+            postCount: 0,
+            friendCount: 0,
+            mutualFriendCount: 0
+        )
+        caption = row.caption ?? ""
+        coordinate = CLLocationCoordinate2D(latitude: row.latitude, longitude: row.longitude)
+        locationName = row.locationName ?? ""
+        timestamp = Self.parseISO8601(row.createdAt) ?? Date()
+        distanceMeters = 0
+        scope = PostScope(serverValue: row.scope)
+        isPinned = row.isPinned
+        isOwn = row.isOwn
     }
 }
 

@@ -1,4 +1,3 @@
-import CoreLocation
 import Observation
 import SwiftUI
 
@@ -19,6 +18,10 @@ final class FriendProfileViewModel {
     var userPosts: [ImagePost] = []
     var isLoadingPosts = false
     var postsError: String?
+
+    var ownPostCount: Int {
+        userPosts.filter(\.isOwn).count
+    }
 
     /// Set to `true` when the view should dismiss (e.g. after removing a friend).
     var shouldDismiss = false
@@ -55,37 +58,22 @@ final class FriendProfileViewModel {
 
     // MARK: - Posts Loading
 
-    /// Fetches the user's posts from Supabase. RLS handles scope filtering.
+    /// Fetches the user's posts and pinned posts from Supabase. RLS handles scope filtering.
     func loadPosts() {
         isLoadingPosts = true
         postsError = nil
 
         Task { @MainActor in
             do {
-                let rows: [PostRowWithoutLocation] = try await SupabaseManager.client
-                    .from("posts")
-                    .select(PostRowWithoutLocation.selectColumns)
-                    .eq("user_id", value: user.id)
-                    .order("created_at", ascending: false)
+                let params = GetUserPostsAndPinsParams(
+                    targetUserId: user.id, pageSize: 1000, pageOffset: 0
+                )
+                let rows: [UserPostWithPinRow] = try await SupabaseManager.client
+                    .rpc("get_user_posts_and_pins", params: params)
                     .execute()
                     .value
 
-                userPosts = rows.map { row in
-                    ImagePost(
-                        id: row.id,
-                        imageURL: SupabaseManager.imageURL(for: row.imagePath),
-                        user: user,
-                        caption: row.caption ?? "",
-                        coordinate: CLLocationCoordinate2D(
-                            latitude: row.latitude,
-                            longitude: row.longitude
-                        ),
-                        locationName: row.locationName ?? "",
-                        timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
-                        distanceMeters: 0,
-                        scope: PostScope(serverValue: row.scope)
-                    )
-                }
+                userPosts = rows.map { ImagePost(from: $0) }
             } catch {
                 postsError = error.localizedDescription
             }

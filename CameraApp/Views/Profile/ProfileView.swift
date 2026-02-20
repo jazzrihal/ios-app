@@ -1,4 +1,3 @@
-import CoreLocation
 import SwiftUI
 
 struct ProfileView: View {
@@ -65,7 +64,7 @@ struct ProfileView: View {
                 ProfileHeaderView(user: user) {
                     HStack(spacing: AppStyle.Padding.screenHorizontal) {
                         ProfileStatItem(
-                            value: userPosts.count + currentUserPendingCount,
+                            value: userPosts.filter(\.isOwn).count + currentUserPendingCount,
                             label: "Posts"
                         )
                         ProfileStatItem(value: friendsStore.friends.count, label: "Friends")
@@ -128,34 +127,18 @@ struct ProfileView: View {
     // MARK: - Data Loading
 
     private func loadPosts() async {
-        guard let userId = authManager.userId,
-              let user = authManager.currentProfile else { return }
+        guard let userId = authManager.userId else { return }
         isLoadingPosts = true
         do {
-            let rows: [PostRowWithoutLocation] = try await SupabaseManager.client
-                .from("posts")
-                .select(PostRowWithoutLocation.selectColumns)
-                .eq("user_id", value: userId)
-                .order("created_at", ascending: false)
+            let params = GetUserPostsAndPinsParams(
+                targetUserId: userId, pageSize: 1000, pageOffset: 0
+            )
+            let rows: [UserPostWithPinRow] = try await SupabaseManager.client
+                .rpc("get_user_posts_and_pins", params: params)
                 .execute()
                 .value
 
-            userPosts = rows.map { row in
-                ImagePost(
-                    id: row.id,
-                    imageURL: SupabaseManager.imageURL(for: row.imagePath),
-                    user: user,
-                    caption: row.caption ?? "",
-                    coordinate: CLLocationCoordinate2D(
-                        latitude: row.latitude,
-                        longitude: row.longitude
-                    ),
-                    locationName: row.locationName ?? "",
-                    timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
-                    distanceMeters: 0,
-                    scope: PostScope(serverValue: row.scope)
-                )
-            }
+            userPosts = rows.map { ImagePost(from: $0) }
         } catch {
             print("[ProfileView] Failed to load posts: \(error)")
         }
