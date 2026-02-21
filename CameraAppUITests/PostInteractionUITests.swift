@@ -143,10 +143,14 @@ final class PostInteractionUITests: XCTestCase {
     // MARK: - Group 3: State Persistence & Cross-Tab
 
     func testLikeAndPinPersistAcrossTabs() {
-        navigateToProfileTab()
-        waitForPostCell(0)
-        app.buttons["PostCell_0"].tap()
-        waitForActionBar()
+        navigateToFriendFirstPost()
+
+        let actionBar = app.otherElements.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'PostActionBar_'")
+        ).firstMatch
+        XCTAssertTrue(actionBar.waitForExistence(timeout: 5), "Action bar should exist")
+        let targetPostId = actionBar.identifier.replacingOccurrences(of: "PostActionBar_", with: "")
+        XCTAssertFalse(targetPostId.isEmpty, "Should extract a post UUID")
 
         ensureUnlikedAndUnpinned()
 
@@ -159,16 +163,16 @@ final class PostInteractionUITests: XCTestCase {
         assertButtonLabel(pinButton, expected: "Unpin")
 
         tapBackButton()
+        tapBackButton()
 
-        // Switch tabs and return
-        app.tabBars.buttons["Moments"].tap()
-        XCTAssertTrue(app.navigationBars["Moments"].waitForExistence(timeout: 5))
+        // Navigate to Profile tab where the pinned post should now appear
         navigateToProfileTab()
+        pullToRefresh()
+        sleep(3)
 
-        // Re-enter the same post and verify state persisted
-        waitForPostCell(0)
-        app.buttons["PostCell_0"].tap()
-        waitForActionBar()
+        // Find the same post on Profile and verify state persisted across tabs
+        let found = findPostOnProfile(postId: targetPostId)
+        XCTAssertTrue(found, "Post liked and pinned from Friends should appear on Profile tab")
 
         let likeButtonAfter = app.buttons["LikeButton"]
         let pinButtonAfter = app.buttons["PinButton"]
@@ -183,10 +187,8 @@ final class PostInteractionUITests: XCTestCase {
     }
 
     func testLikeAndPinReflectedInExplore() {
-        // Search Explore for San Francisco to find a post
         searchSanFranciscoInExplore()
 
-        // Open the first Explore result and capture its UUID
         let firstCell = app.buttons["ExplorePostCell_0"]
         firstCell.tap()
         waitForActionBar()
@@ -198,7 +200,6 @@ final class PostInteractionUITests: XCTestCase {
         let targetPostId = actionBar.identifier.replacingOccurrences(of: "PostActionBar_", with: "")
         XCTAssertFalse(targetPostId.isEmpty, "Should extract a post UUID")
 
-        // Ensure clean state, then like and pin the post
         ensureUnlikedAndUnpinned()
 
         let likeButton = app.buttons["LikeButton"]
@@ -210,25 +211,23 @@ final class PostInteractionUITests: XCTestCase {
 
         tapBackButton()
 
-        // Switch to another tab and come back to verify persistence
-        app.tabBars.buttons["Moments"].tap()
-        XCTAssertTrue(app.navigationBars["Moments"].waitForExistence(timeout: 5))
+        // Navigate to Profile tab where the pinned post should now appear
+        navigateToProfileTab()
+        pullToRefresh()
+        sleep(3)
 
-        app.tabBars.buttons["Explore"].tap()
-        sleep(2)
-
-        // Re-open the same post and verify like/pin state persisted
-        let sameCell = app.buttons["ExplorePostCell_0"]
-        XCTAssertTrue(sameCell.waitForExistence(timeout: 5), "First explore result should still exist")
-        sameCell.tap()
-        waitForActionBar()
+        // Find the same post on Profile and verify state persisted across tabs
+        let found = findPostOnProfile(postId: targetPostId)
+        XCTAssertTrue(found, "Post liked and pinned in Explore should appear on Profile tab")
 
         assertButtonLabel(app.buttons["LikeButton"], expected: "Unlike")
         assertButtonLabel(app.buttons["PinButton"], expected: "Unpin")
 
         // Clean up
         app.buttons["LikeButton"].tap()
+        assertButtonLabel(app.buttons["LikeButton"], expected: "Like")
         app.buttons["PinButton"].tap()
+        assertButtonLabel(app.buttons["PinButton"], expected: "Pin")
     }
 
     // MARK: - Navigation Helpers
@@ -284,6 +283,25 @@ final class PostInteractionUITests: XCTestCase {
             actionBar.waitForExistence(timeout: 5),
             "Post action bar should appear"
         )
+    }
+
+    /// Opens PostCells on the Profile grid until finding one whose action bar
+    /// matches the given post UUID. Returns true and leaves the post open.
+    private func findPostOnProfile(postId: String) -> Bool {
+        let cellCount = postCellCount()
+        for i in 0 ..< cellCount {
+            let cell = app.buttons["PostCell_\(i)"]
+            guard cell.waitForExistence(timeout: 3) else { continue }
+            cell.tap()
+
+            let targetBar = app.otherElements["PostActionBar_\(postId)"]
+            if targetBar.waitForExistence(timeout: 3) {
+                return true
+            }
+            tapBackButton()
+            sleep(1)
+        }
+        return false
     }
 
     private func navigateToFriendFirstPost() {
