@@ -40,4 +40,13 @@ enum PostAction: CaseIterable, Hashable {
         case .pinToProfile: "Unpin"
         }
     }
+
+    var accessibilityId: String {
+        switch self {
+        case .jump: "JumpButton"
+        case .share: "ShareButton"
+        case .pinToProfile: "PinButton"
+        case .like: "LikeButton"
+        }
+    }
 }

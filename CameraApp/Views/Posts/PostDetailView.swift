@@ -195,6 +195,8 @@ struct PostDetailView: View {
             }
         }
         .background(Color(.systemBackground))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("PostActionBar_\(viewModel.post.id.uuidString)")
     }
 
     private func actionButton(for action: PostAction, viewModel: PostDetailViewModel) -> some View {
@@ -215,6 +217,7 @@ struct PostDetailView: View {
             .contentShape(Rectangle())
         }
         .animation(.none, value: viewModel.isActionActive(action))
+        .accessibilityIdentifier(action.accessibilityId)
         .accessibilityLabel(viewModel.accessibilityLabel(for: action))
         .accessibilityHint(viewModel.accessibilityHint(for: action))
     }

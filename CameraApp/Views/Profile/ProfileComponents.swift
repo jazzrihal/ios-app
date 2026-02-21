@@ -149,13 +149,15 @@ struct ProfilePhotoGrid: View {
                     queryDate: Date()
                 )
             ) {
-                uploadedGridCell(for: post)
+                uploadedGridCell(for: post, index: globalIndex)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("PostCell_\(globalIndex)")
 
         case let .pending(post, image):
             if post.status == .failed {
                 pendingGridCell(post: post, image: image)
+                    .accessibilityIdentifier("PostCell_\(globalIndex)")
                     .onTapGesture { onRetry?(post) }
             } else if let image {
                 NavigationLink(
@@ -164,8 +166,10 @@ struct ProfilePhotoGrid: View {
                     pendingGridCell(post: post, image: image)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("PostCell_\(globalIndex)")
             } else {
                 pendingGridCell(post: post, image: image)
+                    .accessibilityIdentifier("PostCell_\(globalIndex)")
             }
         }
     }
@@ -174,7 +178,7 @@ struct ProfilePhotoGrid: View {
         uploadedPosts.firstIndex(where: { $0.id == post.id }) ?? 0
     }
 
-    private func uploadedGridCell(for post: ImagePost) -> some View {
+    private func uploadedGridCell(for post: ImagePost, index: Int) -> some View {
         RemoteImage(url: post.imageURL)
             .aspectRatio(1, contentMode: .fill)
             .clipped()
@@ -186,6 +190,7 @@ struct ProfilePhotoGrid: View {
                         .padding(4)
                         .background(.ultraThinMaterial, in: Circle())
                         .padding(4)
+                        .accessibilityIdentifier("PinBadge_\(index)")
                 }
             }
     }

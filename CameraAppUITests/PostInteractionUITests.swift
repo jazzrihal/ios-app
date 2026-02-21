@@ -1,0 +1,402 @@
+import XCTest
+
+final class PostInteractionUITests: XCTestCase {
+    private var app: XCUIApplication!
+
+    // MARK: - Setup / Teardown
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launch()
+
+        addUIInterruptionMonitor(withDescription: "System Alert") { alert in
+            for label in ["Allow While Using App", "Allow Once", "Allow", "OK", "Continue"] {
+                let button = alert.buttons[label]
+                if button.exists {
+                    button.tap()
+                    return true
+                }
+            }
+            return false
+        }
+
+        try ensureSignedIn(app: app)
+    }
+
+    override func tearDownWithError() throws {
+        app = nil
+    }
+
+    // MARK: - Group 1: Like & Pin Toggle
+
+    func testLikeAndPinOwnPost() {
+        navigateToProfileTab()
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        assertLikeToggle()
+        assertPinToggle()
+    }
+
+    func testLikeAndPinFriendPost() {
+        navigateToFriendsTab()
+
+        let friendRow = app.buttons.matching(identifier: "FriendRow").firstMatch
+        XCTAssertTrue(friendRow.waitForExistence(timeout: 8), "At least one friend should exist")
+        friendRow.tap()
+
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        assertLikeToggle()
+        assertPinToggle()
+    }
+
+    func testLikeAndPinNonFriendPost() {
+        navigateToFriendsTab()
+        app.buttons["Add FriendSectionButton"].tap()
+
+        let searchField = app.textFields["Search by username or name…"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5), "Search field should appear")
+        searchField.tap()
+        searchField.typeText("carol")
+
+        let discoverRow = app.buttons.matching(identifier: "DiscoverUserRow").firstMatch
+        XCTAssertTrue(discoverRow.waitForExistence(timeout: 8), "Carol should appear in search results")
+        discoverRow.tap()
+
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        assertLikeToggle()
+        assertPinToggle()
+    }
+
+    // MARK: - Group 2: Pin-to-Profile Propagation
+
+    func testPinnedPostAppearsOnOwnProfile() {
+        navigateToProfileTab()
+        waitForPostCell(0)
+        var initialCount = postCellCount()
+
+        navigateToFriendFirstPost()
+
+        // Ensure the post starts unpinned so we can test the pin flow
+        let pinButton = app.buttons["PinButton"]
+        if pinButton.label == "Unpin" {
+            pinButton.tap()
+            assertButtonLabel(pinButton, expected: "Pin")
+            tapBackButton()
+            tapBackButton()
+
+            navigateToProfileTab()
+            pullToRefresh()
+            sleep(3)
+            let adjustedCount = postCellCount()
+            initialCount = adjustedCount
+
+            navigateToFriendFirstPost()
+        }
+
+        app.buttons["PinButton"].tap()
+        assertButtonLabel(app.buttons["PinButton"], expected: "Unpin")
+
+        tapBackButton()
+        tapBackButton()
+
+        // Refresh profile and verify count increased
+        navigateToProfileTab()
+        pullToRefresh()
+        sleep(3)
+        let countAfterPin = postCellCount()
+        XCTAssertEqual(
+            countAfterPin, initialCount + 1,
+            "Profile should have one more post after pinning a friend's post"
+        )
+
+        navigateToFriendFirstPost()
+
+        let pinButtonAgain = app.buttons["PinButton"]
+        if pinButtonAgain.label == "Unpin" {
+            pinButtonAgain.tap()
+            assertButtonLabel(pinButtonAgain, expected: "Pin")
+        }
+
+        tapBackButton()
+        tapBackButton()
+
+        // Verify profile count is restored
+        navigateToProfileTab()
+        pullToRefresh()
+        sleep(3)
+        let countAfterUnpin = postCellCount()
+        XCTAssertEqual(
+            countAfterUnpin, initialCount,
+            "Profile should return to original count after unpinning"
+        )
+    }
+
+    // MARK: - Group 3: State Persistence & Cross-Tab
+
+    func testLikeAndPinPersistAcrossTabs() {
+        navigateToProfileTab()
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        ensureUnlikedAndUnpinned()
+
+        let likeButton = app.buttons["LikeButton"]
+        let pinButton = app.buttons["PinButton"]
+
+        likeButton.tap()
+        assertButtonLabel(likeButton, expected: "Unlike")
+        pinButton.tap()
+        assertButtonLabel(pinButton, expected: "Unpin")
+
+        tapBackButton()
+
+        // Switch tabs and return
+        app.tabBars.buttons["Moments"].tap()
+        XCTAssertTrue(app.navigationBars["Moments"].waitForExistence(timeout: 5))
+        navigateToProfileTab()
+
+        // Re-enter the same post and verify state persisted
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        let likeButtonAfter = app.buttons["LikeButton"]
+        let pinButtonAfter = app.buttons["PinButton"]
+        assertButtonLabel(likeButtonAfter, expected: "Unlike")
+        assertButtonLabel(pinButtonAfter, expected: "Unpin")
+
+        // Clean up
+        likeButtonAfter.tap()
+        assertButtonLabel(likeButtonAfter, expected: "Like")
+        pinButtonAfter.tap()
+        assertButtonLabel(pinButtonAfter, expected: "Pin")
+    }
+
+    func testLikeAndPinReflectedInExplore() {
+        // Search Explore for San Francisco to find a post
+        searchSanFranciscoInExplore()
+
+        // Open the first Explore result and capture its UUID
+        let firstCell = app.buttons["ExplorePostCell_0"]
+        firstCell.tap()
+        waitForActionBar()
+
+        let actionBar = app.otherElements.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'PostActionBar_'")
+        ).firstMatch
+        XCTAssertTrue(actionBar.waitForExistence(timeout: 5), "Action bar should exist")
+        let targetPostId = actionBar.identifier.replacingOccurrences(of: "PostActionBar_", with: "")
+        XCTAssertFalse(targetPostId.isEmpty, "Should extract a post UUID")
+
+        // Ensure clean state, then like and pin the post
+        ensureUnlikedAndUnpinned()
+
+        let likeButton = app.buttons["LikeButton"]
+        let pinButton = app.buttons["PinButton"]
+        likeButton.tap()
+        assertButtonLabel(likeButton, expected: "Unlike")
+        pinButton.tap()
+        assertButtonLabel(pinButton, expected: "Unpin")
+
+        tapBackButton()
+
+        // Switch to another tab and come back to verify persistence
+        app.tabBars.buttons["Moments"].tap()
+        XCTAssertTrue(app.navigationBars["Moments"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons["Explore"].tap()
+        sleep(2)
+
+        // Re-open the same post and verify like/pin state persisted
+        let sameCell = app.buttons["ExplorePostCell_0"]
+        XCTAssertTrue(sameCell.waitForExistence(timeout: 5), "First explore result should still exist")
+        sameCell.tap()
+        waitForActionBar()
+
+        assertButtonLabel(app.buttons["LikeButton"], expected: "Unlike")
+        assertButtonLabel(app.buttons["PinButton"], expected: "Unpin")
+
+        // Clean up
+        app.buttons["LikeButton"].tap()
+        app.buttons["PinButton"].tap()
+    }
+
+    // MARK: - Navigation Helpers
+
+    private func navigateToProfileTab() {
+        app.tabBars.buttons["Profile"].tap()
+        sleep(2)
+    }
+
+    private func navigateToFriendsTab() {
+        app.tabBars.buttons["Friends"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Friends"].waitForExistence(timeout: 5),
+            "Friends tab should appear"
+        )
+    }
+
+    private func tapBackButton() {
+        let backButton = app.navigationBars.buttons.firstMatch
+        if backButton.exists, backButton.isHittable {
+            backButton.tap()
+        }
+    }
+
+    private func pullToRefresh() {
+        let scrollView = app.scrollViews.firstMatch
+        if scrollView.exists {
+            scrollView.swipeDown()
+        }
+    }
+
+    // MARK: - Post Grid Helpers
+
+    private func waitForPostCell(_ index: Int) {
+        let cell = app.buttons["PostCell_\(index)"]
+        XCTAssertTrue(
+            cell.waitForExistence(timeout: 10),
+            "PostCell_\(index) should appear"
+        )
+    }
+
+    private func postCellCount() -> Int {
+        app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'PostCell_'")
+        ).count
+    }
+
+    private func waitForActionBar() {
+        let actionBar = app.otherElements.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'PostActionBar_'")
+        ).firstMatch
+        XCTAssertTrue(
+            actionBar.waitForExistence(timeout: 5),
+            "Post action bar should appear"
+        )
+    }
+
+    private func navigateToFriendFirstPost() {
+        navigateToFriendsTab()
+        let friendRow = app.buttons.matching(identifier: "FriendRow").firstMatch
+        XCTAssertTrue(friendRow.waitForExistence(timeout: 8), "At least one friend should exist")
+        friendRow.tap()
+
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+    }
+
+    // MARK: - Like & Pin Assertion Helpers
+
+    private func assertLikeToggle() {
+        let likeButton = app.buttons["LikeButton"]
+        XCTAssertTrue(likeButton.waitForExistence(timeout: 3), "LikeButton should exist")
+
+        let wasLiked = likeButton.label == "Unlike"
+
+        likeButton.tap()
+        assertButtonLabel(likeButton, expected: wasLiked ? "Like" : "Unlike")
+
+        likeButton.tap()
+        assertButtonLabel(likeButton, expected: wasLiked ? "Unlike" : "Like")
+    }
+
+    private func assertPinToggle() {
+        let pinButton = app.buttons["PinButton"]
+        XCTAssertTrue(pinButton.waitForExistence(timeout: 3), "PinButton should exist")
+
+        let wasPinned = pinButton.label == "Unpin"
+
+        pinButton.tap()
+        assertButtonLabel(pinButton, expected: wasPinned ? "Pin" : "Unpin")
+
+        pinButton.tap()
+        assertButtonLabel(pinButton, expected: wasPinned ? "Unpin" : "Pin")
+    }
+
+    /// Resets a post's like and pin state to un-liked and un-pinned before
+    /// tests that require a known starting state.
+    private func ensureUnlikedAndUnpinned() {
+        let likeButton = app.buttons["LikeButton"]
+        if likeButton.waitForExistence(timeout: 3), likeButton.label == "Unlike" {
+            likeButton.tap()
+            assertButtonLabel(likeButton, expected: "Like")
+        }
+        let pinButton = app.buttons["PinButton"]
+        if pinButton.waitForExistence(timeout: 3), pinButton.label == "Unpin" {
+            pinButton.tap()
+            assertButtonLabel(pinButton, expected: "Pin")
+        }
+    }
+
+    private func assertButtonLabel(_ button: XCUIElement, expected: String) {
+        let predicate = NSPredicate(format: "label == %@", expected)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: button)
+        let result = XCTWaiter.wait(for: [expectation], timeout: 5)
+        XCTAssertEqual(
+            result, .completed,
+            "Button label should be '\(expected)' but was '\(button.label)'"
+        )
+    }
+
+    // MARK: - Explore Search Helper
+
+    private func searchSanFranciscoInExplore() {
+        let exploreTab = app.tabBars.buttons["Explore"]
+        exploreTab.tap()
+        sleep(2)
+
+        XCTAssertTrue(exploreTab.isSelected, "Explore tab should be selected after tapping")
+
+        // Expand the map by tapping the location header
+        let locationHeader = app.buttons["LocationPickerButton"]
+        XCTAssertTrue(locationHeader.waitForExistence(timeout: 5), "Location picker button should exist")
+        XCTAssertTrue(locationHeader.isHittable, "Location picker button should be hittable")
+        locationHeader.tap()
+        sleep(1)
+
+        // Type in the place search field
+        let placeSearchField = app.textFields["Search for a place…"]
+        XCTAssertTrue(
+            placeSearchField.waitForExistence(timeout: 5),
+            "Place search field should appear after expanding map"
+        )
+        placeSearchField.tap()
+        placeSearchField.typeText("San Francisco")
+        sleep(2)
+
+        // Tap the first search completion result
+        let firstCompletion = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS 'San Francisco'")
+        ).firstMatch
+        XCTAssertTrue(
+            firstCompletion.waitForExistence(timeout: 8),
+            "San Francisco search completion should appear"
+        )
+        firstCompletion.tap()
+        sleep(2)
+
+        // Tap the search button
+        let searchButton = app.buttons["FindNearbyPostsButton"]
+        XCTAssertTrue(searchButton.waitForExistence(timeout: 5), "Search button should exist")
+        searchButton.tap()
+
+        // Wait for results to load
+        let firstResult = app.buttons["ExplorePostCell_0"]
+        XCTAssertTrue(
+            firstResult.waitForExistence(timeout: 15),
+            "Explore search results should appear"
+        )
+    }
+}

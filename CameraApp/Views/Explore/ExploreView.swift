@@ -100,8 +100,10 @@ struct ExploreView: View {
                         .foregroundStyle(.tertiary)
                         .rotationEffect(.degrees(viewModel.showMap ? 180 : 0))
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("LocationPickerButton")
             .padding(.bottom, AppStyle.Spacing.row)
 
             Button {
@@ -119,6 +121,7 @@ struct ExploreView: View {
                         .foregroundStyle(.tertiary)
                         .rotationEffect(.degrees(viewModel.showDatePicker ? 180 : 0))
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
@@ -285,6 +288,7 @@ struct ExploreView: View {
                     }
                     .padding(.horizontal, AppStyle.Padding.cardInner)
                     .padding(.vertical, AppStyle.Spacing.row)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
@@ -390,6 +394,7 @@ struct ExploreView: View {
                                     .clipped()
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("ExplorePostCell_\(index)")
                         }
                     )
                 }

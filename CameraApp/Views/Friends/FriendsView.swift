@@ -121,6 +121,7 @@ struct FriendsView: View {
                             FriendRow(user: user)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("FriendRow")
                     }
                     .padding(.horizontal, AppStyle.Padding.screenHorizontal)
                 }
@@ -235,6 +236,7 @@ struct FriendsView: View {
                             DiscoverUserRow(user: user)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("DiscoverUserRow")
                     }
                     .padding(.horizontal, AppStyle.Padding.screenHorizontal)
                 }
