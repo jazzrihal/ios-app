@@ -10,6 +10,9 @@ class PostMutationStore {
     /// The authenticated user's UUID. Must be set before calling any methods.
     var currentUserId: UUID?
 
+    /// Cache invalidator for notifying the cache layer of like/pin changes.
+    var cacheInvalidator: CacheInvalidator?
+
     // MARK: - Query
 
     func isPinned(_ postId: UUID) -> Bool {
@@ -91,6 +94,7 @@ class PostMutationStore {
                         .eq("user_id", value: userId)
                         .eq("post_id", value: postId)
                         .execute()
+                    await cacheInvalidator?.postMutated(postId: postId, userId: userId)
                 } catch {
                     pinnedPostIDs.insert(postId)
                     print("[PostMutationStore] Unpin failed: \(error)")
@@ -107,6 +111,7 @@ class PostMutationStore {
                     try await SupabaseManager.client.from("pins")
                         .insert(insert)
                         .execute()
+                    await cacheInvalidator?.postMutated(postId: postId, userId: userId)
                 } catch {
                     pinnedPostIDs.remove(postId)
                     print("[PostMutationStore] Pin failed: \(error)")
@@ -129,6 +134,7 @@ class PostMutationStore {
                         .eq("user_id", value: userId)
                         .eq("post_id", value: postId)
                         .execute()
+                    await cacheInvalidator?.postMutated(postId: postId, userId: userId)
                 } catch {
                     likedPostIDs.insert(postId)
                     print("[PostMutationStore] Unlike failed: \(error)")
@@ -145,6 +151,7 @@ class PostMutationStore {
                     try await SupabaseManager.client.from("likes")
                         .insert(insert)
                         .execute()
+                    await cacheInvalidator?.postMutated(postId: postId, userId: userId)
                 } catch {
                     likedPostIDs.remove(postId)
                     print("[PostMutationStore] Like failed: \(error)")

@@ -46,8 +46,12 @@ build: ## Build the app
 	xcodebuild build -scheme $(SCHEME) -destination '$(DESTINATION)' -quiet
 
 .PHONY: test
-test: ## Run all tests
+test: ## Run all tests (unit + UI)
 	xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -quiet
+
+.PHONY: test-unit
+test-unit: ## Run unit tests only (no UI tests)
+	xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -only-testing CameraAppTests -quiet
 
 .PHONY: run
 run: ## Build and run the app in the simulator (iPhone SE 3rd gen)

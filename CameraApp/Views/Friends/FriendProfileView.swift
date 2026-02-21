@@ -3,6 +3,8 @@ import SwiftUI
 struct FriendProfileView: View {
     @Environment(FriendsStore.self) private var store
     @Environment(PostMutationStore.self) private var postMutationStore
+    @Environment(DefaultPostRepository.self) private var postRepository
+    @Environment(DefaultProfileRepository.self) private var profileRepository
     @Environment(\.dismiss) private var dismiss
 
     @State private var viewModel: FriendProfileViewModel
@@ -71,6 +73,8 @@ struct FriendProfileView: View {
             }
         }
         .onAppear {
+            viewModel.postRepository = postRepository
+            viewModel.profileRepository = profileRepository
             viewModel.loadFullProfile()
             Task {
                 await viewModel.loadPosts()
@@ -195,4 +199,6 @@ struct FriendProfileView: View {
     .environment(MomentsStore())
     .environment(PostMutationStore())
     .environment(AuthManager())
+    .environment(PreviewContainer.postRepository)
+    .environment(PreviewContainer.profileRepository)
 }

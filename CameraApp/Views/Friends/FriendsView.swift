@@ -13,6 +13,7 @@ enum FriendsSection: String, CaseIterable {
 
 struct FriendsView: View {
     @Environment(FriendsStore.self) private var store
+    @Environment(DefaultPostRepository.self) private var postRepository
     @State private var selectedSection: FriendsSection = .friends
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
@@ -196,6 +197,7 @@ struct FriendsView: View {
             await feedViewModel.loadPosts(friends: store.friends)
         }
         .task(id: store.friends.map(\.id)) {
+            feedViewModel.postRepository = postRepository
             await feedViewModel.loadPosts(friends: store.friends)
         }
     }
@@ -449,4 +451,5 @@ struct DiscoverUserRow: View {
     FriendsView()
         .environment(FriendsStore())
         .environment(PostMutationStore())
+        .environment(PreviewContainer.postRepository)
 }

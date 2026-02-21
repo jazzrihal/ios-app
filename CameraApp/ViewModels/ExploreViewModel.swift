@@ -53,6 +53,10 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
     private var hasLoadedInitialLocation = false
     var isFetchingLocation = false
 
+    // MARK: - Repository
+
+    var postRepository: (any PostRepository)?
+
     override init() {
         super.init()
         locationManager.delegate = self
@@ -78,7 +82,6 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
             return
         }
 
-        // Use cached location for instant results when fresh enough
         if let cached = locationManager.location,
            cached.timestamp.timeIntervalSinceNow > -600 {
             let coord = cached.coordinate
@@ -116,7 +119,6 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         isFetchingLocation = false
         guard let location = locations.first else { return }
 
-        // Don't override if the user already dropped a pin manually
         guard pinnedCoordinate == nil else { return }
 
         let coord = location.coordinate
@@ -213,7 +215,6 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
                     )
                 }
 
-                // Build a nice location name from the map item
                 let placemark = mapItem.placemark
                 let city = placemark.locality
                 let country = placemark.country
@@ -311,7 +312,6 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         showMap = false
         momentSaved = false
 
-        // Center the map on the moment's location
         cameraPosition = .region(
             MKCoordinateRegion(
                 center: moment.coordinate,
@@ -333,7 +333,6 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         searchError = nil
         hasMorePages = true
 
-        // Collapse all expanded UI elements
         withAnimation(.spring(duration: 0.3)) {
             showDatePicker = false
             showMap = false
@@ -350,20 +349,22 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
             params.pageSize = pageSize
             params.pageOffset = 0
 
-            let rows: [NearbyPostRow] = try await SupabaseManager.client
-                .rpc("nearby_posts", params: params)
-                .execute()
-                .value
+            let result: [ImagePost]
+            if let repo = postRepository {
+                result = try await repo.nearbyPosts(params: params)
+            } else {
+                let rows: [NearbyPostRow] = try await SupabaseManager.client
+                    .rpc("nearby_posts", params: params)
+                    .execute()
+                    .value
+                result = rows.map { ImagePost(from: $0) }
+            }
 
             withAnimation(.spring(duration: 0.4)) {
-                posts = rows.map { ImagePost(from: $0) }
+                posts = result
                 hasSearched = true
                 isSearching = false
-                if let total = rows.first?.totalCount {
-                    hasMorePages = posts.count < total
-                } else {
-                    hasMorePages = rows.count == pageSize
-                }
+                hasMorePages = result.count == pageSize
             }
         } catch {
             withAnimation(.spring(duration: 0.4)) {
@@ -390,18 +391,19 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
             params.pageSize = pageSize
             params.pageOffset = posts.count
 
-            let rows: [NearbyPostRow] = try await SupabaseManager.client
-                .rpc("nearby_posts", params: params)
-                .execute()
-                .value
-
-            let newPosts = rows.map { ImagePost(from: $0) }
-            posts.append(contentsOf: newPosts)
-            if let total = rows.first?.totalCount {
-                hasMorePages = posts.count < total
+            let newPosts: [ImagePost]
+            if let repo = postRepository {
+                newPosts = try await repo.nearbyPostsNextPage(params: params)
             } else {
-                hasMorePages = rows.count == pageSize
+                let rows: [NearbyPostRow] = try await SupabaseManager.client
+                    .rpc("nearby_posts", params: params)
+                    .execute()
+                    .value
+                newPosts = rows.map { ImagePost(from: $0) }
             }
+
+            posts.append(contentsOf: newPosts)
+            hasMorePages = newPosts.count == pageSize
         } catch {
             searchError = error.localizedDescription
         }

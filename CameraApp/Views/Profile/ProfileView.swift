@@ -5,6 +5,8 @@ struct ProfileView: View {
     @Environment(FriendsStore.self) private var friendsStore
     @Environment(UploadManager.self) private var uploadManager
     @Environment(PostMutationStore.self) private var postMutationStore
+    @Environment(DefaultPostRepository.self) private var postRepository
+    @Environment(CacheInvalidator.self) private var cacheInvalidator
 
     @State private var userPosts: [ImagePost] = []
     @State private var isLoadingPosts = false
@@ -56,6 +58,9 @@ struct ProfileView: View {
             }
             .task { await loadPosts() }
             .onChange(of: uploadManager.completedUploadCount) {
+                if let userId = authManager.userId {
+                    cacheInvalidator.postUploaded(userId: userId)
+                }
                 Task { await loadPosts() }
             }
         }
@@ -105,6 +110,9 @@ struct ProfileView: View {
             }
         }
         .refreshable {
+            if let userId = authManager.userId {
+                postRepository.invalidateUserPosts(userId)
+            }
             await loadPosts()
         }
     }
@@ -141,21 +149,11 @@ struct ProfileView: View {
         isLoadingPosts = true
         hasMorePages = true
         do {
-            let params = GetUserPostsAndPinsParams(
-                targetUserId: userId, pageSize: pageSize, pageOffset: 0
+            userPosts = try await postRepository.userPostsAndPins(
+                userId: userId, pageSize: pageSize, pageOffset: 0
             )
-            let rows: [UserPostWithPinRow] = try await SupabaseManager.client
-                .rpc("get_user_posts_and_pins", params: params)
-                .execute()
-                .value
-
-            userPosts = rows.map { ImagePost(from: $0) }
             postMutationStore.seedFromPosts(userPosts)
-            if let total = rows.first?.totalCount {
-                hasMorePages = userPosts.count < total
-            } else {
-                hasMorePages = rows.count == pageSize
-            }
+            hasMorePages = userPosts.count == pageSize
         } catch {
             print("[ProfileView] Failed to load posts: \(error)")
         }
@@ -166,22 +164,12 @@ struct ProfileView: View {
         guard hasMorePages, !isLoadingMore, let userId = authManager.userId else { return }
         isLoadingMore = true
         do {
-            let params = GetUserPostsAndPinsParams(
-                targetUserId: userId, pageSize: pageSize, pageOffset: userPosts.count
+            let newPosts = try await postRepository.userPostsAndPins(
+                userId: userId, pageSize: pageSize, pageOffset: userPosts.count
             )
-            let rows: [UserPostWithPinRow] = try await SupabaseManager.client
-                .rpc("get_user_posts_and_pins", params: params)
-                .execute()
-                .value
-
-            let newPosts = rows.map { ImagePost(from: $0) }
             postMutationStore.seedFromPosts(newPosts)
             userPosts.append(contentsOf: newPosts)
-            if let total = rows.first?.totalCount {
-                hasMorePages = userPosts.count < total
-            } else {
-                hasMorePages = rows.count == pageSize
-            }
+            hasMorePages = newPosts.count == pageSize
         } catch {
             print("[ProfileView] Failed to load more posts: \(error)")
         }
@@ -198,4 +186,6 @@ struct ProfileView: View {
         .environment(MomentsStore())
         .environment(PostMutationStore())
         .environment(UploadManager())
+        .environment(PreviewContainer.postRepository)
+        .environment(CacheInvalidator())
 }

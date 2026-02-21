@@ -30,6 +30,11 @@ final class FriendProfileViewModel {
     /// Set to `true` when the view should dismiss (e.g. after removing a friend).
     var shouldDismiss = false
 
+    // MARK: - Repositories
+
+    var postRepository: (any PostRepository)?
+    var profileRepository: (any ProfileRepository)?
+
     // MARK: - Init
 
     init(user: User) {
@@ -44,17 +49,19 @@ final class FriendProfileViewModel {
     func loadFullProfile() {
         Task { @MainActor in
             do {
-                let profile: PublicSchema.ProfilesSelect = try await SupabaseManager.client
-                    .from("profiles")
-                    .select()
-                    .eq("id", value: user.id)
-                    .single()
-                    .execute()
-                    .value
-
-                user = User(from: profile)
+                if let repo = profileRepository {
+                    user = try await repo.loadProfile(userId: user.id)
+                } else {
+                    let profile: PublicSchema.ProfilesSelect = try await SupabaseManager.client
+                        .from("profiles")
+                        .select()
+                        .eq("id", value: user.id)
+                        .single()
+                        .execute()
+                        .value
+                    user = User(from: profile)
+                }
             } catch {
-                // Keep the original user data as fallback
                 print("[FriendProfile] Failed to load full profile: \(error)")
             }
         }
@@ -70,26 +77,28 @@ final class FriendProfileViewModel {
         hasMorePages = true
 
         do {
-            let params = GetUserPostsAndPinsParams(
-                targetUserId: user.id, pageSize: pageSize, pageOffset: 0
-            )
-            let rows: [UserPostWithPinRow] = try await SupabaseManager.client
-                .rpc("get_user_posts_and_pins", params: params)
-                .execute()
-                .value
-
-            userPosts = rows.map { row in
-                var post = ImagePost(from: row)
-                if row.isPinnedByUser {
-                    post.pinnedByUsername = user.username
-                }
-                return post
-            }
-            if let total = rows.first?.totalCount {
-                hasMorePages = userPosts.count < total
+            if let repo = postRepository {
+                userPosts = try await repo.userPostsAndPins(
+                    userId: user.id, pageSize: pageSize, pageOffset: 0
+                )
             } else {
-                hasMorePages = rows.count == pageSize
+                let params = GetUserPostsAndPinsParams(
+                    targetUserId: user.id, pageSize: pageSize, pageOffset: 0
+                )
+                let rows: [UserPostWithPinRow] = try await SupabaseManager.client
+                    .rpc("get_user_posts_and_pins", params: params)
+                    .execute()
+                    .value
+
+                userPosts = rows.map { row in
+                    var post = ImagePost(from: row)
+                    if row.isPinnedByUser {
+                        post.pinnedByUsername = user.username
+                    }
+                    return post
+                }
             }
+            hasMorePages = userPosts.count == pageSize
         } catch {
             postsError = error.localizedDescription
         }
@@ -104,27 +113,30 @@ final class FriendProfileViewModel {
         isLoadingMore = true
 
         do {
-            let params = GetUserPostsAndPinsParams(
-                targetUserId: user.id, pageSize: pageSize, pageOffset: userPosts.count
-            )
-            let rows: [UserPostWithPinRow] = try await SupabaseManager.client
-                .rpc("get_user_posts_and_pins", params: params)
-                .execute()
-                .value
+            let newPosts: [ImagePost]
+            if let repo = postRepository {
+                newPosts = try await repo.userPostsAndPins(
+                    userId: user.id, pageSize: pageSize, pageOffset: userPosts.count
+                )
+            } else {
+                let params = GetUserPostsAndPinsParams(
+                    targetUserId: user.id, pageSize: pageSize, pageOffset: userPosts.count
+                )
+                let rows: [UserPostWithPinRow] = try await SupabaseManager.client
+                    .rpc("get_user_posts_and_pins", params: params)
+                    .execute()
+                    .value
 
-            let newPosts = rows.map { row in
-                var post = ImagePost(from: row)
-                if row.isPinnedByUser {
-                    post.pinnedByUsername = user.username
+                newPosts = rows.map { row in
+                    var post = ImagePost(from: row)
+                    if row.isPinnedByUser {
+                        post.pinnedByUsername = user.username
+                    }
+                    return post
                 }
-                return post
             }
             userPosts.append(contentsOf: newPosts)
-            if let total = rows.first?.totalCount {
-                hasMorePages = userPosts.count < total
-            } else {
-                hasMorePages = rows.count == pageSize
-            }
+            hasMorePages = newPosts.count == pageSize
         } catch {
             postsError = error.localizedDescription
         }

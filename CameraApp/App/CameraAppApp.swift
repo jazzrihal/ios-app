@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 @main
@@ -9,8 +10,31 @@ struct CameraAppApp: App {
     @State private var uploadManager = UploadManager()
     @State private var postMutationStore = PostMutationStore()
     @State private var networkMonitor = NetworkMonitor()
+    @State private var cacheInvalidator = CacheInvalidator()
     @State private var showCamera = false
     @State private var previousTab: Int = 0
+
+    private let modelContainer: ModelContainer
+    @State private var postRepository: DefaultPostRepository
+    @State private var friendRepository: DefaultFriendRepository
+    @State private var momentRepository: DefaultMomentRepository
+    @State private var profileRepository: DefaultProfileRepository
+
+    init() {
+        do {
+            let container = try ModelContainer(
+                for: CacheEntry.self, CachedPost.self, CachedUser.self, CachedMoment.self
+            )
+            modelContainer = container
+            let context = ModelContext(container)
+            _postRepository = State(initialValue: DefaultPostRepository(modelContext: context))
+            _friendRepository = State(initialValue: DefaultFriendRepository(modelContext: context))
+            _momentRepository = State(initialValue: DefaultMomentRepository(modelContext: context))
+            _profileRepository = State(initialValue: DefaultProfileRepository(modelContext: context))
+        } catch {
+            fatalError("Failed to create ModelContainer: \(error)")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -29,12 +53,31 @@ struct CameraAppApp: App {
             .environment(uploadManager)
             .environment(postMutationStore)
             .environment(networkMonitor)
+            .environment(postRepository)
+            .environment(friendRepository)
+            .environment(momentRepository)
+            .environment(profileRepository)
+            .environment(cacheInvalidator)
             .onChange(of: authManager.isAuthenticated, initial: true) {
                 if authManager.isAuthenticated, let uid = authManager.userId {
                     friendsStore.currentUserId = uid
                     momentsStore.currentUserId = uid
                     postMutationStore.currentUserId = uid
                     uploadManager.removeOrphanedPosts()
+
+                    cacheInvalidator.configure(
+                        posts: postRepository,
+                        friends: friendRepository,
+                        moments: momentRepository,
+                        profiles: profileRepository
+                    )
+
+                    friendsStore.repository = friendRepository
+                    friendsStore.cacheInvalidator = cacheInvalidator
+                    momentsStore.repository = momentRepository
+                    momentsStore.cacheInvalidator = cacheInvalidator
+                    postMutationStore.cacheInvalidator = cacheInvalidator
+
                     Task { await friendsStore.loadAll() }
                     Task { await momentsStore.loadMoments() }
                 }

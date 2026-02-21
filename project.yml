@@ -17,6 +17,7 @@ targets:
     platform: iOS
     scheme:
       testTargets:
+        - CameraAppTests
         - CameraAppUITests
     sources:
       - CameraApp
@@ -52,6 +53,19 @@ targets:
           fi
         name: SwiftLint
         basedOnDependencyAnalysis: false
+  CameraAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - CameraAppTests
+    dependencies:
+      - target: CameraApp
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CameraApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CameraApp"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        GENERATE_INFOPLIST_FILE: YES
   CameraAppUITests:
     type: bundle.ui-testing
     platform: iOS

@@ -8,6 +8,7 @@ struct ExploreView: View {
 
     @Environment(MomentsStore.self) private var store
     @Environment(PostMutationStore.self) private var postMutationStore
+    @Environment(DefaultPostRepository.self) private var postRepository
     @State private var viewModel = ExploreViewModel()
     @State private var prefetcher = ImagePrefetcher()
     @FocusState private var isSearchFieldFocused: Bool
@@ -51,6 +52,7 @@ struct ExploreView: View {
                 }
             }
             .onAppear {
+                viewModel.postRepository = postRepository
                 viewModel.loadPendingMoment(store: store)
                 viewModel.fetchCurrentLocationOnLaunch()
             }
@@ -419,4 +421,5 @@ struct ExploreView: View {
         .environment(PostMutationStore())
         .environment(FriendsStore())
         .environment(AuthManager())
+        .environment(PreviewContainer.postRepository)
 }

@@ -11,6 +11,8 @@ final class FriendsFeedViewModel {
 
     private let pageSize = 20
 
+    var postRepository: (any PostRepository)?
+
     /// Fetches the first page of posts from all provided friends (initial load or refresh).
     @MainActor
     func loadPosts(friends: [User]) async {
@@ -25,36 +27,40 @@ final class FriendsFeedViewModel {
         errorMessage = nil
         hasMorePages = true
 
-        let userLookup = Dictionary(uniqueKeysWithValues: friends.map { ($0.id, $0) })
-
         do {
-            let rows: [PostRowWithoutLocation] = try await SupabaseManager.client
-                .from("posts")
-                .select(PostRowWithoutLocation.selectColumns)
-                .in("user_id", values: friendIds)
-                .order("created_at", ascending: false)
-                .range(from: 0, to: pageSize - 1)
-                .execute()
-                .value
-
-            posts = rows.compactMap { row in
-                guard let user = userLookup[row.userId] else { return nil }
-                return ImagePost(
-                    id: row.id,
-                    imageURL: SupabaseManager.imageURL(for: row.imagePath),
-                    user: user,
-                    caption: row.caption ?? "",
-                    coordinate: CLLocationCoordinate2D(
-                        latitude: row.latitude,
-                        longitude: row.longitude
-                    ),
-                    locationName: row.locationName ?? "",
-                    timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
-                    distanceMeters: 0,
-                    scope: PostScope(serverValue: row.scope)
+            if let repo = postRepository {
+                posts = try await repo.friendFeedPosts(
+                    friendIds: friendIds, friends: friends, pageSize: pageSize, from: 0
                 )
+            } else {
+                let userLookup = Dictionary(uniqueKeysWithValues: friends.map { ($0.id, $0) })
+                let rows: [PostRowWithoutLocation] = try await SupabaseManager.client
+                    .from("posts")
+                    .select(PostRowWithoutLocation.selectColumns)
+                    .in("user_id", values: friendIds)
+                    .order("created_at", ascending: false)
+                    .range(from: 0, to: pageSize - 1)
+                    .execute()
+                    .value
+
+                posts = rows.compactMap { row in
+                    guard let user = userLookup[row.userId] else { return nil }
+                    return ImagePost(
+                        id: row.id,
+                        imageURL: SupabaseManager.imageURL(for: row.imagePath),
+                        user: user,
+                        caption: row.caption ?? "",
+                        coordinate: CLLocationCoordinate2D(
+                            latitude: row.latitude, longitude: row.longitude
+                        ),
+                        locationName: row.locationName ?? "",
+                        timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
+                        distanceMeters: 0,
+                        scope: PostScope(serverValue: row.scope)
+                    )
+                }
             }
-            hasMorePages = rows.count == pageSize
+            hasMorePages = posts.count == pageSize
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -71,39 +77,44 @@ final class FriendsFeedViewModel {
 
         isLoadingMore = true
 
-        let userLookup = Dictionary(uniqueKeysWithValues: friends.map { ($0.id, $0) })
-        let from = posts.count
-        let to = from + pageSize - 1
-
         do {
-            let rows: [PostRowWithoutLocation] = try await SupabaseManager.client
-                .from("posts")
-                .select(PostRowWithoutLocation.selectColumns)
-                .in("user_id", values: friendIds)
-                .order("created_at", ascending: false)
-                .range(from: from, to: to)
-                .execute()
-                .value
-
-            let newPosts = rows.compactMap { row -> ImagePost? in
-                guard let user = userLookup[row.userId] else { return nil }
-                return ImagePost(
-                    id: row.id,
-                    imageURL: SupabaseManager.imageURL(for: row.imagePath),
-                    user: user,
-                    caption: row.caption ?? "",
-                    coordinate: CLLocationCoordinate2D(
-                        latitude: row.latitude,
-                        longitude: row.longitude
-                    ),
-                    locationName: row.locationName ?? "",
-                    timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
-                    distanceMeters: 0,
-                    scope: PostScope(serverValue: row.scope)
+            let newPosts: [ImagePost]
+            if let repo = postRepository {
+                newPosts = try await repo.friendFeedPosts(
+                    friendIds: friendIds, friends: friends, pageSize: pageSize, from: posts.count
                 )
+            } else {
+                let userLookup = Dictionary(uniqueKeysWithValues: friends.map { ($0.id, $0) })
+                let from = posts.count
+                let to = from + pageSize - 1
+                let rows: [PostRowWithoutLocation] = try await SupabaseManager.client
+                    .from("posts")
+                    .select(PostRowWithoutLocation.selectColumns)
+                    .in("user_id", values: friendIds)
+                    .order("created_at", ascending: false)
+                    .range(from: from, to: to)
+                    .execute()
+                    .value
+
+                newPosts = rows.compactMap { row -> ImagePost? in
+                    guard let user = userLookup[row.userId] else { return nil }
+                    return ImagePost(
+                        id: row.id,
+                        imageURL: SupabaseManager.imageURL(for: row.imagePath),
+                        user: user,
+                        caption: row.caption ?? "",
+                        coordinate: CLLocationCoordinate2D(
+                            latitude: row.latitude, longitude: row.longitude
+                        ),
+                        locationName: row.locationName ?? "",
+                        timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
+                        distanceMeters: 0,
+                        scope: PostScope(serverValue: row.scope)
+                    )
+                }
             }
             posts.append(contentsOf: newPosts)
-            hasMorePages = rows.count == pageSize
+            hasMorePages = newPosts.count == pageSize
         } catch {
             errorMessage = error.localizedDescription
         }

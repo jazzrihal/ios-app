@@ -14,9 +14,15 @@ class MomentsStore {
     /// The authenticated user's UUID. Must be set before calling any methods.
     var currentUserId: UUID?
 
+    /// Repository for data fetching (set from CameraAppApp on auth).
+    var repository: (any MomentRepository)?
+
+    /// Cache invalidator for notifying other layers of moment changes.
+    var cacheInvalidator: CacheInvalidator?
+
     // MARK: - Load
 
-    /// Fetches all moments with their nearby posts via the `moments_with_nearby_posts` RPC.
+    /// Fetches all moments with their nearby posts.
     func loadMoments() async {
         guard currentUserId != nil else { return }
 
@@ -24,25 +30,31 @@ class MomentsStore {
         defer { isLoading = false }
 
         do {
-            let params = MomentsWithNearbyPostsParams(
-                radiusMeters: nil,
-                dateRangeDays: nil,
-                timeDecayHours: nil,
-                distanceWeight: nil,
-                postsPerMoment: 5
-            )
+            if let repo = repository {
+                let (loadedMoments, loadedPosts) = try await repo.loadMomentsWithPosts()
+                moments = loadedMoments
+                nearbyPosts = loadedPosts
+            } else {
+                let params = MomentsWithNearbyPostsParams(
+                    radiusMeters: nil,
+                    dateRangeDays: nil,
+                    timeDecayHours: nil,
+                    distanceWeight: nil,
+                    postsPerMoment: 5
+                )
 
-            let rows: [MomentWithNearbyPostsRow] = try await SupabaseManager.client
-                .rpc("moments_with_nearby_posts", params: params)
-                .execute()
-                .value
+                let rows: [MomentWithNearbyPostsRow] = try await SupabaseManager.client
+                    .rpc("moments_with_nearby_posts", params: params)
+                    .execute()
+                    .value
 
-            nearbyPosts = Dictionary(
-                uniqueKeysWithValues: rows.map { row in
-                    (row.momentId, row.nearbyPosts.map { ImagePost(from: $0) })
-                }
-            )
-            moments = rows.map { Moment(from: $0) }
+                nearbyPosts = Dictionary(
+                    uniqueKeysWithValues: rows.map { row in
+                        (row.momentId, row.nearbyPosts.map { ImagePost(from: $0) })
+                    }
+                )
+                moments = rows.map { Moment(from: $0) }
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -52,7 +64,6 @@ class MomentsStore {
 
     /// Deletes a moment from Supabase and removes it from local state.
     func deleteMoment(_ moment: Moment) async {
-        // Optimistic local removal
         moments.removeAll { $0.id == moment.id }
         nearbyPosts.removeValue(forKey: moment.id)
 
@@ -61,9 +72,9 @@ class MomentsStore {
                 .delete()
                 .eq("id", value: moment.id)
                 .execute()
+            cacheInvalidator?.momentsChanged()
         } catch {
             errorMessage = error.localizedDescription
-            // Reload to restore consistent state on failure
             await loadMoments()
         }
     }
@@ -94,6 +105,7 @@ class MomentsStore {
                 )
                 try await SupabaseManager.client.from("moments").insert(insert).execute()
 
+                cacheInvalidator?.momentsChanged()
                 await loadMoments()
             } catch {
                 errorMessage = error.localizedDescription
