@@ -88,7 +88,7 @@ struct FriendsView: View {
     private func badgeView(count: Int) -> some View {
         Text("\(count)")
             .font(.caption2.weight(.bold))
-            .foregroundStyle(.white)
+            .foregroundStyle(Color(.systemBackground))
             .padding(.horizontal, AppStyle.Spacing.compact)
             .padding(.vertical, 2)
             .background(Color.primary, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.badge))
@@ -141,7 +141,7 @@ struct FriendsView: View {
                 Spacer()
                 Text("\(store.incomingRequests.count)")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(.systemBackground))
                     .padding(.horizontal, AppStyle.Spacing.small)
                     .padding(.vertical, 3)
                     .background(Color.primary, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.badge))
