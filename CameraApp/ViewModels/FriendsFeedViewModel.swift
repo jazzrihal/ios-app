@@ -1,4 +1,5 @@
 import CoreLocation
+import Foundation
 import Observation
 
 @Observable
@@ -10,16 +11,26 @@ final class FriendsFeedViewModel {
     var errorMessage: String?
 
     private let pageSize = 20
+    private let duplicateLoadWindow: TimeInterval = 0.75
+    private var lastFirstPageLoadToken: String?
+    private var lastFirstPageLoadAt: Date?
 
     var postRepository: (any PostRepository)?
 
     /// Fetches the first page of posts from all provided friends (initial load or refresh).
     @MainActor
-    func loadPosts(friends: [User]) async {
+    func loadPosts(friends: [User], force: Bool = false) async {
         let friendIds = friends.map(\.id)
+        let loadToken = makeLoadToken(friendIds: friendIds)
+
+        if shouldSkipDuplicateFirstPageLoad(token: loadToken, force: force) {
+            return
+        }
+
         guard !friendIds.isEmpty else {
             posts = []
             hasMorePages = false
+            recordFirstPageLoad(token: loadToken)
             return
         }
 
@@ -66,6 +77,14 @@ final class FriendsFeedViewModel {
         }
 
         isLoading = false
+        recordFirstPageLoad(token: loadToken)
+    }
+
+    /// Invalidates feed cache and reloads first page from a network-fresh source.
+    @MainActor
+    func refreshPosts(friends: [User]) async {
+        postRepository?.invalidateFriendFeed()
+        await loadPosts(friends: friends, force: true)
     }
 
     /// Loads the next page and appends to posts.
@@ -120,5 +139,24 @@ final class FriendsFeedViewModel {
         }
 
         isLoadingMore = false
+    }
+
+    private func makeLoadToken(friendIds: [UUID]) -> String {
+        friendIds
+            .map(\.uuidString)
+            .sorted()
+            .joined(separator: ",")
+    }
+
+    private func shouldSkipDuplicateFirstPageLoad(token: String, force: Bool) -> Bool {
+        guard !force else { return false }
+        guard !token.isEmpty else { return false }
+        guard lastFirstPageLoadToken == token, let loadedAt = lastFirstPageLoadAt else { return false }
+        return Date().timeIntervalSince(loadedAt) < duplicateLoadWindow
+    }
+
+    private func recordFirstPageLoad(token: String) {
+        lastFirstPageLoadToken = token
+        lastFirstPageLoadAt = Date()
     }
 }

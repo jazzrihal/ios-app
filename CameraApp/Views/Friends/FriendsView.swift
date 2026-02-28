@@ -129,6 +129,9 @@ struct FriendsView: View {
             }
             .padding(.bottom, AppStyle.Spacing.large)
         }
+        .refreshable {
+            await refreshFriendsSection()
+        }
     }
 
     private var incomingRequestsSection: some View {
@@ -194,7 +197,7 @@ struct FriendsView: View {
             }
         }
         .refreshable {
-            await feedViewModel.loadPosts(friends: store.friends)
+            await feedViewModel.refreshPosts(friends: store.friends)
         }
         .task(id: store.friends.map(\.id)) {
             feedViewModel.postRepository = postRepository
@@ -245,6 +248,9 @@ struct FriendsView: View {
             }
             .padding(.bottom, AppStyle.Spacing.large)
         }
+        .refreshable {
+            await refreshAddFriendSection()
+        }
         .onChange(of: searchText) { _, newValue in
             guard selectedSection == .addFriend else { return }
 
@@ -262,6 +268,21 @@ struct FriendsView: View {
                 await store.remoteSearchUsers(query: newValue)
             }
         }
+    }
+
+    @MainActor
+    private func refreshFriendsSection() async {
+        await store.refreshAll()
+    }
+
+    @MainActor
+    private func refreshAddFriendSection() async {
+        searchTask?.cancel()
+        await store.refreshAll()
+
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return }
+        await store.remoteSearchUsers(query: trimmed)
     }
 }
 

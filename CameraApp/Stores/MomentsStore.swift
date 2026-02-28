@@ -60,6 +60,12 @@ class MomentsStore {
         }
     }
 
+    /// Invalidates cached moments and reloads from the server-backed source.
+    func refreshMoments() async {
+        repository?.invalidate()
+        await loadMoments()
+    }
+
     // MARK: - Delete
 
     /// Deletes a moment from Supabase and removes it from local state.

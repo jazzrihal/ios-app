@@ -147,6 +147,7 @@ final class FriendProfileViewModel {
     /// Resets and reloads from the first page (for pull-to-refresh).
     @MainActor
     func refreshPosts() async {
+        postRepository?.invalidateUserPosts(user.id)
         await loadPosts()
     }
 

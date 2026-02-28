@@ -375,6 +375,13 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    /// Forces a fresh first page by invalidating nearby-post cache before searching.
+    @MainActor
+    func refreshSearch() async {
+        postRepository?.invalidateNearbyPosts()
+        await performSearch()
+    }
+
     @MainActor
     func loadNextPage() async {
         guard hasMorePages, !isLoadingMore, let coord = pinnedCoordinate else { return }

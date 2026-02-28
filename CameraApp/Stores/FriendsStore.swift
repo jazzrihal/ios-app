@@ -53,6 +53,13 @@ class FriendsStore {
         isLoading = false
     }
 
+    /// Invalidates cached friend graph and reloads friends/requests/suggestions.
+    func refreshAll() async {
+        guard let userId = currentUserId else { return }
+        await repository?.invalidate(userId: userId)
+        await loadAll()
+    }
+
     private func loadAllViaRepository(_ repo: any FriendRepository, userId: UUID) async {
         async let friendsResult = Result { try await repo.loadFriends(userId: userId) }
         async let incomingResult = Result { try await repo.loadIncomingRequests(userId: userId) }

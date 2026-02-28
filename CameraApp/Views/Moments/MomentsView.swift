@@ -9,12 +9,17 @@ struct MomentsView: View {
         NavigationStack {
             Group {
                 if store.moments.isEmpty, !store.isLoading {
-                    EmptyStateView(
-                        icon: "clock.badge.questionmark",
-                        title: "No Moments Yet",
-                        subtitle: "Save moments from the Explore tab to see them here."
-                    )
-                    .frame(maxHeight: .infinity, alignment: .top)
+                    ScrollView {
+                        EmptyStateView(
+                            icon: "clock.badge.questionmark",
+                            title: "No Moments Yet",
+                            subtitle: "Save moments from the Explore tab to see them here."
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    }
+                    .refreshable {
+                        await store.refreshMoments()
+                    }
                 } else {
                     List {
                         ForEach(sortedMoments) { moment in
@@ -43,6 +48,9 @@ struct MomentsView: View {
                         }
                     }
                     .listStyle(.plain)
+                    .refreshable {
+                        await store.refreshMoments()
+                    }
                 }
             }
             .overlay {

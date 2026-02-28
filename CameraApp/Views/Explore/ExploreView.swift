@@ -31,7 +31,7 @@ struct ExploreView: View {
                     resultsSection
                 }
                 .refreshable {
-                    await viewModel.performSearch()
+                    await viewModel.refreshSearch()
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
