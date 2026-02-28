@@ -4,8 +4,8 @@ import SwiftUI
 // MARK: - Friends Tab Sections
 
 enum FriendsSection: String, CaseIterable {
-    case friends = "Friends"
     case feed = "Feed"
+    case friends = "Friends"
     case addFriend = "Add Friend"
 }
 
@@ -14,7 +14,7 @@ enum FriendsSection: String, CaseIterable {
 struct FriendsView: View {
     @Environment(FriendsStore.self) private var store
     @Environment(DefaultPostRepository.self) private var postRepository
-    @State private var selectedSection: FriendsSection = .friends
+    @State private var selectedSection: FriendsSection = .feed
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
     @State private var feedViewModel = FriendsFeedViewModel()
