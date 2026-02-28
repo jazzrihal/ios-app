@@ -197,7 +197,7 @@ struct FriendsView: View {
             }
         }
         .refreshable {
-            await feedViewModel.refreshPosts(friends: store.friends)
+            await refreshFeedSection()
         }
         .task(id: store.friends.map(\.id)) {
             feedViewModel.postRepository = postRepository
@@ -283,6 +283,11 @@ struct FriendsView: View {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 2 else { return }
         await store.remoteSearchUsers(query: trimmed)
+    }
+
+    @MainActor
+    private func refreshFeedSection() async {
+        await feedViewModel.refreshPosts(friends: store.friends)
     }
 }
 
