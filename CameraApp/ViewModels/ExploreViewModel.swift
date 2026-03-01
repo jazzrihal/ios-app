@@ -6,7 +6,7 @@ import SwiftUI
 // MARK: - Explore View Model
 
 @Observable
-final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
+final class ExploreViewModel: NSObject, CLLocationManagerDelegate, TabRefreshable {
     // MARK: - Search Parameters
 
     var selectedDate = Date()
@@ -25,6 +25,9 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
     var posts: [ImagePost] = []
     var hasSearched = false
     var isSearching = false
+    /// True only during a user-initiated pull-to-refresh. Center overlays must not
+    /// appear while this is true — the native pull spinner is the only indicator.
+    var isRefreshing = false
     var isLoadingMore = false
     var hasMorePages = true
     var searchError: String?
@@ -375,9 +378,30 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    // MARK: - TabRefreshable
+
+    /// True while the first location-based search is in-flight (no results yet).
+    var isInitialLoading: Bool {
+        !hasSearched && isSearching
+    }
+
+    /// Surfaces the most recent search error for the refresh contract.
+    var lastRefreshError: String? {
+        searchError
+    }
+
+    func refresh() async {
+        await refreshSearch()
+    }
+
     /// Forces a fresh first page by invalidating nearby-post cache before searching.
+    /// Guards against overlapping concurrent refresh operations.
     @MainActor
     func refreshSearch() async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+
         postRepository?.invalidateNearbyPosts()
         await performSearch()
     }

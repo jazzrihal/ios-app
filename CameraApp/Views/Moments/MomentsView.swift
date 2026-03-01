@@ -7,58 +7,49 @@ struct MomentsView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            List {
                 if store.moments.isEmpty, !store.isLoading {
-                    ScrollView {
-                        EmptyStateView(
-                            icon: "clock.badge.questionmark",
-                            title: "No Moments Yet",
-                            subtitle: "Save moments from the Explore tab to see them here."
-                        )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    }
-                    .refreshable {
-                        await store.refreshMoments()
-                    }
+                    EmptyStateView(
+                        icon: "clock.badge.questionmark",
+                        title: "No Moments Yet",
+                        subtitle: "Save moments from the Explore tab to see them here."
+                    )
+                    .frame(maxWidth: .infinity)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 } else {
-                    List {
-                        ForEach(sortedMoments) { moment in
-                            let posts = store.nearbyPosts[moment.id] ?? []
-                            MomentCard(
-                                moment: moment,
-                                posts: posts
-                            ) {
-                                navigateToExplore(moment)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    Task { await store.deleteMoment(moment) }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(
-                                top: AppStyle.Spacing.small,
-                                leading: AppStyle.Padding.screenHorizontal,
-                                bottom: AppStyle.Spacing.small,
-                                trailing: AppStyle.Padding.screenHorizontal
-                            ))
-                            .listRowBackground(Color.clear)
+                    ForEach(sortedMoments) { moment in
+                        let posts = store.nearbyPosts[moment.id] ?? []
+                        MomentCard(
+                            moment: moment,
+                            posts: posts
+                        ) {
+                            navigateToExplore(moment)
                         }
-                    }
-                    .listStyle(.plain)
-                    .refreshable {
-                        await store.refreshMoments()
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                Task { await store.deleteMoment(moment) }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: AppStyle.Spacing.small,
+                            leading: AppStyle.Padding.screenHorizontal,
+                            bottom: AppStyle.Spacing.small,
+                            trailing: AppStyle.Padding.screenHorizontal
+                        ))
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
-            .overlay {
-                if store.isLoading {
-                    ProgressView()
-                        .tint(.secondary)
-                }
-            }
+            .listStyle(.plain)
+            .tabLoadable(
+                isLoading: store.isLoading,
+                isRefreshing: store.isRefreshing,
+                onRefresh: { await store.refreshMoments() }
+            )
             .navigationTitle("Moments")
             .navigationBarTitleDisplayMode(.large)
             .onChange(of: store.nearbyPosts.keys.sorted()) { _, _ in

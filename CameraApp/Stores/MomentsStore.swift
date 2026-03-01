@@ -3,10 +3,15 @@ import Foundation
 import Observation
 
 @MainActor @Observable
-class MomentsStore {
+class MomentsStore: TabRefreshable {
     var moments: [Moment] = []
     var nearbyPosts: [UUID: [ImagePost]] = [:]
+    /// True only during the initial data load (before any moments are available).
     var isLoading = false
+    /// True only during a user-initiated pull-to-refresh. Center overlays must not
+    /// appear while this is true — the native pull spinner is the only indicator.
+    var isRefreshing = false
+    var lastRefreshError: String?
     var pendingMoment: Moment?
     var selectedTab: Int = 0
     var errorMessage: String?
@@ -22,12 +27,32 @@ class MomentsStore {
 
     // MARK: - Load
 
-    /// Fetches all moments with their nearby posts.
+    /// Fetches all moments with their nearby posts (initial load).
     func loadMoments() async {
         guard currentUserId != nil else { return }
 
         isLoading = true
         defer { isLoading = false }
+
+        await fetchMomentsData()
+    }
+
+    /// Invalidates cached moments and reloads from the server-backed source.
+    /// Guards against overlapping concurrent refresh operations.
+    func refreshMoments() async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        lastRefreshError = nil
+        defer { isRefreshing = false }
+
+        repository?.invalidate()
+        await fetchMomentsData()
+    }
+
+    // MARK: - Shared Fetch
+
+    private func fetchMomentsData() async {
+        guard currentUserId != nil else { return }
 
         do {
             if let repo = repository {
@@ -56,14 +81,10 @@ class MomentsStore {
                 moments = rows.map { Moment(from: $0) }
             }
         } catch {
-            errorMessage = error.localizedDescription
+            let message = error.localizedDescription
+            errorMessage = message
+            lastRefreshError = message
         }
-    }
-
-    /// Invalidates cached moments and reloads from the server-backed source.
-    func refreshMoments() async {
-        repository?.invalidate()
-        await loadMoments()
     }
 
     // MARK: - Delete
@@ -83,6 +104,16 @@ class MomentsStore {
             errorMessage = error.localizedDescription
             await loadMoments()
         }
+    }
+
+    // MARK: - TabRefreshable
+
+    var isInitialLoading: Bool {
+        isLoading && moments.isEmpty
+    }
+
+    func refresh() async {
+        await refreshMoments()
     }
 
     // MARK: - Add

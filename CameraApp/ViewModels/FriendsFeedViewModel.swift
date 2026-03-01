@@ -3,19 +3,31 @@ import Foundation
 import Observation
 
 @Observable
-final class FriendsFeedViewModel {
+final class FriendsFeedViewModel: TabRefreshable {
     var posts: [ImagePost] = []
+    /// True only while the first page load is in-flight (before any posts are available).
     var isLoading = false
+    /// True only during a user-initiated pull-to-refresh. Center overlays must not
+    /// appear while this is true — the native pull spinner is the only indicator.
+    var isRefreshing = false
     var isLoadingMore = false
     var hasMorePages = true
     var errorMessage: String?
+
+    var isInitialLoading: Bool {
+        isLoading && posts.isEmpty
+    }
 
     private let pageSize = 20
     private let duplicateLoadWindow: TimeInterval = 0.75
     private var lastFirstPageLoadToken: String?
     private var lastFirstPageLoadAt: Date?
+    private var latestRefreshContextFriends: [User] = []
 
     var postRepository: (any PostRepository)?
+    var lastRefreshError: String? {
+        errorMessage
+    }
 
     /// Fetches the first page of posts from all provided friends (initial load or refresh).
     @MainActor
@@ -81,16 +93,31 @@ final class FriendsFeedViewModel {
     }
 
     /// Invalidates feed cache and reloads first page from a network-fresh source.
+    /// Guards against overlapping concurrent refresh operations.
     @MainActor
     func refreshPosts(friends: [User]) async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+
         postRepository?.invalidateFriendFeed()
         await loadPosts(friends: friends, force: true)
+    }
+
+    /// Stores the latest friend set so `refresh()` can satisfy `TabRefreshable`.
+    @MainActor
+    func setRefreshContext(friends: [User]) {
+        latestRefreshContextFriends = friends
+    }
+
+    func refresh() async {
+        await refreshPosts(friends: latestRefreshContextFriends)
     }
 
     /// Loads the next page and appends to posts.
     @MainActor
     func loadNextPage(friends: [User]) async {
-        guard hasMorePages, !isLoadingMore else { return }
+        guard hasMorePages, !isLoadingMore, !isRefreshing else { return }
         let friendIds = friends.map(\.id)
         guard !friendIds.isEmpty else { return }
 

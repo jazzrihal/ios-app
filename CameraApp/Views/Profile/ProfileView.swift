@@ -10,6 +10,9 @@ struct ProfileView: View {
 
     @State private var userPosts: [ImagePost] = []
     @State private var isLoadingPosts = false
+    /// True only during a user-initiated pull-to-refresh. Center overlays must not
+    /// appear while this is true — the native pull spinner is the only indicator.
+    @State private var isRefreshing = false
     @State private var isLoadingMore = false
     @State private var hasMorePages = true
     @State private var showSignOutAlert = false
@@ -109,12 +112,20 @@ struct ProfileView: View {
                 .padding(.top, AppStyle.Padding.screenHorizontal)
             }
         }
-        .refreshable {
-            if let userId = authManager.userId {
-                postRepository.invalidateUserPosts(userId)
+        .tabLoadable(
+            isLoading: isLoadingPosts && userPosts.isEmpty,
+            isRefreshing: isRefreshing,
+            onRefresh: {
+                guard !isRefreshing else { return }
+                isRefreshing = true
+                defer { isRefreshing = false }
+
+                if let userId = authManager.userId {
+                    postRepository.invalidateUserPosts(userId)
+                }
+                await loadPosts()
             }
-            await loadPosts()
-        }
+        )
     }
 
     // MARK: - Grid Items

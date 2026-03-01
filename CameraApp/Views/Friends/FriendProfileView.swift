@@ -50,7 +50,7 @@ struct FriendProfileView: View {
                 .padding(.top, AppStyle.Padding.screenHorizontal)
             }
         }
-        .refreshable {
+        .tabRefreshable {
             await viewModel.refreshPosts()
             postMutationStore.seedFromPosts(viewModel.userPosts)
         }

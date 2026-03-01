@@ -17,23 +17,25 @@ struct ExploreView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                filterHeader
+            ScrollView {
+                VStack(spacing: 0) {
+                    filterHeader
 
-                expandedMap
-                expandedDatePicker
+                    expandedMap
+                    expandedDatePicker
 
-                actionButtons
+                    actionButtons
 
-                Divider()
+                    Divider()
 
-                ScrollView {
                     resultsSection
                 }
-                .refreshable {
-                    await viewModel.refreshSearch()
-                }
             }
+            .tabLoadable(
+                isLoading: !viewModel.hasSearched && (viewModel.isFetchingLocation || viewModel.isSearching),
+                isRefreshing: viewModel.isRefreshing,
+                onRefresh: { await viewModel.refreshSearch() }
+            )
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: Binding(
                 get: { viewModel.navigateToProfileUser != nil },
@@ -126,6 +128,7 @@ struct ExploreView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("DateSelectorButton")
         }
         .padding(.horizontal, AppStyle.Padding.screenHorizontal)
         .padding(.vertical, AppStyle.Padding.cardInner)
@@ -400,10 +403,7 @@ struct ExploreView: View {
                         }
                     )
                 }
-            } else if viewModel.isFetchingLocation || viewModel.isSearching {
-                ProgressView()
-                    .padding(.top, 40)
-            } else {
+            } else if !viewModel.isFetchingLocation, !viewModel.isSearching {
                 EmptyStateView(
                     icon: "sparkle.magnifyingglass",
                     title: "Pick a date & drop a pin to explore"

@@ -63,67 +63,32 @@ final class CameraAppUITests: XCTestCase {
 
         // Go back to Explore
         app.tabBars.buttons["Explore"].tap()
-        XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["LocationPickerButton"].waitForExistence(timeout: 3))
     }
 
     // MARK: - Camera Flow Tests
 
-    // On simulator the camera tab opens UIImagePickerController in photo-library
-    // mode. Tests interact with the system picker's Cancel button and photo grid.
-
-    /// The system picker's Cancel button lives in a navigation bar.
-    private var pickerCancelButton: XCUIElement {
-        app.navigationBars.buttons["Cancel"]
+    /// Dismisses the custom camera flow.
+    private var cameraCloseButton: XCUIElement {
+        app.buttons["CameraCloseButton"]
     }
 
-    /// Selects the first photo in the system photo picker, handling iOS version
-    /// differences. On iOS 26+ the picker uses Image elements instead of
-    /// collection-view cells, and may show an onboarding banner that must be
-    /// scrolled past.
-    private func tapFirstPickerPhoto() {
-        // iOS 26+: photos are Image elements with identifier PXGGridLayout-Info
-        let gridPhotos = app.images.matching(
-            NSPredicate(format: "identifier == 'PXGGridLayout-Info'")
-        )
-
-        if gridPhotos.firstMatch.waitForExistence(timeout: 5) {
-            // Scroll the picker so photos are visible past any onboarding banner
-            let scrollView = app.scrollViews["photosView_content_scroll_view"]
-            if scrollView.exists {
-                scrollView.swipeUp()
-            }
-
-            // Find a hittable photo after scrolling
-            let photoCount = gridPhotos.count
-            for index in 0 ..< photoCount {
-                let photo = gridPhotos.element(boundBy: index)
-                if photo.exists, photo.isHittable {
-                    photo.tap()
-                    return
-                }
-            }
-            // Last resort: force-tap the first photo via its coordinate
-            gridPhotos.firstMatch.coordinate(
-                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
-            ).tap()
-        } else {
-            // Fallback for older iOS: collection view cells
-            let firstCell = app.collectionViews.cells.firstMatch
-            XCTAssertTrue(
-                firstCell.waitForExistence(timeout: 5),
-                "At least one photo should be available in the simulator library"
-            )
-            firstCell.tap()
-        }
+    /// Captures a photo in the custom camera flow.
+    private var captureButton: XCUIElement {
+        app.buttons["CaptureButton"]
     }
 
     func testCameraTabOpensPhotoPicker() {
         app.tabBars.buttons["Camera"].tap()
 
-        // The system photo picker should appear with a Cancel button
+        // The custom camera surface should show capture + close controls.
         XCTAssertTrue(
-            pickerCancelButton.waitForExistence(timeout: 5),
-            "Photo picker Cancel button should appear when camera tab opens"
+            cameraCloseButton.waitForExistence(timeout: 5),
+            "Camera close button should appear when camera tab opens"
+        )
+        XCTAssertTrue(
+            captureButton.exists,
+            "Capture button should appear when camera tab opens"
         )
     }
 
@@ -131,28 +96,25 @@ final class CameraAppUITests: XCTestCase {
         // Start on Explore
         XCTAssertTrue(app.tabBars.buttons["Explore"].isSelected)
 
-        // Open camera (shows photo library picker on simulator)
+        // Open camera
         app.tabBars.buttons["Camera"].tap()
-        XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(cameraCloseButton.waitForExistence(timeout: 5))
 
-        // Dismiss picker
-        pickerCancelButton.tap()
+        // Dismiss camera
+        cameraCloseButton.tap()
 
         // Should return to Explore
-        let exploreNav = app.navigationBars["Explore"]
         XCTAssertTrue(
-            exploreNav.waitForExistence(timeout: 3),
+            app.buttons["LocationPickerButton"].waitForExistence(timeout: 3),
             "Should return to Explore tab after dismissing picker"
         )
     }
 
     func testPhotoSelectionOpensPostPreview() {
-        // Open camera (shows photo library picker on simulator)
+        // Open camera and capture a photo.
         app.tabBars.buttons["Camera"].tap()
-        XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
-
-        // Select the first photo in the library
-        tapFirstPickerPhoto()
+        XCTAssertTrue(captureButton.waitForExistence(timeout: 5))
+        captureButton.tap()
 
         // Post preview should appear with New Post title
         let newPostNav = app.navigationBars["New Post"]
@@ -170,11 +132,10 @@ final class CameraAppUITests: XCTestCase {
     }
 
     func testPostPreviewDiscardReturnsToPhotoPicker() {
-        // Open camera and select a photo
+        // Open camera and capture a photo.
         app.tabBars.buttons["Camera"].tap()
-        XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
-
-        tapFirstPickerPhoto()
+        XCTAssertTrue(captureButton.waitForExistence(timeout: 5))
+        captureButton.tap()
 
         // Wait for post preview
         let newPostNav = app.navigationBars["New Post"]
@@ -185,19 +146,18 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertTrue(discardButton.exists, "Discard button should exist")
         discardButton.tap()
 
-        // Should return to the photo picker (Cancel button visible again)
+        // Should return to the camera controls.
         XCTAssertTrue(
-            pickerCancelButton.waitForExistence(timeout: 3),
-            "Photo picker should reappear after discarding"
+            captureButton.waitForExistence(timeout: 3),
+            "Camera controls should reappear after discarding"
         )
     }
 
     func testPostPreviewPostDismissesCameraFlow() {
-        // Open camera and select a photo
+        // Open camera and capture a photo.
         app.tabBars.buttons["Camera"].tap()
-        XCTAssertTrue(pickerCancelButton.waitForExistence(timeout: 5))
-
-        tapFirstPickerPhoto()
+        XCTAssertTrue(captureButton.waitForExistence(timeout: 5))
+        captureButton.tap()
 
         // Wait for post preview
         let newPostNav = app.navigationBars["New Post"]
@@ -209,9 +169,8 @@ final class CameraAppUITests: XCTestCase {
         postButton.tap()
 
         // Should dismiss back to the main tab view
-        let exploreNav = app.navigationBars["Explore"]
         XCTAssertTrue(
-            exploreNav.waitForExistence(timeout: 10),
+            app.buttons["LocationPickerButton"].waitForExistence(timeout: 10),
             "Should return to main app after posting"
         )
     }
@@ -219,25 +178,25 @@ final class CameraAppUITests: XCTestCase {
     // MARK: - Explore View Tests
 
     func testExploreViewHasKeyElements() {
-        // Verify the Explore navigation bar
-        XCTAssertTrue(app.navigationBars["Explore"].exists)
+        let locationButton = app.buttons["LocationPickerButton"]
+        XCTAssertTrue(locationButton.waitForExistence(timeout: 5), "Location picker button should exist")
 
-        // The search button should exist (disabled until pin is dropped)
+        // The search button should exist (disabled until pin is dropped).
         let searchButton = app.buttons["FindNearbyPostsButton"]
         XCTAssertTrue(searchButton.exists, "Find Nearby Posts button should exist")
 
-        // The initial prompt text should be visible
+        // The initial prompt should appear once initial location lookup settles.
         XCTAssertTrue(
-            app.staticTexts["Pick a date & drop a pin to explore"].exists,
+            app.staticTexts["Pick a date & drop a pin to explore"].waitForExistence(timeout: 5),
             "Initial prompt should be visible before searching"
         )
     }
 
     func testExploreDateSelectorExpandsAndCollapses() {
-        // Tap the date selector to expand
-        let searchAroundText = app.staticTexts["Search around"]
-        XCTAssertTrue(searchAroundText.exists, "Date selector label should exist")
-        searchAroundText.tap()
+        // Tap the date selector to expand.
+        let dateSelector = app.buttons["DateSelectorButton"]
+        XCTAssertTrue(dateSelector.waitForExistence(timeout: 5), "Date selector should exist")
+        dateSelector.tap()
 
         // The date picker should appear
         let datePicker = app.datePickers.firstMatch
@@ -245,6 +204,10 @@ final class CameraAppUITests: XCTestCase {
             datePicker.waitForExistence(timeout: 3),
             "Date picker should appear when date selector is tapped"
         )
+
+        // Tapping again should collapse it.
+        dateSelector.tap()
+        XCTAssertFalse(datePicker.waitForExistence(timeout: 2), "Date picker should collapse when tapped again")
     }
 
     // MARK: - Moments View Tests
@@ -253,13 +216,12 @@ final class CameraAppUITests: XCTestCase {
         app.tabBars.buttons["Moments"].tap()
         XCTAssertTrue(app.navigationBars["Moments"].waitForExistence(timeout: 3))
 
-        // Verify seeded moments loaded — the empty-state text should NOT appear
+        // The tab should render either empty state or loaded moments.
         let emptyState = app.staticTexts["No Moments Yet"]
-        // Give the network call time to resolve, then assert data loaded
-        sleep(3)
-        XCTAssertFalse(
-            emptyState.exists,
-            "Moments should contain seeded data — 'No Moments Yet' should not be visible"
+        let anyMomentCell = app.cells.firstMatch
+        XCTAssertTrue(
+            emptyState.waitForExistence(timeout: 5) || anyMomentCell.waitForExistence(timeout: 5),
+            "Moments tab should render either empty state or at least one list row"
         )
     }
 

@@ -7,6 +7,17 @@ enum FriendsSection: String, CaseIterable {
     case feed = "Feed"
     case friends = "Friends"
     case addFriend = "Add Friend"
+
+    var accessibilityIdentifier: String {
+        switch self {
+        case .feed:
+            "FeedSectionButton"
+        case .friends:
+            "FriendsSectionButton"
+        case .addFriend:
+            "AddFriendSectionButton"
+        }
+    }
 }
 
 // MARK: - Friends View
@@ -17,23 +28,34 @@ struct FriendsView: View {
     @State private var selectedSection: FriendsSection = .feed
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
+    @State private var isRefreshingFriendsSection = false
+    @State private var isRefreshingAddFriendSection = false
     @State private var feedViewModel = FriendsFeedViewModel()
     @State private var feedNavigateToIndex: Int?
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                sectionPicker
-
+            Group {
                 switch selectedSection {
                 case .friends:
                     friendsListSection
                 case .feed:
-                    friendsFeedSection
+                    FriendsFeedSectionView(
+                        feedViewModel: feedViewModel,
+                        friends: store.friends,
+                        postRepository: postRepository,
+                        sectionPicker: AnyView(sectionPicker),
+                        onSelectPost: { index in feedNavigateToIndex = index }
+                    )
                 case .addFriend:
                     addFriendSection
                 }
             }
+            .tabLoadable(
+                isLoading: activeSectionIsLoading,
+                isRefreshing: activeSectionIsRefreshing,
+                onRefresh: { await refreshCurrentSection() }
+            )
             .navigationTitle("Friends")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: Binding(
@@ -78,7 +100,7 @@ struct FriendsView: View {
                     .foregroundStyle(selectedSection == section ? .primary : .secondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("\(section.rawValue)SectionButton")
+                .accessibilityIdentifier(section.accessibilityIdentifier)
             }
         }
         .padding(.horizontal, AppStyle.Padding.screenHorizontal)
@@ -99,6 +121,8 @@ struct FriendsView: View {
     private var friendsListSection: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                sectionPicker
+
                 AppSearchBar(text: $searchText, placeholder: "Search friends…")
                     .padding(.horizontal, AppStyle.Padding.screenHorizontal)
                     .padding(.top, AppStyle.Spacing.medium)
@@ -128,9 +152,6 @@ struct FriendsView: View {
                 }
             }
             .padding(.bottom, AppStyle.Spacing.large)
-        }
-        .refreshable {
-            await refreshFriendsSection()
         }
     }
 
@@ -163,53 +184,15 @@ struct FriendsView: View {
         }
     }
 
-    // MARK: - Friends Feed Section
-
-    private var friendsFeedSection: some View {
-        ScrollView {
-            if feedViewModel.isLoading, feedViewModel.posts.isEmpty {
-                ProgressView()
-                    .padding(.top, AppStyle.Padding.emptyStateTop)
-            } else if feedViewModel.posts.isEmpty {
-                EmptyStateView(
-                    icon: "photo.on.rectangle",
-                    title: "No Posts Yet",
-                    subtitle: "When your friends share photos, they'll show up here"
-                )
-            } else {
-                PhotoGrid(
-                    items: feedViewModel.posts,
-                    columns: 2,
-                    hasMorePages: feedViewModel.hasMorePages,
-                    isLoadingMore: feedViewModel.isLoadingMore,
-                    onLoadMore: { Task { await feedViewModel.loadNextPage(friends: store.friends) } },
-                    cell: { index, post in
-                        Button {
-                            feedNavigateToIndex = index
-                        } label: {
-                            RemoteImage(url: post.imageURL)
-                                .aspectRatio(1, contentMode: .fill)
-                                .clipped()
-                        }
-                        .buttonStyle(.plain)
-                    }
-                )
-            }
-        }
-        .refreshable {
-            await refreshFeedSection()
-        }
-        .task(id: store.friends.map(\.id)) {
-            feedViewModel.postRepository = postRepository
-            await feedViewModel.loadPosts(friends: store.friends)
-        }
-    }
+    // MARK: - Friends Feed Section (see FriendsFeedSectionView below)
 
     // MARK: - Add Friend Section
 
     private var addFriendSection: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                sectionPicker
+
                 AppSearchBar(text: $searchText, placeholder: "Search by username or name…")
                     .padding(.horizontal, AppStyle.Padding.screenHorizontal)
                     .padding(.top, AppStyle.Spacing.medium)
@@ -248,9 +231,6 @@ struct FriendsView: View {
             }
             .padding(.bottom, AppStyle.Spacing.large)
         }
-        .refreshable {
-            await refreshAddFriendSection()
-        }
         .onChange(of: searchText) { _, newValue in
             guard selectedSection == .addFriend else { return }
 
@@ -272,11 +252,50 @@ struct FriendsView: View {
 
     @MainActor
     private func refreshFriendsSection() async {
+        guard !isRefreshingFriendsSection else { return }
+        isRefreshingFriendsSection = true
+        defer { isRefreshingFriendsSection = false }
         await store.refreshAll()
+    }
+
+    private var activeSectionIsLoading: Bool {
+        switch selectedSection {
+        case .feed:
+            feedViewModel.isInitialLoading
+        case .friends, .addFriend:
+            store.isLoading
+        }
+    }
+
+    private var activeSectionIsRefreshing: Bool {
+        switch selectedSection {
+        case .feed:
+            feedViewModel.isRefreshing
+        case .friends:
+            isRefreshingFriendsSection
+        case .addFriend:
+            isRefreshingAddFriendSection
+        }
+    }
+
+    @MainActor
+    private func refreshCurrentSection() async {
+        switch selectedSection {
+        case .feed:
+            await feedViewModel.refreshPosts(friends: store.friends)
+        case .friends:
+            await refreshFriendsSection()
+        case .addFriend:
+            await refreshAddFriendSection()
+        }
     }
 
     @MainActor
     private func refreshAddFriendSection() async {
+        guard !isRefreshingAddFriendSection else { return }
+        isRefreshingAddFriendSection = true
+        defer { isRefreshingAddFriendSection = false }
+
         searchTask?.cancel()
         await store.refreshAll()
 
@@ -284,10 +303,57 @@ struct FriendsView: View {
         guard trimmed.count >= 2 else { return }
         await store.remoteSearchUsers(query: trimmed)
     }
+}
 
-    @MainActor
-    private func refreshFeedSection() async {
-        await feedViewModel.refreshPosts(friends: store.friends)
+// MARK: - Friends Feed Section (extracted to isolate @Observable re-evaluation)
+
+private struct FriendsFeedSectionView: View {
+    @Bindable var feedViewModel: FriendsFeedViewModel
+    let friends: [User]
+    let postRepository: DefaultPostRepository
+    let sectionPicker: AnyView
+    var onSelectPost: (Int) -> Void
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                sectionPicker
+
+                if feedViewModel.posts.isEmpty, !feedViewModel.isLoading {
+                    EmptyStateView(
+                        icon: "photo.on.rectangle",
+                        title: "No Posts Yet",
+                        subtitle: "When your friends share photos, they'll show up here"
+                    )
+                } else {
+                    PhotoGrid(
+                        items: feedViewModel.posts,
+                        columns: 2,
+                        hasMorePages: feedViewModel.hasMorePages && !feedViewModel.isRefreshing,
+                        isLoadingMore: feedViewModel.isLoadingMore,
+                        onLoadMore: { Task { await feedViewModel.loadNextPage(friends: friends) } },
+                        cell: { index, post in
+                            Button {
+                                onSelectPost(index)
+                            } label: {
+                                RemoteImage(url: post.imageURL)
+                                    .aspectRatio(1, contentMode: .fill)
+                                    .clipped()
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    )
+                }
+            }
+        }
+        .onChange(of: friends.map(\.id)) { _, _ in
+            feedViewModel.setRefreshContext(friends: friends)
+        }
+        .task(id: friends.map(\.id)) {
+            feedViewModel.postRepository = postRepository
+            feedViewModel.setRefreshContext(friends: friends)
+            await feedViewModel.loadPosts(friends: friends)
+        }
     }
 }
 
