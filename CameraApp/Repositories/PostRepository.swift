@@ -10,6 +10,8 @@ protocol PostRepository {
     func nearbyPostsNextPage(params: NearbyPostsParams) async throws -> [ImagePost]
     func userPostsAndPins(userId: UUID, pageSize: Int, pageOffset: Int) async throws -> [ImagePost]
     func friendFeedPosts(friendIds: [UUID], friends: [User], pageSize: Int, from: Int) async throws -> [ImagePost]
+    func updatePost(id: UUID, caption: String?, scope: PostScope) async throws
+    func deletePost(id: UUID, imagePath: String) async throws
     func invalidateUserPosts(_ userId: UUID)
     func invalidateNearbyPosts()
     func invalidateFriendFeed()
@@ -153,6 +155,7 @@ final class DefaultPostRepository: PostRepository {
                 return ImagePost(
                     id: row.id,
                     imageURL: SupabaseManager.imageURL(for: row.imagePath),
+                    imagePath: row.imagePath,
                     user: user,
                     caption: row.caption ?? "",
                     coordinate: CLLocationCoordinate2D(
@@ -171,6 +174,52 @@ final class DefaultPostRepository: PostRepository {
             }
             throw error
         }
+    }
+
+    // MARK: - Owner Mutations
+
+    func updatePost(id: UUID, caption: String?, scope: PostScope) async throws {
+        let updates = Self.makePostUpdate(caption: caption, scope: scope)
+
+        try await SupabaseManager.client
+            .from("posts")
+            .update(updates)
+            .eq("id", value: id)
+            .execute()
+    }
+
+    func deletePost(id: UUID, imagePath: String) async throws {
+        try await SupabaseManager.client
+            .from("posts")
+            .delete()
+            .eq("id", value: id)
+            .execute()
+
+        try await SupabaseManager.client
+            .storage
+            .from("post-images")
+            .remove(paths: [imagePath])
+    }
+
+    nonisolated static func makePostUpdate(caption: String?, scope: PostScope) -> PublicSchema.PostsUpdate {
+        PublicSchema.PostsUpdate(
+            caption: normalizedCaption(caption),
+            createdAt: nil,
+            id: nil,
+            imagePath: nil,
+            latitude: nil,
+            location: nil,
+            locationName: nil,
+            longitude: nil,
+            scope: scope.databaseValue,
+            userId: nil
+        )
+    }
+
+    nonisolated static func normalizedCaption(_ caption: String?) -> String? {
+        guard let caption else { return nil }
+        let trimmed = caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     // MARK: - Invalidation

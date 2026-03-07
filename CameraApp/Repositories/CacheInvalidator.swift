@@ -35,6 +35,20 @@ final class CacheInvalidator {
         postRepository?.invalidateFriendFeed()
     }
 
+    /// Call after a post caption/scope edit so all post surfaces refresh.
+    func postEdited(userId: UUID) {
+        postRepository?.invalidateUserPosts(userId)
+        postRepository?.invalidateFriendFeed()
+        postRepository?.invalidateNearbyPosts()
+    }
+
+    /// Call after deleting a post so all post surfaces refresh.
+    func postDeleted(userId: UUID) {
+        postRepository?.invalidateUserPosts(userId)
+        postRepository?.invalidateFriendFeed()
+        postRepository?.invalidateNearbyPosts()
+    }
+
     /// Call after any friend status change (send/accept/decline/remove).
     func friendshipChanged(userId: UUID) {
         friendRepository?.invalidate(userId: userId)

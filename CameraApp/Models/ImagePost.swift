@@ -5,6 +5,7 @@ import SwiftUI
 struct ImagePost: Identifiable {
     let id: UUID
     let imageURL: URL
+    let imagePath: String
     let user: User
     let caption: String
     let coordinate: CLLocationCoordinate2D
@@ -173,6 +174,7 @@ extension ImagePost {
     init(from row: UserPostWithPinRow) {
         id = row.id
         imageURL = SupabaseManager.imageURL(for: row.imagePath)
+        imagePath = row.imagePath
         user = User(
             id: row.userId,
             username: row.username,
@@ -203,6 +205,7 @@ extension ImagePost {
     init(from row: NearbyPostRow) {
         id = row.id
         imageURL = SupabaseManager.imageURL(for: row.imagePath)
+        imagePath = row.imagePath
         user = User(
             id: row.userId,
             username: row.username,
@@ -229,6 +232,7 @@ extension ImagePost {
     init(from post: PublicSchema.PostsSelect, user: User) {
         id = post.id
         imageURL = SupabaseManager.imageURL(for: post.imagePath)
+        imagePath = post.imagePath
         self.user = user
         caption = post.caption ?? ""
         coordinate = CLLocationCoordinate2D(
@@ -319,6 +323,7 @@ extension ImagePost {
             return ImagePost(
                 id: UUID(),
                 imageURL: url,
+                imagePath: "sample/\(UUID().uuidString).jpg",
                 user: users[i],
                 caption: captions[i],
                 coordinate: postCoord,
@@ -379,6 +384,7 @@ extension ImagePost {
             return ImagePost(
                 id: UUID(),
                 imageURL: url,
+                imagePath: "sample/\(UUID().uuidString).jpg",
                 user: user,
                 caption: captions[i],
                 coordinate: coord,

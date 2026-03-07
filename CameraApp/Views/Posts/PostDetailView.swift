@@ -9,11 +9,17 @@ struct PostDetailView: View {
     @Environment(PostMutationStore.self) private var postMutationStore
     @Environment(AuthManager.self) private var authManager
     @Environment(UploadManager.self) private var uploadManager
+    @Environment(DefaultPostRepository.self) private var postRepository
+    @Environment(CacheInvalidator.self) private var cacheInvalidator
     @Environment(\.dismiss) private var dismiss
 
     private let source: Source
 
     @State private var viewModel: PostDetailViewModel?
+    @State private var showEditPostFlow = false
+    @State private var showDeleteConfirmation = false
+    @State private var mutationError: String?
+    @State private var isMutatingPost = false
 
     enum Source {
         case uploaded(posts: [ImagePost], initialIndex: Int, queryDate: Date)
@@ -84,6 +90,32 @@ struct PostDetailView: View {
         .background(Color(.systemBackground))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            if shouldShowOwnerMenu {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            showEditPostFlow = true
+                        } label: {
+                            Label("Edit Post", systemImage: "pencil")
+                        }
+                        .accessibilityIdentifier("EditPostMenuAction")
+
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label("Delete Post", systemImage: "trash")
+                        }
+                        .accessibilityIdentifier("DeletePostMenuAction")
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityIdentifier("PostOptionsMenuButton")
+                }
+            }
+        }
         .sheet(isPresented: Binding(
             get: { viewModel?.showShareSheet ?? false },
             set: { viewModel?.showShareSheet = $0 }
@@ -92,12 +124,49 @@ struct PostDetailView: View {
                 ShareSheet(items: [viewModel.post.imageURL])
             }
         }
+        .fullScreenCover(isPresented: $showEditPostFlow) {
+            if let editingPost = currentUploadedPost {
+                PostPreviewView(
+                    editingPost: editingPost,
+                    onDone: { showEditPostFlow = false },
+                    onSaved: { dismiss() }
+                )
+            } else {
+                EmptyView()
+            }
+        }
+        .alert("Delete Post?", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                Task { await deleteCurrentPost() }
+            }
+        } message: {
+            Text("This will permanently remove your post.")
+        }
+        .alert("Couldn't delete post", isPresented: Binding(
+            get: { mutationError != nil },
+            set: { if !$0 { mutationError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(mutationError ?? "Unknown error.")
+        }
         .onChange(of: viewModel?.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss == true { dismiss() }
         }
         .onAppear {
             viewModel?.mutationStore = postMutationStore
         }
+    }
+
+    private var currentUploadedPost: ImagePost? {
+        guard case .uploaded = source else { return nil }
+        return viewModel?.post
+    }
+
+    private var shouldShowOwnerMenu: Bool {
+        guard let post = currentUploadedPost, post.isOwnPost else { return false }
+        return !isMutatingPost
     }
 
     // MARK: - Post Page
@@ -307,6 +376,32 @@ struct PostDetailView: View {
         .font(.footnote)
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @MainActor
+    private func deleteCurrentPost() async {
+        guard let post = currentUploadedPost else { return }
+        guard authManager.userId != nil else {
+            mutationError = "You must be signed in to delete a post."
+            return
+        }
+
+        isMutatingPost = true
+        defer { isMutatingPost = false }
+
+        do {
+            try await postRepository.deletePost(id: post.id, imagePath: post.imagePath)
+            cacheInvalidator.postDeleted(userId: post.user.id)
+            dismiss()
+        } catch {
+            let errorText = String(describing: error).lowercased()
+            if errorText.contains("app.supabase_url") {
+                mutationError = "Delete is blocked by a backend configuration issue (missing app.supabase_url). " +
+                    "Please contact support or update the database function configuration."
+            } else {
+                mutationError = "Failed to delete post. Please try again."
+            }
+        }
     }
 }
 

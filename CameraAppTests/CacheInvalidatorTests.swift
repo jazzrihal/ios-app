@@ -97,4 +97,82 @@ struct CacheInvalidatorTests {
         ).first
         #expect(entryAfter == nil)
     }
+
+    @Test("postEdited invalidates user, feed, and nearby caches")
+    @MainActor
+    func postEdited() {
+        let context = makeContext()
+        let postRepo = DefaultPostRepository(modelContext: context)
+        let invalidator = CacheInvalidator()
+        invalidator.configure(
+            posts: postRepo,
+            friends: DefaultFriendRepository(modelContext: context),
+            moments: DefaultMomentRepository(modelContext: context),
+            profiles: DefaultProfileRepository(modelContext: context)
+        )
+
+        let userId = UUID()
+        let userKey = "user_posts:\(userId.uuidString)"
+        let feedKey = "friend_feed"
+        let nearbyKey = "nearby_posts:37.775:-122.419:2026-03-07"
+
+        context.insert(CacheEntry(key: userKey))
+        context.insert(CacheEntry(key: feedKey))
+        context.insert(CacheEntry(key: nearbyKey))
+        try? context.save()
+
+        invalidator.postEdited(userId: userId)
+
+        let userAfter = try? context.fetch(
+            FetchDescriptor<CacheEntry>(predicate: #Predicate { $0.key == userKey })
+        ).first
+        let feedAfter = try? context.fetch(
+            FetchDescriptor<CacheEntry>(predicate: #Predicate { $0.key == feedKey })
+        ).first
+        let nearbyAfter = try? context.fetch(
+            FetchDescriptor<CacheEntry>(predicate: #Predicate { $0.key == nearbyKey })
+        ).first
+        #expect(userAfter == nil)
+        #expect(feedAfter == nil)
+        #expect(nearbyAfter == nil)
+    }
+
+    @Test("postDeleted invalidates user, feed, and nearby caches")
+    @MainActor
+    func postDeleted() {
+        let context = makeContext()
+        let postRepo = DefaultPostRepository(modelContext: context)
+        let invalidator = CacheInvalidator()
+        invalidator.configure(
+            posts: postRepo,
+            friends: DefaultFriendRepository(modelContext: context),
+            moments: DefaultMomentRepository(modelContext: context),
+            profiles: DefaultProfileRepository(modelContext: context)
+        )
+
+        let userId = UUID()
+        let userKey = "user_posts:\(userId.uuidString)"
+        let feedKey = "friend_feed"
+        let nearbyKey = "nearby_posts:40.000:-70.000:2026-03-07"
+
+        context.insert(CacheEntry(key: userKey))
+        context.insert(CacheEntry(key: feedKey))
+        context.insert(CacheEntry(key: nearbyKey))
+        try? context.save()
+
+        invalidator.postDeleted(userId: userId)
+
+        let userAfter = try? context.fetch(
+            FetchDescriptor<CacheEntry>(predicate: #Predicate { $0.key == userKey })
+        ).first
+        let feedAfter = try? context.fetch(
+            FetchDescriptor<CacheEntry>(predicate: #Predicate { $0.key == feedKey })
+        ).first
+        let nearbyAfter = try? context.fetch(
+            FetchDescriptor<CacheEntry>(predicate: #Predicate { $0.key == nearbyKey })
+        ).first
+        #expect(userAfter == nil)
+        #expect(feedAfter == nil)
+        #expect(nearbyAfter == nil)
+    }
 }

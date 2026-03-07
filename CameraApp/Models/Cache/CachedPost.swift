@@ -152,6 +152,7 @@ extension CachedPost {
         ImagePost(
             id: postId,
             imageURL: SupabaseManager.imageURL(for: imagePath),
+            imagePath: imagePath,
             user: User(
                 id: userId,
                 username: username,

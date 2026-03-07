@@ -88,6 +88,7 @@ struct FriendsFeedViewModelTests {
             ImagePost(
                 id: UUID(),
                 imageURL: URL(string: "https://example.com/\(index).jpg")!,
+                imagePath: "friend/\(index).jpg",
                 user: user,
                 caption: "Caption \(index)",
                 coordinate: CLLocationCoordinate2D(latitude: 37.0, longitude: -122.0),
@@ -131,6 +132,10 @@ private final class MockPostRepository: PostRepository {
         }
         return from == 0 ? firstPageResult : nextPageResult
     }
+
+    func updatePost(id _: UUID, caption _: String?, scope _: PostScope) async throws {}
+
+    func deletePost(id _: UUID, imagePath _: String) async throws {}
 
     func invalidateUserPosts(_: UUID) {}
 

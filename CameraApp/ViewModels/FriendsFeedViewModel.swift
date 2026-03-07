@@ -71,6 +71,7 @@ final class FriendsFeedViewModel: TabRefreshable {
                     return ImagePost(
                         id: row.id,
                         imageURL: SupabaseManager.imageURL(for: row.imagePath),
+                        imagePath: row.imagePath,
                         user: user,
                         caption: row.caption ?? "",
                         coordinate: CLLocationCoordinate2D(
@@ -147,6 +148,7 @@ final class FriendsFeedViewModel: TabRefreshable {
                     return ImagePost(
                         id: row.id,
                         imageURL: SupabaseManager.imageURL(for: row.imagePath),
+                        imagePath: row.imagePath,
                         user: user,
                         caption: row.caption ?? "",
                         coordinate: CLLocationCoordinate2D(

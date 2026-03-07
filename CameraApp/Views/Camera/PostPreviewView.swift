@@ -4,29 +4,73 @@ import SwiftUI
 // MARK: - Post Preview View
 
 struct PostPreviewView: View {
-    let image: UIImage
+    enum Mode {
+        case create(image: UIImage)
+        case edit(existingPost: ImagePost)
+    }
+
+    private let mode: Mode
     let onDone: () -> Void
+    let onSaved: (() -> Void)?
 
     @Environment(AuthManager.self) private var authManager
     @Environment(UploadManager.self) private var uploadManager
     @Environment(NetworkMonitor.self) private var networkMonitor
-    @State private var caption = ""
-    @State private var captureDate = Date()
-    @State private var scope: PostScope = .friends
+    @Environment(DefaultPostRepository.self) private var postRepository
+    @Environment(CacheInvalidator.self) private var cacheInvalidator
+    @State private var caption: String
+    @State private var captureDate: Date
+    @State private var scope: PostScope
+    @State private var fixedLocationName: String?
     @State private var locationManager = PostLocationManager()
     @State private var enqueueError: String?
+    @State private var isSavingEdits = false
     @FocusState private var captionFocused: Bool
+
+    init(image: UIImage, onDone: @escaping () -> Void) {
+        mode = .create(image: image)
+        self.onDone = onDone
+        onSaved = nil
+        _caption = State(initialValue: "")
+        _captureDate = State(initialValue: Date())
+        _scope = State(initialValue: .friends)
+        _fixedLocationName = State(initialValue: nil)
+    }
+
+    init(
+        editingPost: ImagePost,
+        onDone: @escaping () -> Void,
+        onSaved: (() -> Void)? = nil
+    ) {
+        mode = .edit(existingPost: editingPost)
+        self.onDone = onDone
+        self.onSaved = onSaved
+        _caption = State(initialValue: editingPost.caption)
+        _captureDate = State(initialValue: editingPost.timestamp)
+        _scope = State(initialValue: editingPost.scope)
+        _fixedLocationName = State(initialValue: editingPost.locationName)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: AppStyle.Spacing.large) {
                     imageSection
-                    quickActionsSection
-                    offlineBanner
+                    if isCreateMode {
+                        quickActionsSection
+                        offlineBanner
+                    }
                     captionSection
                     dateTimeSection
                     locationSection
+                    if !isCreateMode {
+                        Text("Photo, location, and timestamp cannot be changed.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityIdentifier("ImmutablePostMetadataNotice")
+                    }
                     scopeSection
 
                     if let enqueueError {
@@ -41,11 +85,11 @@ struct PostPreviewView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .ignoresSafeArea(edges: .top)
-            .navigationTitle("New Post")
+            .navigationTitle(isCreateMode ? "New Post" : "Edit Post")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Discard") {
+                    Button(isCreateMode ? "Discard" : "Cancel") {
                         onDone()
                     }
                     .accessibilityIdentifier("DiscardButton")
@@ -54,18 +98,27 @@ struct PostPreviewView: View {
             }
         }
         .onAppear {
-            locationManager.requestLocation()
+            if isCreateMode {
+                locationManager.requestLocation()
+            }
         }
     }
 
     // MARK: - Image
 
     private var imageSection: some View {
-        Image(uiImage: image)
-            .resizable()
-            .scaledToFit()
-            .frame(maxWidth: .infinity)
-            .clipped()
+        Group {
+            switch mode {
+            case let .create(image):
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+            case let .edit(existingPost):
+                RemoteImage(url: existingPost.imageURL, contentMode: .fit)
+            }
+        }
     }
 
     // MARK: - Quick Actions
@@ -193,17 +246,32 @@ struct PostPreviewView: View {
     }
 
     @ViewBuilder private var locationContent: some View {
-        if locationManager.isLoading {
-            ProgressView()
-                .controlSize(.small)
-            Text("Getting location…")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        } else if let name = locationManager.locationName {
+        if isCreateMode {
+            if locationManager.isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Getting location…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else if let name = locationManager.locationName {
+                Image(systemName: "mappin.circle.fill")
+                    .foregroundStyle(.primary)
+                    .font(.title3)
+                Text(name)
+                    .font(.subheadline)
+            } else {
+                Image(systemName: "location.slash.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.title3)
+                Text("Location unavailable")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else if let fixedLocationName, !fixedLocationName.isEmpty {
             Image(systemName: "mappin.circle.fill")
                 .foregroundStyle(.primary)
                 .font(.title3)
-            Text(name)
+            Text(fixedLocationName)
                 .font(.subheadline)
         } else {
             Image(systemName: "location.slash.fill")
@@ -247,19 +315,28 @@ struct PostPreviewView: View {
 
     private var postButton: some View {
         Button {
-            enqueueWithSettings()
+            if isCreateMode {
+                enqueueWithSettings()
+            } else {
+                Task { await saveEdits() }
+            }
         } label: {
-            Text("Post")
+            Text(isCreateMode ? "Post" : "Save Changes")
         }
-        .accessibilityIdentifier("PostButton")
+        .accessibilityIdentifier(isCreateMode ? "PostButton" : "SavePostChangesButton")
         .buttonStyle(.appPrimary)
         .padding(.horizontal, AppStyle.Padding.screenHorizontal)
         .padding(.bottom, 32)
+        .disabled(isSavingEdits)
     }
 
     // MARK: - Actions
 
     private func enqueueWithDefaults() {
+        guard let image = createImage else {
+            enqueueError = "Unable to prepare image."
+            return
+        }
         guard let userId = authManager.userId else {
             enqueueError = "Not signed in."
             return
@@ -279,6 +356,10 @@ struct PostPreviewView: View {
     }
 
     private func saveDraft() {
+        guard let image = createImage else {
+            enqueueError = "Unable to prepare image."
+            return
+        }
         guard let userId = authManager.userId else {
             enqueueError = "Not signed in."
             return
@@ -298,6 +379,10 @@ struct PostPreviewView: View {
     }
 
     private func enqueueWithSettings() {
+        guard let image = createImage else {
+            enqueueError = "Unable to prepare image."
+            return
+        }
         guard let userId = authManager.userId else {
             enqueueError = "Not signed in."
             return
@@ -316,6 +401,33 @@ struct PostPreviewView: View {
         onDone()
     }
 
+    @MainActor
+    private func saveEdits() async {
+        guard case let .edit(existingPost) = mode else { return }
+        guard authManager.userId != nil else {
+            enqueueError = "Not signed in."
+            return
+        }
+
+        enqueueError = nil
+        isSavingEdits = true
+        defer { isSavingEdits = false }
+
+        do {
+            let trimmedCaption = caption.trimmingCharacters(in: .whitespacesAndNewlines)
+            try await postRepository.updatePost(
+                id: existingPost.id,
+                caption: trimmedCaption.isEmpty ? nil : trimmedCaption,
+                scope: scope
+            )
+            cacheInvalidator.postEdited(userId: existingPost.user.id)
+            onSaved?()
+            onDone()
+        } catch {
+            enqueueError = "Failed to save changes. Please try again."
+        }
+    }
+
     // MARK: - Helpers
 
     private var dateString: String {
@@ -328,6 +440,16 @@ struct PostPreviewView: View {
         captureDate.formatted(
             .dateTime.hour().minute().second()
         )
+    }
+
+    private var isCreateMode: Bool {
+        if case .create = mode { return true }
+        return false
+    }
+
+    private var createImage: UIImage? {
+        guard case let .create(image) = mode else { return nil }
+        return image
     }
 }
 
@@ -360,5 +482,6 @@ struct ScopeOptionButton: View {
             .foregroundStyle(isSelected ? .primary : .secondary)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("ScopeOption_\(option.rawValue)")
     }
 }

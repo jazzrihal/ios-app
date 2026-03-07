@@ -230,6 +230,77 @@ final class PostInteractionUITests: XCTestCase {
         assertButtonLabel(app.buttons["PinButton"], expected: "Pin")
     }
 
+    // MARK: - Group 4: Owner Edit/Delete
+
+    func testOwnerSeesPostOptionsMenu() {
+        navigateToProfileTab()
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        let optionsButton = app.buttons["PostOptionsMenuButton"]
+        XCTAssertTrue(optionsButton.waitForExistence(timeout: 5), "Owner should see post options menu")
+        optionsButton.tap()
+
+        XCTAssertTrue(app.buttons["EditPostMenuAction"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["DeletePostMenuAction"].waitForExistence(timeout: 3))
+    }
+
+    func testEditPostShowsLockedMetadataAndSaves() {
+        navigateToProfileTab()
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        app.buttons["PostOptionsMenuButton"].tap()
+        app.buttons["EditPostMenuAction"].tap()
+
+        XCTAssertTrue(app.navigationBars["Edit Post"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["ImmutablePostMetadataNotice"].waitForExistence(timeout: 5))
+        XCTAssertFalse(
+            app.buttons["PostWithoutEditingButton"].exists,
+            "Quick create-only action should be hidden in edit mode"
+        )
+        XCTAssertFalse(
+            app.buttons["SaveWithoutUploadingButton"].exists,
+            "Draft create-only action should be hidden in edit mode"
+        )
+
+        let captionField = app.textFields["CaptionTextField"].firstMatch
+        let captionTextView = app.textViews["CaptionTextField"].firstMatch
+        if captionField.waitForExistence(timeout: 2) {
+            captionField.tap()
+            captionField.typeText(" Updated")
+        } else {
+            XCTAssertTrue(captionTextView.waitForExistence(timeout: 5))
+            captionTextView.tap()
+            captionTextView.typeText(" Updated")
+        }
+
+        let publicScope = app.buttons["ScopeOption_Public"]
+        if publicScope.exists {
+            publicScope.tap()
+        }
+
+        let saveButton = app.buttons["SavePostChangesButton"]
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
+        saveButton.tap()
+    }
+
+    func testDeletePostShowsConfirmationAlert() {
+        navigateToProfileTab()
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        app.buttons["PostOptionsMenuButton"].tap()
+        app.buttons["DeletePostMenuAction"].tap()
+
+        let deleteAlert = app.alerts["Delete Post?"]
+        XCTAssertTrue(deleteAlert.waitForExistence(timeout: 5), "Delete confirmation should appear")
+        deleteAlert.buttons["Cancel"].tap()
+    }
+
     // MARK: - Navigation Helpers
 
     private func navigateToProfileTab() {
