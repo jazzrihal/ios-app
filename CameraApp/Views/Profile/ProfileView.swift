@@ -7,6 +7,7 @@ struct ProfileView: View {
     @Environment(PostMutationStore.self) private var postMutationStore
     @Environment(DefaultPostRepository.self) private var postRepository
     @Environment(CacheInvalidator.self) private var cacheInvalidator
+    @Environment(DefaultNotificationRepository.self) private var notificationRepository
 
     @State private var userPosts: [ImagePost] = []
     @State private var isLoadingPosts = false
@@ -16,6 +17,8 @@ struct ProfileView: View {
     @State private var isLoadingMore = false
     @State private var hasMorePages = true
     @State private var showSignOutAlert = false
+    @State private var unreadCount: Int = 0
+    @State private var showActivity = false
 
     private let pageSize = 20
 
@@ -29,8 +32,26 @@ struct ProfileView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            .navigationDestination(isPresented: $showActivity) {
+                ActivityView(repository: notificationRepository, unreadBadge: $unreadCount)
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showActivity = true } label: {
+                        Image(systemName: "bell")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .overlay(alignment: .topTrailing) {
+                                if unreadCount > 0 {
+                                    Circle()
+                                        .fill(.red)
+                                        .frame(width: 8, height: 8)
+                                        .offset(x: 4, y: -4)
+                                }
+                            }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         if currentUserPendingCount > 0 {
@@ -60,6 +81,7 @@ struct ProfileView: View {
                 )
             }
             .task { await loadPosts() }
+            .task { await loadUnreadCount() }
             .onChange(of: uploadManager.completedUploadCount) {
                 if let userId = authManager.userId {
                     cacheInvalidator.postUploaded(userId: userId)
@@ -171,6 +193,14 @@ struct ProfileView: View {
         isLoadingPosts = false
     }
 
+    private func loadUnreadCount() async {
+        do {
+            unreadCount = try await notificationRepository.getUnreadCount()
+        } catch {
+            print("[ProfileView] Failed to load unread count: \(error)")
+        }
+    }
+
     private func loadNextPage() async {
         guard hasMorePages, !isLoadingMore, let userId = authManager.userId else { return }
         isLoadingMore = true
@@ -199,4 +229,5 @@ struct ProfileView: View {
         .environment(UploadManager())
         .environment(PreviewContainer.postRepository)
         .environment(CacheInvalidator())
+        .environment(DefaultNotificationRepository())
 }

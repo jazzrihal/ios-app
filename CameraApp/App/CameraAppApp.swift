@@ -19,6 +19,7 @@ struct CameraAppApp: App {
     @State private var friendRepository: DefaultFriendRepository
     @State private var momentRepository: DefaultMomentRepository
     @State private var profileRepository: DefaultProfileRepository
+    @State private var notificationRepository = DefaultNotificationRepository()
 
     init() {
         do {
@@ -58,6 +59,7 @@ struct CameraAppApp: App {
             .environment(momentRepository)
             .environment(profileRepository)
             .environment(cacheInvalidator)
+            .environment(notificationRepository)
             .onChange(of: authManager.isAuthenticated, initial: true) {
                 if authManager.isAuthenticated, let uid = authManager.userId {
                     friendsStore.currentUserId = uid
