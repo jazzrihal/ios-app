@@ -171,6 +171,72 @@ enum PublicSchema {
             case userId = "user_id"
         }
     }
+    struct NotificationsSelect: Codable, Hashable, Sendable {
+        let actorId: UUID
+        let createdAt: String
+        let entityId: UUID
+        let entityType: String
+        let id: UUID
+        let metadata: AnyJSON
+        let readAt: String?
+        let recipientId: UUID
+        let type: String
+        enum CodingKeys: String, CodingKey {
+            case actorId = "actor_id"
+            case createdAt = "created_at"
+            case entityId = "entity_id"
+            case entityType = "entity_type"
+            case id
+            case metadata
+            case readAt = "read_at"
+            case recipientId = "recipient_id"
+            case type
+        }
+    }
+    struct NotificationsInsert: Codable, Hashable, Sendable {
+        let actorId: UUID
+        let createdAt: String?
+        let entityId: UUID
+        let entityType: String
+        let id: UUID?
+        let metadata: AnyJSON?
+        let readAt: String?
+        let recipientId: UUID
+        let type: String
+        enum CodingKeys: String, CodingKey {
+            case actorId = "actor_id"
+            case createdAt = "created_at"
+            case entityId = "entity_id"
+            case entityType = "entity_type"
+            case id
+            case metadata
+            case readAt = "read_at"
+            case recipientId = "recipient_id"
+            case type
+        }
+    }
+    struct NotificationsUpdate: Codable, Hashable, Sendable {
+        let actorId: UUID?
+        let createdAt: String?
+        let entityId: UUID?
+        let entityType: String?
+        let id: UUID?
+        let metadata: AnyJSON?
+        let readAt: String?
+        let recipientId: UUID?
+        let type: String?
+        enum CodingKeys: String, CodingKey {
+            case actorId = "actor_id"
+            case createdAt = "created_at"
+            case entityId = "entity_id"
+            case entityType = "entity_type"
+            case id
+            case metadata
+            case readAt = "read_at"
+            case recipientId = "recipient_id"
+            case type
+        }
+    }
     struct PinsSelect: Codable, Hashable, Sendable {
         let createdAt: String?
         let postId: UUID
