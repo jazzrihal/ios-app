@@ -182,6 +182,7 @@ struct ProfilePhotoGrid: View {
         RemoteImage(url: post.imageURL)
             .aspectRatio(1, contentMode: .fill)
             .clipped()
+            .contentShape(Rectangle())
             .overlay(alignment: .topTrailing) {
                 if postMutationStore.isPinned(post.id) {
                     Image(systemName: "pin.fill")
@@ -216,6 +217,7 @@ struct ProfilePhotoGrid: View {
         }
         .aspectRatio(1, contentMode: .fill)
         .clipped()
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder

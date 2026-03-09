@@ -397,6 +397,7 @@ struct ExploreView: View {
                                 RemoteImage(url: post.imageURL)
                                     .aspectRatio(1, contentMode: .fill)
                                     .clipped()
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("ExplorePostCell_\(index)")

@@ -95,6 +95,7 @@ struct FriendsView: View {
                             .frame(height: 2)
                     }
                     .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
                     .foregroundStyle(selectedSection == section ? .primary : .secondary)
                 }
                 .buttonStyle(.plain)
@@ -324,6 +325,7 @@ private struct FriendsFeedSectionView: View {
                                 RemoteImage(url: post.imageURL)
                                     .aspectRatio(1, contentMode: .fill)
                                     .clipped()
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                         }
