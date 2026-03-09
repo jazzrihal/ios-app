@@ -2,7 +2,7 @@
 
 SCHEME      := CameraApp
 DESTINATION := platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2
-RUN_DEVICE  := iPhone SE (3rd generation)
+RUN_DEVICE  := iPhone 17 Pro
 TEST_RESULTS_DIR := build/test-results
 
 .DEFAULT_GOAL := help
@@ -67,7 +67,7 @@ test-unit: ## Run unit tests only (no UI tests)
 	fi
 
 .PHONY: run
-run: ## Build and run the app in the simulator (iPhone SE 3rd gen)
+run: ## Build and run the app in the simulator (iPhone 17 Pro)
 	@UDID=$$(xcrun simctl list devices available | grep '$(RUN_DEVICE)' | tail -1 | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}') && \
 	echo "Using $(RUN_DEVICE) ($$UDID)" && \
 	(xcrun simctl boot "$$UDID" 2>/dev/null || true) && \
