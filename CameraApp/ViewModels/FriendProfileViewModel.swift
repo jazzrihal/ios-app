@@ -23,6 +23,10 @@ final class FriendProfileViewModel {
 
     private let pageSize = 20
 
+    private var profilePinnedUsername: String {
+        user.username
+    }
+
     var ownPostCount: Int {
         userPosts.filter(\.isOwnPost).count
     }
@@ -98,6 +102,7 @@ final class FriendProfileViewModel {
                     return post
                 }
             }
+            userPosts = applyPinnedUserContext(to: userPosts)
             hasMorePages = userPosts.count == pageSize
         } catch {
             postsError = error.localizedDescription
@@ -135,8 +140,9 @@ final class FriendProfileViewModel {
                     return post
                 }
             }
-            userPosts.append(contentsOf: newPosts)
-            hasMorePages = newPosts.count == pageSize
+            let normalizedPosts = applyPinnedUserContext(to: newPosts)
+            userPosts.append(contentsOf: normalizedPosts)
+            hasMorePages = normalizedPosts.count == pageSize
         } catch {
             postsError = error.localizedDescription
         }
@@ -186,5 +192,14 @@ final class FriendProfileViewModel {
             store.removeFriend(user)
         }
         shouldDismiss = true
+    }
+
+    private func applyPinnedUserContext(to posts: [ImagePost]) -> [ImagePost] {
+        posts.map { post in
+            guard post.isPinnedByUser else { return post }
+            var normalizedPost = post
+            normalizedPost.pinnedByUsername = profilePinnedUsername
+            return normalizedPost
+        }
     }
 }

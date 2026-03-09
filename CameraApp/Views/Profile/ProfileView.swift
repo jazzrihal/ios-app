@@ -22,6 +22,10 @@ struct ProfileView: View {
 
     private let pageSize = 20
 
+    private var currentUsername: String? {
+        authManager.currentProfile?.username
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -182,9 +186,10 @@ struct ProfileView: View {
         isLoadingPosts = true
         hasMorePages = true
         do {
-            userPosts = try await postRepository.userPostsAndPins(
+            let loadedPosts = try await postRepository.userPostsAndPins(
                 userId: userId, pageSize: pageSize, pageOffset: 0
             )
+            userPosts = applyPinnedUserContext(to: loadedPosts)
             postMutationStore.seedFromPosts(userPosts)
             hasMorePages = userPosts.count == pageSize
         } catch {
@@ -205,9 +210,10 @@ struct ProfileView: View {
         guard hasMorePages, !isLoadingMore, let userId = authManager.userId else { return }
         isLoadingMore = true
         do {
-            let newPosts = try await postRepository.userPostsAndPins(
+            let loadedPosts = try await postRepository.userPostsAndPins(
                 userId: userId, pageSize: pageSize, pageOffset: userPosts.count
             )
+            let newPosts = applyPinnedUserContext(to: loadedPosts)
             postMutationStore.seedFromPosts(newPosts)
             userPosts.append(contentsOf: newPosts)
             hasMorePages = newPosts.count == pageSize
@@ -215,6 +221,16 @@ struct ProfileView: View {
             print("[ProfileView] Failed to load more posts: \(error)")
         }
         isLoadingMore = false
+    }
+
+    private func applyPinnedUserContext(to posts: [ImagePost]) -> [ImagePost] {
+        guard let username = currentUsername else { return posts }
+        return posts.map { post in
+            guard post.isPinnedByUser else { return post }
+            var normalizedPost = post
+            normalizedPost.pinnedByUsername = username
+            return normalizedPost
+        }
     }
 }
 
