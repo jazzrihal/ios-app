@@ -249,11 +249,12 @@ struct ExploreView: View {
                         }
                     }
                 }
-                .frame(height: 180)
+                .frame(height: 280)
                 .clipShape(RoundedRectangle(cornerRadius: AppStyle.Padding.screenHorizontal))
             }
             .padding(.horizontal, AppStyle.Padding.screenHorizontal)
             .padding(.top, AppStyle.Spacing.small)
+            .padding(.bottom, AppStyle.Spacing.small)
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
