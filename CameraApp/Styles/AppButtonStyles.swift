@@ -84,6 +84,19 @@ struct AppIconButtonStyle: ButtonStyle {
     }
 }
 
+// MARK: - Text Button
+
+/// Subtle text-only action with no background, for low-priority shortcuts.
+struct AppTextButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.secondary)
+            .opacity(configuration.isPressed ? 0.5 : 1.0)
+            .animation(AppStyle.Animation.press, value: configuration.isPressed)
+    }
+}
+
 // MARK: - Moment Card Button
 
 /// Subtle scale + opacity press effect for card-level buttons.
@@ -118,6 +131,12 @@ extension ButtonStyle where Self == AppPillButtonStyle {
 
 extension ButtonStyle where Self == AppPillSecondaryButtonStyle {
     static var appPillSecondary: AppPillSecondaryButtonStyle {
+        .init()
+    }
+}
+
+extension ButtonStyle where Self == AppTextButtonStyle {
+    static var appText: AppTextButtonStyle {
         .init()
     }
 }

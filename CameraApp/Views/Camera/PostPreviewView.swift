@@ -124,23 +124,26 @@ struct PostPreviewView: View {
     // MARK: - Quick Actions
 
     private var quickActionsSection: some View {
-        VStack(spacing: AppStyle.Spacing.medium) {
+        HStack(spacing: AppStyle.Spacing.large) {
             Button {
                 enqueueWithDefaults()
             } label: {
-                Label("Post Without Editing", systemImage: "paperplane.fill")
+                Label("Post Without Editing", systemImage: "paperplane")
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
             }
             .accessibilityIdentifier("PostWithoutEditingButton")
-            .buttonStyle(.appPrimary)
 
             Button {
                 saveDraft()
             } label: {
                 Label("Save Without Uploading", systemImage: "square.and.arrow.down")
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
             }
             .accessibilityIdentifier("SaveWithoutUploadingButton")
-            .buttonStyle(.appSecondary)
         }
+        .buttonStyle(.appText)
         .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 
