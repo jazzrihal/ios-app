@@ -1,14 +1,16 @@
 import Foundation
 import Observation
 
-@Observable
+@MainActor @Observable
 class FriendsStore {
     var friends: [User] = []
     var suggestedUsers: [User] = []
     var incomingRequests: [User] = []
     var pendingSentRequests: Set<UUID> = []
     var isLoading = false
+    var isRefreshing = false
     var errorMessage: String?
+    var lastRefreshError: String?
 
     // Search state
     var searchResults: [User] = []
@@ -43,20 +45,23 @@ class FriendsStore {
         guard let userId = currentUserId else { return }
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
 
         if let repo = repository {
             await loadAllViaRepository(repo, userId: userId)
         } else {
             await loadAllDirectly(userId: userId)
         }
-
-        isLoading = false
     }
 
     /// Invalidates cached friend graph and reloads friends/requests/suggestions.
     func refreshAll() async {
+        guard !isRefreshing else { return }
         guard let userId = currentUserId else { return }
-        await repository?.invalidate(userId: userId)
+        isRefreshing = true
+        lastRefreshError = nil
+        defer { isRefreshing = false }
+        repository?.invalidate(userId: userId)
         await loadAll()
     }
 
@@ -66,6 +71,7 @@ class FriendsStore {
         async let sentResult = Result { try await repo.loadSentRequests(userId: userId) }
 
         let (fr, ir, sr) = await (friendsResult, incomingResult, sentResult)
+        guard isLoadContextCurrent(userId) else { return }
         applyFriendsResult(fr)
         applyIncomingResult(ir)
         applySentResult(sr)
@@ -75,11 +81,16 @@ class FriendsStore {
             + Array(pendingSentRequests)
 
         do {
-            suggestedUsers = try await repo.loadSuggestedUsers(
+            let suggested = try await repo.loadSuggestedUsers(
                 userId: userId, excludeIds: excludeIds
             )
+            guard isLoadContextCurrent(userId) else { return }
+            suggestedUsers = suggested
+        } catch is CancellationError {
+            return
         } catch {
-            errorMessage = error.localizedDescription
+            guard isLoadContextCurrent(userId) else { return }
+            applyNonCancellationError(error)
         }
     }
 
@@ -90,6 +101,7 @@ class FriendsStore {
         async let suggestedResult = Result { try await loadSuggestedUsersDirectly(userId: userId) }
 
         let (fr, ir, sr, sgr) = await (friendsResult, incomingResult, sentResult, suggestedResult)
+        guard isLoadContextCurrent(userId) else { return }
         applyFriendsResult(fr)
         applyIncomingResult(ir)
         applySentResult(sr)
@@ -99,29 +111,41 @@ class FriendsStore {
     private func applyFriendsResult(_ result: Result<[User], Error>) {
         switch result {
         case let .success(value): friends = value
-        case let .failure(error): errorMessage = error.localizedDescription
+        case let .failure(error): applyNonCancellationError(error)
         }
     }
 
     private func applyIncomingResult(_ result: Result<[User], Error>) {
         switch result {
         case let .success(value): incomingRequests = value
-        case let .failure(error): errorMessage = error.localizedDescription
+        case let .failure(error): applyNonCancellationError(error)
         }
     }
 
     private func applySentResult(_ result: Result<[User], Error>) {
         switch result {
         case let .success(value): pendingSentRequests = Set(value.map(\.id))
-        case let .failure(error): errorMessage = error.localizedDescription
+        case let .failure(error): applyNonCancellationError(error)
         }
     }
 
     private func applySuggestedResult(_ result: Result<[User], Error>) {
         switch result {
         case let .success(value): suggestedUsers = value
-        case let .failure(error): errorMessage = error.localizedDescription
+        case let .failure(error): applyNonCancellationError(error)
         }
+    }
+
+    private func applyNonCancellationError(_ error: Error) {
+        guard !(error is CancellationError) else { return }
+        let message = error.localizedDescription
+        errorMessage = message
+        lastRefreshError = message
+    }
+
+    private func isLoadContextCurrent(_ requestedUserId: UUID) -> Bool {
+        guard !Task.isCancelled else { return false }
+        return currentUserId == requestedUserId
     }
 
     // MARK: - Actions
@@ -141,7 +165,7 @@ class FriendsStore {
                     status: "pending"
                 )
                 try await SupabaseManager.client.from("friendships").insert(insert).execute()
-                await cacheInvalidator?.friendshipChanged(userId: userId)
+                cacheInvalidator?.friendshipChanged(userId: userId)
             } catch {
                 pendingSentRequests.remove(user.id)
                 suggestedUsers.append(user)
@@ -162,7 +186,7 @@ class FriendsStore {
                     .eq("requester_id", value: userId)
                     .eq("addressee_id", value: user.id)
                     .execute()
-                await cacheInvalidator?.friendshipChanged(userId: userId)
+                cacheInvalidator?.friendshipChanged(userId: userId)
             } catch {
                 pendingSentRequests.insert(user.id)
                 errorMessage = error.localizedDescription
@@ -187,7 +211,7 @@ class FriendsStore {
                     .eq("requester_id", value: user.id)
                     .eq("addressee_id", value: userId)
                     .execute()
-                await cacheInvalidator?.friendshipChanged(userId: userId)
+                cacheInvalidator?.friendshipChanged(userId: userId)
             } catch {
                 friends.removeAll { $0.id == user.id }
                 incomingRequests.append(user)
@@ -209,7 +233,7 @@ class FriendsStore {
                     .eq("requester_id", value: user.id)
                     .eq("addressee_id", value: userId)
                     .execute()
-                await cacheInvalidator?.friendshipChanged(userId: userId)
+                cacheInvalidator?.friendshipChanged(userId: userId)
             } catch {
                 if let removed { incomingRequests.append(removed) }
                 errorMessage = error.localizedDescription
@@ -229,7 +253,7 @@ class FriendsStore {
                     .delete()
                     .or("and(requester_id.eq.\(userId),addressee_id.eq.\(user.id)),and(requester_id.eq.\(user.id),addressee_id.eq.\(userId))")
                     .execute()
-                await cacheInvalidator?.friendshipChanged(userId: userId)
+                cacheInvalidator?.friendshipChanged(userId: userId)
             } catch {
                 if let removed { friends.append(removed) }
                 errorMessage = error.localizedDescription

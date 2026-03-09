@@ -151,24 +151,28 @@ final class FriendProfileViewModel {
         await loadPosts()
     }
 
+    @MainActor
     func sendRequest(store: FriendsStore) {
         withAnimation(.spring(duration: 0.3)) {
             store.sendRequest(to: user)
         }
     }
 
+    @MainActor
     func cancelRequest(store: FriendsStore) {
         withAnimation(.spring(duration: 0.3)) {
             store.cancelRequest(to: user)
         }
     }
 
+    @MainActor
     func acceptRequest(store: FriendsStore) {
         withAnimation(.spring(duration: 0.3)) {
             store.acceptRequest(from: user)
         }
     }
 
+    @MainActor
     func declineRequest(store: FriendsStore) {
         withAnimation(.spring(duration: 0.3)) {
             store.declineRequest(from: user)
@@ -176,6 +180,7 @@ final class FriendProfileViewModel {
         shouldDismiss = true
     }
 
+    @MainActor
     func removeFriend(store: FriendsStore) {
         withAnimation(.spring(duration: 0.3)) {
             store.removeFriend(user)

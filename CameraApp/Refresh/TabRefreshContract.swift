@@ -65,7 +65,7 @@ extension View {
     /// bundles the loading overlay with refresh wiring. Use this lighter variant only for
     /// non-tab views that need pull-to-refresh without a loading overlay.
     func tabRefreshable(_ action: @escaping () async -> Void) -> some View {
-        refreshable { await action() }
+        refreshable { await Self.detachedRefresh(action) }
     }
 
     /// Combines a centered loading spinner with pull-to-refresh for tab surfaces.
@@ -80,7 +80,7 @@ extension View {
         onRefresh: @escaping () async -> Void
     ) -> some View {
         refreshable {
-            await onRefresh()
+            await Self.detachedRefresh(onRefresh)
         }
         .overlay {
             if isLoading, !isRefreshing {
@@ -88,5 +88,18 @@ extension View {
                     .tint(.secondary)
             }
         }
+    }
+
+    /// Runs the refresh callback in an unstructured `Task` so that SwiftUI's
+    /// cancellation of the `.refreshable` task (triggered by `@Observable`
+    /// state changes re-evaluating the view body) cannot kill in-flight
+    /// network requests. The `.refreshable` indicator still waits for the
+    /// work to finish via `task.value`.
+    private static func detachedRefresh(
+        _ action: @escaping () async -> Void
+    ) async {
+        await Task { @MainActor in
+            await action()
+        }.value
     }
 }

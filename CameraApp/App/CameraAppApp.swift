@@ -11,6 +11,8 @@ struct CameraAppApp: App {
     @State private var postMutationStore = PostMutationStore()
     @State private var networkMonitor = NetworkMonitor()
     @State private var cacheInvalidator = CacheInvalidator()
+    @State private var friendRealtimeService = FriendRealtimeService()
+    @State private var friendsBootstrapTask: Task<Void, Never>?
     @State private var showCamera = false
     @State private var previousTab: Int = 0
 
@@ -62,6 +64,8 @@ struct CameraAppApp: App {
             .environment(notificationRepository)
             .onChange(of: authManager.isAuthenticated, initial: true) {
                 if authManager.isAuthenticated, let uid = authManager.userId {
+                    friendsBootstrapTask?.cancel()
+
                     friendsStore.currentUserId = uid
                     momentsStore.currentUserId = uid
                     postMutationStore.currentUserId = uid
@@ -80,8 +84,23 @@ struct CameraAppApp: App {
                     momentsStore.cacheInvalidator = cacheInvalidator
                     postMutationStore.cacheInvalidator = cacheInvalidator
 
-                    Task { await friendsStore.loadAll() }
+                    friendsBootstrapTask = Task {
+                        await friendsStore.loadAll()
+                        guard !Task.isCancelled else { return }
+                        guard authManager.isAuthenticated else { return }
+                        guard let currentUserId = authManager.userId, currentUserId == uid else {
+                            return
+                        }
+
+                        await friendRealtimeService.start(userId: uid) {
+                            await friendsStore.refreshAll()
+                        }
+                    }
                     Task { await momentsStore.loadMoments() }
+                } else {
+                    friendsBootstrapTask?.cancel()
+                    friendsBootstrapTask = nil
+                    Task { await friendRealtimeService.stop() }
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in

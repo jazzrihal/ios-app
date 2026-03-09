@@ -28,8 +28,6 @@ struct FriendsView: View {
     @State private var selectedSection: FriendsSection = .feed
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
-    @State private var isRefreshingFriendsSection = false
-    @State private var isRefreshingAddFriendSection = false
     @State private var feedViewModel = FriendsFeedViewModel()
     @State private var feedNavigateToIndex: Int?
 
@@ -54,7 +52,7 @@ struct FriendsView: View {
             .tabLoadable(
                 isLoading: activeSectionIsLoading,
                 isRefreshing: activeSectionIsRefreshing,
-                onRefresh: { await refreshCurrentSection() }
+                onRefresh: refreshCurrentSection
             )
             .navigationTitle("Friends")
             .navigationBarTitleDisplayMode(.large)
@@ -250,14 +248,6 @@ struct FriendsView: View {
         }
     }
 
-    @MainActor
-    private func refreshFriendsSection() async {
-        guard !isRefreshingFriendsSection else { return }
-        isRefreshingFriendsSection = true
-        defer { isRefreshingFriendsSection = false }
-        await store.refreshAll()
-    }
-
     private var activeSectionIsLoading: Bool {
         switch selectedSection {
         case .feed:
@@ -271,20 +261,19 @@ struct FriendsView: View {
         switch selectedSection {
         case .feed:
             feedViewModel.isRefreshing
-        case .friends:
-            isRefreshingFriendsSection
-        case .addFriend:
-            isRefreshingAddFriendSection
+        case .friends, .addFriend:
+            store.isRefreshing
         }
     }
 
     @MainActor
     private func refreshCurrentSection() async {
-        switch selectedSection {
+        let section = selectedSection
+        switch section {
         case .feed:
             await feedViewModel.refreshPosts(friends: store.friends)
         case .friends:
-            await refreshFriendsSection()
+            await store.refreshAll()
         case .addFriend:
             await refreshAddFriendSection()
         }
@@ -292,10 +281,6 @@ struct FriendsView: View {
 
     @MainActor
     private func refreshAddFriendSection() async {
-        guard !isRefreshingAddFriendSection else { return }
-        isRefreshingAddFriendSection = true
-        defer { isRefreshingAddFriendSection = false }
-
         searchTask?.cancel()
         await store.refreshAll()
 
