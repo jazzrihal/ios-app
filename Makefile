@@ -1,8 +1,9 @@
 # CameraApp — run `make help` for available targets
 
 SCHEME      := CameraApp
-DESTINATION := platform=iOS Simulator,name=iPhone 17 Pro,OS=latest
+DESTINATION := platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2
 RUN_DEVICE  := iPhone SE (3rd generation)
+TEST_RESULTS_DIR := build/test-results
 
 .DEFAULT_GOAL := help
 
@@ -47,11 +48,23 @@ build: ## Build the app
 
 .PHONY: test
 test: ## Run all tests (unit + UI)
-	xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -quiet
+	@mkdir -p "$(TEST_RESULTS_DIR)"
+	@rm -rf "$(TEST_RESULTS_DIR)/all-tests.xcresult"
+	@if command -v xcbeautify >/dev/null 2>&1; then \
+		bash -o pipefail -c "xcodebuild test -scheme '$(SCHEME)' -destination '$(DESTINATION)' -resultBundlePath '$(TEST_RESULTS_DIR)/all-tests.xcresult' | xcbeautify"; \
+	else \
+		xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -resultBundlePath '$(TEST_RESULTS_DIR)/all-tests.xcresult'; \
+	fi
 
 .PHONY: test-unit
 test-unit: ## Run unit tests only (no UI tests)
-	xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -only-testing CameraAppTests -quiet
+	@mkdir -p "$(TEST_RESULTS_DIR)"
+	@rm -rf "$(TEST_RESULTS_DIR)/unit-tests.xcresult"
+	@if command -v xcbeautify >/dev/null 2>&1; then \
+		bash -o pipefail -c "xcodebuild test -scheme '$(SCHEME)' -destination '$(DESTINATION)' -only-testing CameraAppTests -resultBundlePath '$(TEST_RESULTS_DIR)/unit-tests.xcresult' | xcbeautify"; \
+	else \
+		xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -only-testing CameraAppTests -resultBundlePath '$(TEST_RESULTS_DIR)/unit-tests.xcresult'; \
+	fi
 
 .PHONY: run
 run: ## Build and run the app in the simulator (iPhone SE 3rd gen)
