@@ -125,7 +125,7 @@ struct PostDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $showEditPostFlow) {
-            if let editingPost = currentUploadedPost {
+            if let editingPost = currentUploadedPost, viewerOwnsCurrentUploadedPost {
                 PostPreviewView(
                     editingPost: editingPost,
                     onDone: { showEditPostFlow = false },
@@ -164,9 +164,13 @@ struct PostDetailView: View {
         return viewModel?.post
     }
 
+    private var viewerOwnsCurrentUploadedPost: Bool {
+        guard let post = currentUploadedPost, let authUserId = authManager.userId else { return false }
+        return post.user.id == authUserId
+    }
+
     private var shouldShowOwnerMenu: Bool {
-        guard let post = currentUploadedPost, post.isOwnPost else { return false }
-        return !isMutatingPost
+        viewerOwnsCurrentUploadedPost && !isMutatingPost
     }
 
     // MARK: - Post Page
@@ -382,8 +386,12 @@ struct PostDetailView: View {
     @MainActor
     private func deleteCurrentPost() async {
         guard let post = currentUploadedPost else { return }
-        guard authManager.userId != nil else {
+        guard let authUserId = authManager.userId else {
             mutationError = "You must be signed in to delete a post."
+            return
+        }
+        guard post.user.id == authUserId else {
+            mutationError = "You can only delete your own posts."
             return
         }
 

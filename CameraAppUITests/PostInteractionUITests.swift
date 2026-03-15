@@ -301,14 +301,66 @@ final class PostInteractionUITests: XCTestCase {
         deleteAlert.buttons["Cancel"].tap()
     }
 
+    // MARK: - Group 5: Non-owner Menu Visibility
+
+    func testNonOwnerDoesNotSeePostOptionsFromFriendProfile() throws {
+        navigateToFriendsTab()
+
+        let friendRow = app.buttons.matching(identifier: "FriendRow").firstMatch
+        if !friendRow.waitForExistence(timeout: 8) {
+            throw XCTSkip("No seeded friend rows available in this environment.")
+        }
+        friendRow.tap()
+
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        assertOwnerMenuHidden()
+    }
+
+    func testNonOwnerDoesNotSeePostOptionsFromFriendsFeed() {
+        navigateToFriendsTab()
+        app.buttons["FeedSectionButton"].tap()
+
+        let feedCell = app.buttons["FeedPostCell_0"]
+        XCTAssertTrue(feedCell.waitForExistence(timeout: 10), "Friends feed should show at least one post")
+        feedCell.tap()
+        waitForActionBar()
+
+        assertOwnerMenuHidden()
+    }
+
+    func testNonOwnerDoesNotSeePostOptionsFromDiscoveredProfile() {
+        navigateToFriendsTab()
+        app.buttons["AddFriendSectionButton"].tap()
+
+        let searchField = app.textFields["Search by username or name…"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5), "Search field should appear")
+        searchField.tap()
+        searchField.typeText("carol")
+
+        let discoverRow = app.buttons.matching(identifier: "DiscoverUserRow").firstMatch
+        XCTAssertTrue(discoverRow.waitForExistence(timeout: 8), "At least one discovered user should exist")
+        discoverRow.tap()
+
+        waitForPostCell(0)
+        app.buttons["PostCell_0"].tap()
+        waitForActionBar()
+
+        assertOwnerMenuHidden()
+    }
+}
+
+private extension PostInteractionUITests {
     // MARK: - Navigation Helpers
 
-    private func navigateToProfileTab() {
+    func navigateToProfileTab() {
         app.tabBars.buttons["Profile"].tap()
         sleep(2)
     }
 
-    private func navigateToFriendsTab() {
+    func navigateToFriendsTab() {
         app.tabBars.buttons["Friends"].tap()
         XCTAssertTrue(
             app.navigationBars["Friends"].waitForExistence(timeout: 5),
@@ -316,23 +368,25 @@ final class PostInteractionUITests: XCTestCase {
         )
     }
 
-    private func tapBackButton() {
+    func tapBackButton() {
         let backButton = app.navigationBars.buttons.firstMatch
         if backButton.exists, backButton.isHittable {
             backButton.tap()
         }
     }
 
-    private func pullToRefresh() {
+    func pullToRefresh() {
         let scrollView = app.scrollViews.firstMatch
         if scrollView.exists {
             scrollView.swipeDown()
         }
     }
+}
 
+private extension PostInteractionUITests {
     // MARK: - Post Grid Helpers
 
-    private func waitForPostCell(_ index: Int) {
+    func waitForPostCell(_ index: Int) {
         let cell = app.buttons["PostCell_\(index)"]
         XCTAssertTrue(
             cell.waitForExistence(timeout: 10),
@@ -340,13 +394,13 @@ final class PostInteractionUITests: XCTestCase {
         )
     }
 
-    private func postCellCount() -> Int {
+    func postCellCount() -> Int {
         app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH 'PostCell_'")
         ).count
     }
 
-    private func waitForActionBar() {
+    func waitForActionBar() {
         let actionBar = app.otherElements.matching(
             NSPredicate(format: "identifier BEGINSWITH 'PostActionBar_'")
         ).firstMatch
@@ -356,9 +410,17 @@ final class PostInteractionUITests: XCTestCase {
         )
     }
 
+    func assertOwnerMenuHidden() {
+        let optionsButton = app.buttons["PostOptionsMenuButton"]
+        XCTAssertFalse(
+            optionsButton.waitForExistence(timeout: 2),
+            "Non-owner should not see post options menu"
+        )
+    }
+
     /// Opens PostCells on the Profile grid until finding one whose action bar
     /// matches the given post UUID. Returns true and leaves the post open.
-    private func findPostOnProfile(postId: String) -> Bool {
+    func findPostOnProfile(postId: String) -> Bool {
         let cellCount = postCellCount()
         for i in 0 ..< cellCount {
             let cell = app.buttons["PostCell_\(i)"]
@@ -375,7 +437,7 @@ final class PostInteractionUITests: XCTestCase {
         return false
     }
 
-    private func navigateToFriendFirstPost() {
+    func navigateToFriendFirstPost() {
         navigateToFriendsTab()
         let friendRow = app.buttons.matching(identifier: "FriendRow").firstMatch
         XCTAssertTrue(friendRow.waitForExistence(timeout: 8), "At least one friend should exist")
@@ -385,10 +447,12 @@ final class PostInteractionUITests: XCTestCase {
         app.buttons["PostCell_0"].tap()
         waitForActionBar()
     }
+}
 
+private extension PostInteractionUITests {
     // MARK: - Like & Pin Assertion Helpers
 
-    private func assertLikeToggle() {
+    func assertLikeToggle() {
         let likeButton = app.buttons["LikeButton"]
         XCTAssertTrue(likeButton.waitForExistence(timeout: 3), "LikeButton should exist")
 
@@ -401,7 +465,7 @@ final class PostInteractionUITests: XCTestCase {
         assertButtonLabel(likeButton, expected: wasLiked ? "Unlike" : "Like")
     }
 
-    private func assertPinToggle() {
+    func assertPinToggle() {
         let pinButton = app.buttons["PinButton"]
         XCTAssertTrue(pinButton.waitForExistence(timeout: 3), "PinButton should exist")
 
@@ -416,7 +480,7 @@ final class PostInteractionUITests: XCTestCase {
 
     /// Resets a post's like and pin state to un-liked and un-pinned before
     /// tests that require a known starting state.
-    private func ensureUnlikedAndUnpinned() {
+    func ensureUnlikedAndUnpinned() {
         let likeButton = app.buttons["LikeButton"]
         if likeButton.waitForExistence(timeout: 3), likeButton.label == "Unlike" {
             likeButton.tap()
@@ -429,7 +493,7 @@ final class PostInteractionUITests: XCTestCase {
         }
     }
 
-    private func assertButtonLabel(_ button: XCUIElement, expected: String) {
+    func assertButtonLabel(_ button: XCUIElement, expected: String) {
         let predicate = NSPredicate(format: "label == %@", expected)
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: button)
         let result = XCTWaiter.wait(for: [expectation], timeout: 5)
@@ -438,10 +502,12 @@ final class PostInteractionUITests: XCTestCase {
             "Button label should be '\(expected)' but was '\(button.label)'"
         )
     }
+}
 
+private extension PostInteractionUITests {
     // MARK: - Explore Search Helper
 
-    private func searchSanFranciscoInExplore() {
+    func searchSanFranciscoInExplore() {
         let exploreTab = app.tabBars.buttons["Explore"]
         exploreTab.tap()
         sleep(2)

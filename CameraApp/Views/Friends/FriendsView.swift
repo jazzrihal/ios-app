@@ -328,6 +328,7 @@ private struct FriendsFeedSectionView: View {
                                     .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("FeedPostCell_\(index)")
                         }
                     )
                 }
