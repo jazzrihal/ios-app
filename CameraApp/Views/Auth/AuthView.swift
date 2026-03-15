@@ -9,90 +9,101 @@ struct AuthView: View {
     @State private var username = ""
     @State private var isSignUp = false
 
+    private var authDisabled: Bool {
+        email.isEmpty || password.isEmpty || (isSignUp && username.isEmpty) || auth.isLoading
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: AppStyle.Spacing.large) {
+            VStack(spacing: AppStyle.Spacing.medium) {
                 Spacer()
 
-                // App branding
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(.primary)
-                Text("CameraApp")
-                    .font(.largeTitle.bold())
-
-                Spacer()
-
-                // Form fields
-                VStack(spacing: AppStyle.Spacing.medium) {
-                    if isSignUp {
-                        TextField("Username", text: $username)
-                            .textContentType(.username)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .padding()
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
-                    }
-
-                    TextField("Email", text: $email)
-                        .textContentType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        .padding()
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
-
-                    SecureField("Password", text: $password)
-                        .textContentType(isSignUp ? .newPassword : .password)
-                        .padding()
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
-                }
-
-                // Error
-                if let error = auth.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.center)
-                }
-
-                // Primary action
-                let authDisabled = email.isEmpty || password.isEmpty || (isSignUp && username.isEmpty) || auth.isLoading
-
-                Button {
-                    Task {
-                        if isSignUp {
-                            await auth.signUp(email: email, password: password, username: username)
-                        } else {
-                            await auth.signIn(email: email, password: password)
-                        }
-                    }
-                } label: {
-                    if auth.isLoading {
-                        ProgressView()
-                            .tint(Color(.systemGray))
-                    } else {
-                        Text(isSignUp ? "Create Account" : "Sign In")
-                    }
-                }
-                .buttonStyle(.appPrimary)
-                .disabled(authDisabled)
-                .accessibilityIdentifier("AuthActionButton")
-
-                // Toggle mode
-                Button {
-                    isSignUp.toggle()
-                    username = ""
-                    auth.errorMessage = nil
-                } label: {
-                    Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+                Image("AppLogo")
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
+                    .frame(height: AppStyle.IconSize.avatarLarge * 2.4)
+                    .accessibilityLabel("Pinstoria logo")
 
                 Spacer()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, AppStyle.Spacing.large)
+            .safeAreaInset(edge: .bottom) {
+                bottomAuthSection
+                    .padding(.horizontal, AppStyle.Spacing.large)
+                    .padding(.bottom, AppStyle.Spacing.medium)
+            }
         }
+    }
+
+    private var bottomAuthSection: some View {
+        VStack(spacing: AppStyle.Spacing.medium) {
+            // Keep the field stack height stable so branding does not shift when toggling modes.
+            TextField("Username", text: $username)
+                .textContentType(.username)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .padding()
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
+                .opacity(isSignUp ? 1 : 0)
+                .allowsHitTesting(isSignUp)
+                .accessibilityHidden(!isSignUp)
+
+            TextField("Email", text: $email)
+                .textContentType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.emailAddress)
+                .padding()
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
+
+            SecureField("Password", text: $password)
+                .textContentType(isSignUp ? .newPassword : .password)
+                .padding()
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control))
+
+            if let error = auth.errorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                Task {
+                    if isSignUp {
+                        await auth.signUp(email: email, password: password, username: username)
+                    } else {
+                        await auth.signIn(email: email, password: password)
+                    }
+                }
+            } label: {
+                if auth.isLoading {
+                    ProgressView()
+                        .tint(Color(.systemGray))
+                } else {
+                    Text(isSignUp ? "Create Account" : "Sign In")
+                }
+            }
+            .buttonStyle(.appPrimary)
+            .disabled(authDisabled)
+            .accessibilityIdentifier("AuthActionButton")
+
+            Button {
+                var noAnimationTransaction = Transaction(animation: nil)
+                noAnimationTransaction.disablesAnimations = true
+                withTransaction(noAnimationTransaction) {
+                    isSignUp.toggle()
+                    username = ""
+                    auth.errorMessage = nil
+                }
+            } label: {
+                Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
