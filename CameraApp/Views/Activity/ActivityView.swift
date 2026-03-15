@@ -39,6 +39,7 @@ struct ActivityView: View {
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
                 }
             }
         }

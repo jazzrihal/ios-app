@@ -286,6 +286,7 @@ struct PostDetailView: View {
             .contentShape(Rectangle())
         }
         .animation(.none, value: viewModel.isActionActive(action))
+        .buttonStyle(.plain)
         .accessibilityIdentifier(action.accessibilityId)
         .accessibilityLabel(viewModel.accessibilityLabel(for: action))
         .accessibilityHint(viewModel.accessibilityHint(for: action))

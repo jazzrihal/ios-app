@@ -55,6 +55,7 @@ struct ProfileView: View {
                                 }
                             }
                     }
+                    .buttonStyle(.plain)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -68,6 +69,7 @@ struct ProfileView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .alert(

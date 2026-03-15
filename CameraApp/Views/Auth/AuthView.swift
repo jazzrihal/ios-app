@@ -88,6 +88,7 @@ struct AuthView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+                .buttonStyle(.plain)
 
                 Spacer()
             }
