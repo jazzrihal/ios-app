@@ -527,9 +527,11 @@ struct DiscoverUserRow: View {
 
 // MARK: - Preview
 
-#Preview {
-    FriendsView()
-        .environment(FriendsStore())
-        .environment(PostMutationStore())
-        .environment(PreviewContainer.postRepository)
-}
+#if DEBUG
+    #Preview {
+        FriendsView()
+            .environment(FriendsStore())
+            .environment(PostMutationStore())
+            .environment(PreviewContainer.postRepository)
+    }
+#endif

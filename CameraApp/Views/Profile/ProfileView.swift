@@ -238,14 +238,16 @@ struct ProfileView: View {
 
 // MARK: - Preview
 
-#Preview {
-    ProfileView()
-        .environment(AuthManager())
-        .environment(FriendsStore())
-        .environment(MomentsStore())
-        .environment(PostMutationStore())
-        .environment(UploadManager())
-        .environment(PreviewContainer.postRepository)
-        .environment(CacheInvalidator())
-        .environment(DefaultNotificationRepository())
-}
+#if DEBUG
+    #Preview {
+        ProfileView()
+            .environment(AuthManager())
+            .environment(FriendsStore())
+            .environment(MomentsStore())
+            .environment(PostMutationStore())
+            .environment(UploadManager())
+            .environment(PreviewContainer.postRepository)
+            .environment(CacheInvalidator())
+            .environment(DefaultNotificationRepository())
+    }
+#endif

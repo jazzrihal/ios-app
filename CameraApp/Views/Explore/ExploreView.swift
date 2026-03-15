@@ -417,11 +417,13 @@ struct ExploreView: View {
 
 // MARK: - Preview
 
-#Preview {
-    ExploreView()
-        .environment(MomentsStore())
-        .environment(PostMutationStore())
-        .environment(FriendsStore())
-        .environment(AuthManager())
-        .environment(PreviewContainer.postRepository)
-}
+#if DEBUG
+    #Preview {
+        ExploreView()
+            .environment(MomentsStore())
+            .environment(PostMutationStore())
+            .environment(FriendsStore())
+            .environment(AuthManager())
+            .environment(PreviewContainer.postRepository)
+    }
+#endif

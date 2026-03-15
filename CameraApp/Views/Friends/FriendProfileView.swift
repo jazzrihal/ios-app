@@ -191,14 +191,16 @@ struct FriendProfileView: View {
 
 // MARK: - Preview
 
-#Preview {
-    NavigationStack {
-        FriendProfileView(user: User.sampleFriends().first!)
+#if DEBUG
+    #Preview {
+        NavigationStack {
+            FriendProfileView(user: User.sampleFriends().first!)
+        }
+        .environment(FriendsStore())
+        .environment(MomentsStore())
+        .environment(PostMutationStore())
+        .environment(AuthManager())
+        .environment(PreviewContainer.postRepository)
+        .environment(PreviewContainer.profileRepository)
     }
-    .environment(FriendsStore())
-    .environment(MomentsStore())
-    .environment(PostMutationStore())
-    .environment(AuthManager())
-    .environment(PreviewContainer.postRepository)
-    .environment(PreviewContainer.profileRepository)
-}
+#endif
