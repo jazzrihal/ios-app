@@ -11,6 +11,7 @@ struct PostDetailView: View {
     @Environment(UploadManager.self) private var uploadManager
     @Environment(DefaultPostRepository.self) private var postRepository
     @Environment(CacheInvalidator.self) private var cacheInvalidator
+    @Environment(DefaultBadgeRepository.self) private var badgeRepository
     @Environment(\.dismiss) private var dismiss
 
     private let source: Source
@@ -156,6 +157,15 @@ struct PostDetailView: View {
         }
         .onAppear {
             viewModel?.mutationStore = postMutationStore
+            viewModel?.badgeRepository = badgeRepository
+        }
+        .task {
+            guard let viewModel else { return }
+            await viewModel.loadBadges(postId: viewModel.post.id)
+        }
+        .onChange(of: viewModel?.currentIndex) {
+            guard let viewModel else { return }
+            Task { await viewModel.loadBadges(postId: viewModel.post.id) }
         }
     }
 
@@ -253,6 +263,8 @@ struct PostDetailView: View {
                     .foregroundStyle(.orange)
             }
 
+            badgeChips
+
             captionSection(caption: meta.caption)
             metadataSection(timestamp: meta.timestamp, locationName: meta.locationName)
         }
@@ -346,6 +358,24 @@ struct PostDetailView: View {
         }
     }
 
+    // MARK: - Badge Chips
+
+    @ViewBuilder private var badgeChips: some View {
+        if let viewModel, !viewModel.badges.isEmpty {
+            HStack(spacing: AppStyle.Spacing.small) {
+                ForEach(viewModel.badges) { badge in
+                    Label(badge.badgeName, systemImage: badge.displayIcon)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(badge.displayColor)
+                        .padding(.horizontal, AppStyle.Padding.pillHorizontal)
+                        .padding(.vertical, AppStyle.Spacing.tight)
+                        .background(badge.displayColor.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: AppStyle.CornerRadius.badge))
+                }
+            }
+        }
+    }
+
     // MARK: - Caption
 
     @ViewBuilder
@@ -432,4 +462,5 @@ struct PostDetailView: View {
     .environment(PostMutationStore())
     .environment(AuthManager())
     .environment(UploadManager())
+    .environment(DefaultBadgeRepository())
 }

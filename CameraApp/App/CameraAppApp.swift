@@ -22,6 +22,7 @@ struct CameraAppApp: App {
     @State private var momentRepository: DefaultMomentRepository
     @State private var profileRepository: DefaultProfileRepository
     @State private var notificationRepository = DefaultNotificationRepository()
+    @State private var badgeRepository = DefaultBadgeRepository()
 
     init() {
         do {
@@ -62,6 +63,7 @@ struct CameraAppApp: App {
             .environment(profileRepository)
             .environment(cacheInvalidator)
             .environment(notificationRepository)
+            .environment(badgeRepository)
             .onChange(of: authManager.isAuthenticated, initial: true) {
                 if authManager.isAuthenticated, let uid = authManager.userId {
                     friendsBootstrapTask?.cancel()

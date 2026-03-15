@@ -1,4 +1,5 @@
 import Foundation
+import Supabase
 import SwiftUI
 
 // MARK: - Notification Type
@@ -7,6 +8,7 @@ enum NotificationType: String, Codable {
     case friendRequestReceived = "friend_request_received"
     case friendRequestAccepted = "friend_request_accepted"
     case postLiked = "post_liked"
+    case badgeAwarded = "badge_awarded"
 }
 
 // MARK: - Domain Model
@@ -21,6 +23,9 @@ struct AppNotification: Identifiable {
     let entityId: UUID?
     let createdAt: Date
     var isRead: Bool
+
+    let badgeType: String?
+    let badgeName: String?
 }
 
 // MARK: - RPC Param & Row Types
@@ -48,6 +53,7 @@ struct GetNotificationsRow: Decodable {
     let createdAt: String
     /// Null means unread; a timestamp means the notification was read at that time.
     let readAt: String?
+    let metadata: AnyJSON?
 
     enum CodingKeys: String, CodingKey {
         case notificationId = "id"
@@ -59,10 +65,19 @@ struct GetNotificationsRow: Decodable {
         case entityId = "entity_id"
         case createdAt = "created_at"
         case readAt = "read_at"
+        case metadata
     }
 
     func toAppNotification() -> AppNotification? {
         guard let notifType = NotificationType(rawValue: type) else { return nil }
+
+        var badgeType: String?
+        var badgeName: String?
+        if notifType == .badgeAwarded, let metadata {
+            badgeType = metadata.stringValue(forKey: "badge_type")
+            badgeName = metadata.stringValue(forKey: "badge_name")
+        }
+
         return AppNotification(
             id: notificationId,
             type: notifType,
@@ -72,7 +87,9 @@ struct GetNotificationsRow: Decodable {
             actorGradientColors: User.parseGradientColors(actorGradientColors),
             entityId: entityId,
             createdAt: parseDate(createdAt) ?? Date(),
-            isRead: readAt != nil
+            isRead: readAt != nil,
+            badgeType: badgeType,
+            badgeName: badgeName
         )
     }
 

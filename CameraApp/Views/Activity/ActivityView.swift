@@ -95,29 +95,42 @@ private struct ActivityRow: View {
         )
     }
 
+    private var isBadgeNotification: Bool {
+        notification.type == .badgeAwarded
+    }
+
     private var messageSuffix: String {
         switch notification.type {
         case .friendRequestReceived: " sent you a friend request."
         case .friendRequestAccepted: " accepted your friend request."
         case .postLiked: " liked your photo."
+        case .badgeAwarded: ""
         }
+    }
+
+    private var badgeDisplayIcon: String {
+        PostBadge.icon(forType: notification.badgeType ?? "")
+    }
+
+    private var badgeDisplayColor: Color {
+        PostBadge.color(forType: notification.badgeType ?? "")
     }
 
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: AppStyle.Spacing.row) {
-                AvatarView(user: actorUser, size: AppStyle.IconSize.avatarSmall)
+                if isBadgeNotification {
+                    badgeIconCircle
+                } else {
+                    AvatarView(user: actorUser, size: AppStyle.IconSize.avatarSmall)
+                }
 
                 VStack(alignment: .leading, spacing: AppStyle.Spacing.tight) {
-                    (
-                        Text(notification.actorDisplayName)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
-                            + Text(messageSuffix)
-                            .foregroundStyle(.secondary)
-                    )
-                    .font(.subheadline)
-                    .lineLimit(3)
+                    if isBadgeNotification {
+                        badgeMessage
+                    } else {
+                        socialMessage
+                    }
 
                     Text(notification.createdAt, style: .relative)
                         .font(.caption)
@@ -134,5 +147,48 @@ private struct ActivityRow: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    private var badgeIconCircle: some View {
+        ZStack {
+            Circle()
+                .fill(badgeDisplayColor.opacity(0.15))
+            Image(systemName: badgeDisplayIcon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(badgeDisplayColor)
+        }
+        .frame(width: AppStyle.IconSize.avatarSmall, height: AppStyle.IconSize.avatarSmall)
+    }
+
+    @ViewBuilder private var badgeMessage: some View {
+        if let badgeName = notification.badgeName {
+            (
+                Text("You earned the ")
+                    .foregroundStyle(.secondary)
+                    + Text(badgeName)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+                    + Text(" badge!")
+                    .foregroundStyle(.secondary)
+            )
+            .font(.subheadline)
+            .lineLimit(3)
+        } else {
+            Text("You earned a new badge!")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var socialMessage: some View {
+        (
+            Text(notification.actorDisplayName)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+                + Text(messageSuffix)
+                .foregroundStyle(.secondary)
+        )
+        .font(.subheadline)
+        .lineLimit(3)
     }
 }

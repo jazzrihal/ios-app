@@ -15,6 +15,7 @@ final class PostDetailViewModel {
     // MARK: - Shared Store
 
     var mutationStore: PostMutationStore?
+    var badgeRepository: (any BadgeRepository)?
 
     // MARK: - Paging State
 
@@ -23,6 +24,7 @@ final class PostDetailViewModel {
     // MARK: - UI State
 
     var showShareSheet: Bool = false
+    var badges: [PostBadge] = []
 
     // MARK: - Overlay Icon Animation State
 
@@ -91,6 +93,19 @@ final class PostDetailViewModel {
         self.posts = posts
         self.queryDate = queryDate
         currentIndex = initialIndex
+    }
+
+    // MARK: - Badge Loading
+
+    @MainActor
+    func loadBadges(postId: UUID) async {
+        badges = []
+        guard let badgeRepository else { return }
+        do {
+            badges = try await badgeRepository.fetchBadges(forPostId: postId)
+        } catch {
+            badges = []
+        }
     }
 
     // MARK: - Action Handlers
