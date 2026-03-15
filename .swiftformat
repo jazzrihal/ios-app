@@ -20,4 +20,4 @@
 --disable wrapMultilineStatementBraces
 --disable sortSwitchCases
 
---exclude DerivedData,build
+--exclude DerivedData,build,CameraApp/Models/SupabaseTypes.swift
