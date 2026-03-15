@@ -1,6 +1,6 @@
-# CameraApp — run `make help` for available targets
+# Pinstoria — run `make help` for available targets
 
-SCHEME      := CameraApp
+SCHEME      := Pinstoria
 DEVICE      := iPhone 16e
 DESTINATION := platform=iOS Simulator,name=$(DEVICE)
 RUN_DEVICE  := $(DEVICE)
@@ -77,7 +77,7 @@ run: ## Build and run the app in the simulator (iPhone 16e)
 	APP=$$(xcodebuild -scheme $(SCHEME) -destination "id=$$UDID" -showBuildSettings 2>/dev/null | \
 		awk '$$1=="BUILT_PRODUCTS_DIR" {dir=$$3} $$1=="FULL_PRODUCT_NAME" {name=$$3} END {print dir "/" name}') && \
 	xcrun simctl install "$$UDID" "$$APP" && \
-	xcrun simctl launch "$$UDID" com.cameraapp.CameraApp
+	xcrun simctl launch "$$UDID" com.jazzrihal.pinstoria
 
 .PHONY: clean
 clean: ## Remove build artifacts
