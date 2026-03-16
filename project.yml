@@ -34,6 +34,8 @@ targets:
         NSPhotoLibraryAddUsageDescription: "This app saves captured photos to your photo library."
         NSLocationWhenInUseUsageDescription: "This app uses your location to find nearby image posts on the Explore map."
         CFBundleDisplayName: "Pinstoria"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen:
           UIColorName: ""
     settings:
@@ -42,7 +44,7 @@ targets:
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "15"
         SWIFT_VERSION: "5.9"
-        TARGETED_DEVICE_FAMILY: "1,2"
+        TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_FILE: CameraApp/Info.plist
     postCompileScripts:
       - script: |
