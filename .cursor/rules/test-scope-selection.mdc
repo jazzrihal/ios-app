@@ -1,0 +1,16 @@
+---
+description: Choose the smallest useful test scope
+alwaysApply: true
+---
+
+# Test Scope Selection
+
+Pick the smallest test scope that still validates the change.
+
+- Start with targeted tests for the files or behaviors you changed.
+- Prefer `make test-unit` for non-UI or model/view-model/service changes.
+- For UI changes, run the smallest targeted UI tests first (specific test class or case) before considering broader runs.
+- Run `make test` only as a last resort: when targeted and `make test-unit` coverage is insufficient, or when explicitly asked to run the full suite.
+- Before running `make test`, provide a 1-2 sentence justification describing why narrower scope is insufficient for this change.
+- If a targeted run fails unexpectedly or suggests broader impact, expand scope incrementally (`targeted -> test-unit -> test`).
+- In updates, briefly state why that test scope was chosen.

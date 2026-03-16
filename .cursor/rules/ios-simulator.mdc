@@ -5,4 +5,6 @@ alwaysApply: true
 
 # iOS Build & Simulator
 
-Always use `make build`, `make test`, and `make run` instead of raw `xcodebuild` commands. The `Makefile` defines the correct simulator device, scheme, and destination.
+Use Makefile targets for standard commands: `make build`, `make test`, `make test-unit`, and `make run`.
+
+The `Makefile` defines the correct simulator device, scheme, and destination. Prefer Make targets over raw `xcodebuild` unless a narrower one-off test selection is needed (for example, a specific `-only-testing` case).
