@@ -55,8 +55,8 @@ jobs:
 
       - name: Write Secrets.plist from hosted Supabase
         env:
-          CI_SUPABASE_URL: ${{ secrets.CI_SUPABASE_URL }}
-          CI_SUPABASE_ANON_KEY: ${{ secrets.CI_SUPABASE_ANON_KEY }}
+          CI_SUPABASE_URL: ${{ vars.CI_SUPABASE_URL }}
+          CI_SUPABASE_ANON_KEY: ${{ vars.CI_SUPABASE_ANON_KEY }}
         run: |
           chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh scripts/ci-reset-hosted-supabase.sh
           ./scripts/ci-write-secrets.sh hosted
