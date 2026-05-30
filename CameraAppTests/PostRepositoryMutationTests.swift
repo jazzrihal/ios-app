@@ -1,4 +1,4 @@
-@testable import CameraApp
+@testable import Pinstoria
 import Testing
 
 @Suite("PostRepository Mutations")

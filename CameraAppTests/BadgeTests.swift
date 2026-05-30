@@ -1,4 +1,4 @@
-@testable import CameraApp
+@testable import Pinstoria
 import Foundation
 import Supabase
 import Testing

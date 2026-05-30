@@ -1,4 +1,4 @@
-@testable import CameraApp
+@testable import Pinstoria
 import CoreLocation
 import Foundation
 import SwiftUI
