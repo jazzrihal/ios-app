@@ -132,8 +132,6 @@ struct PostDetailView: View {
                     onDone: { showEditPostFlow = false },
                     onSaved: { dismiss() }
                 )
-            } else {
-                EmptyView()
             }
         }
         .alert("Delete Post?", isPresented: $showDeleteConfirmation) {

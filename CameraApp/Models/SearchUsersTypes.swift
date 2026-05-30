@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - search_users RPC Types
 
 /// Parameters for the `search_users` Supabase RPC.
-struct SearchUsersParams: Encodable, Sendable {
+struct SearchUsersParams: Encodable {
     let query: String
     let maxResults: Int
 
@@ -15,7 +15,7 @@ struct SearchUsersParams: Encodable, Sendable {
 }
 
 /// Decoded row from the `search_users` Supabase RPC.
-struct SearchUserRow: Decodable, Sendable {
+struct SearchUserRow: Decodable {
     let id: UUID
     let username: String
     let displayName: String

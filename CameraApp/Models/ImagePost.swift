@@ -67,7 +67,7 @@ struct ImagePost: Identifiable {
 // MARK: - nearby_posts RPC Types
 
 /// Parameters for the `nearby_posts` Supabase RPC.
-struct NearbyPostsParams: Encodable, Sendable {
+struct NearbyPostsParams: Encodable {
     let lng: Double
     let lat: Double
     let searchDate: String
@@ -121,7 +121,7 @@ struct NearbyPostRow: Codable {
 // MARK: - get_user_posts_and_pins RPC Types
 
 /// Parameters for the `get_user_posts_and_pins` Supabase RPC.
-struct GetUserPostsAndPinsParams: Encodable, Sendable {
+struct GetUserPostsAndPinsParams: Encodable {
     let targetUserId: UUID
     let pageSize: Int
     let pageOffset: Int
