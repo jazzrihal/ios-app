@@ -103,13 +103,19 @@ jobs:
           token: ${{ secrets.IOS_APP_BACKEND_READ_TOKEN }}
 
       - name: Install tools
-        run: brew install swiftlint swiftformat xcodegen
+        run: brew install swiftlint swiftformat xcodegen colima docker
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
           version: 2.102.0
           github-token: ${{ github.token }}
+
+      - name: Start Docker
+        run: |
+          colima start --cpu 2 --memory 6 --disk 20
+          docker context use colima || true
+          docker info
 
       - name: Start Supabase
         working-directory: ios-app-backend
