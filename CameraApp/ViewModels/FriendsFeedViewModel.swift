@@ -1,4 +1,3 @@
-import CoreLocation
 import Foundation
 import Observation
 
@@ -68,20 +67,7 @@ final class FriendsFeedViewModel: TabRefreshable {
 
                 posts = rows.compactMap { row in
                     guard let user = userLookup[row.userId] else { return nil }
-                    return ImagePost(
-                        id: row.id,
-                        imageURL: SupabaseManager.imageURL(for: row.imagePath),
-                        imagePath: row.imagePath,
-                        user: user,
-                        caption: row.caption ?? "",
-                        coordinate: CLLocationCoordinate2D(
-                            latitude: row.latitude, longitude: row.longitude
-                        ),
-                        locationName: row.locationName ?? "",
-                        timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
-                        distanceMeters: 0,
-                        scope: PostScope(serverValue: row.scope)
-                    )
+                    return ImagePost(from: row, user: user)
                 }
             }
             hasMorePages = posts.count == pageSize
@@ -145,20 +131,7 @@ final class FriendsFeedViewModel: TabRefreshable {
 
                 newPosts = rows.compactMap { row -> ImagePost? in
                     guard let user = userLookup[row.userId] else { return nil }
-                    return ImagePost(
-                        id: row.id,
-                        imageURL: SupabaseManager.imageURL(for: row.imagePath),
-                        imagePath: row.imagePath,
-                        user: user,
-                        caption: row.caption ?? "",
-                        coordinate: CLLocationCoordinate2D(
-                            latitude: row.latitude, longitude: row.longitude
-                        ),
-                        locationName: row.locationName ?? "",
-                        timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
-                        distanceMeters: 0,
-                        scope: PostScope(serverValue: row.scope)
-                    )
+                    return ImagePost(from: row, user: user)
                 }
             }
             posts.append(contentsOf: newPosts)

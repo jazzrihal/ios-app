@@ -1,4 +1,3 @@
-import CoreLocation
 import Foundation
 import SwiftData
 
@@ -152,20 +151,7 @@ final class DefaultPostRepository: PostRepository {
 
             return rows.compactMap { row in
                 guard let user = userLookup[row.userId] else { return nil }
-                return ImagePost(
-                    id: row.id,
-                    imageURL: SupabaseManager.imageURL(for: row.imagePath),
-                    imagePath: row.imagePath,
-                    user: user,
-                    caption: row.caption ?? "",
-                    coordinate: CLLocationCoordinate2D(
-                        latitude: row.latitude, longitude: row.longitude
-                    ),
-                    locationName: row.locationName ?? "",
-                    timestamp: ISO8601DateFormatter.flexibleParse(row.createdAt) ?? Date(),
-                    distanceMeters: 0,
-                    scope: PostScope(serverValue: row.scope)
-                )
+                return ImagePost(from: row, user: user)
             }
         } catch {
             if from == 0 {

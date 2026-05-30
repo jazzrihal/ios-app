@@ -64,6 +64,36 @@ struct ImagePost: Identifiable {
     }
 }
 
+// MARK: - Post Row Types
+
+/// Decodes a post row without the `location` geography column, which PostGIS
+/// returns as WKB hex. Uses the separate `latitude`/`longitude` columns instead.
+struct PostRowWithoutLocation: Codable {
+    let id: UUID
+    let userId: UUID
+    let imagePath: String
+    let caption: String?
+    let latitude: Double
+    let longitude: Double
+    let locationName: String?
+    let scope: String
+    let createdAt: String?
+
+    /// Columns to select — excludes the `location` geography column.
+    static let selectColumns =
+        "id,user_id,image_path,caption,latitude,longitude,location_name,scope,created_at"
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case imagePath = "image_path"
+        case caption, latitude, longitude
+        case locationName = "location_name"
+        case scope
+        case createdAt = "created_at"
+    }
+}
+
 // MARK: - nearby_posts RPC Types
 
 /// Parameters for the `nearby_posts` Supabase RPC.
@@ -201,6 +231,20 @@ extension ImagePost {
 }
 
 extension ImagePost {
+    /// Creates an `ImagePost` from a friend-feed post row and its owning user.
+    init(from row: PostRowWithoutLocation, user: User) {
+        id = row.id
+        imageURL = SupabaseManager.imageURL(for: row.imagePath)
+        imagePath = row.imagePath
+        self.user = user
+        caption = row.caption ?? ""
+        coordinate = CLLocationCoordinate2D(latitude: row.latitude, longitude: row.longitude)
+        locationName = row.locationName ?? ""
+        timestamp = Self.parseISO8601(row.createdAt) ?? Date()
+        distanceMeters = 0
+        scope = PostScope(serverValue: row.scope)
+    }
+
     /// Creates an `ImagePost` from a `NearbyPostRow` returned by the RPC.
     init(from row: NearbyPostRow) {
         id = row.id
