@@ -57,7 +57,7 @@ final class PostInteractionUITests: XCTestCase {
 
     func testLikeAndPinNonFriendPost() {
         navigateToFriendsTab()
-        app.buttons["Add FriendSectionButton"].tap()
+        app.buttons["AddFriendSectionButton"].tap()
 
         let searchField = app.textFields["Search by username or name…"]
         XCTAssertTrue(searchField.waitForExistence(timeout: 5), "Search field should appear")
@@ -240,7 +240,7 @@ final class PostInteractionUITests: XCTestCase {
 
         let optionsButton = app.buttons["PostOptionsMenuButton"]
         XCTAssertTrue(optionsButton.waitForExistence(timeout: 5), "Owner should see post options menu")
-        optionsButton.tap()
+        tap(optionsButton)
 
         XCTAssertTrue(app.buttons["EditPostMenuAction"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["DeletePostMenuAction"].waitForExistence(timeout: 3))
@@ -252,7 +252,7 @@ final class PostInteractionUITests: XCTestCase {
         app.buttons["PostCell_0"].tap()
         waitForActionBar()
 
-        app.buttons["PostOptionsMenuButton"].tap()
+        tapPostOptionsMenu()
         app.buttons["EditPostMenuAction"].tap()
 
         XCTAssertTrue(app.navigationBars["Edit Post"].waitForExistence(timeout: 5))
@@ -293,7 +293,7 @@ final class PostInteractionUITests: XCTestCase {
         app.buttons["PostCell_0"].tap()
         waitForActionBar()
 
-        app.buttons["PostOptionsMenuButton"].tap()
+        tapPostOptionsMenu()
         app.buttons["DeletePostMenuAction"].tap()
 
         let deleteAlert = app.alerts["Delete Post?"]
@@ -366,12 +366,31 @@ private extension PostInteractionUITests {
             app.navigationBars["Friends"].waitForExistence(timeout: 5),
             "Friends tab should appear"
         )
+
+        let friendsSection = app.buttons["FriendsSectionButton"]
+        if friendsSection.waitForExistence(timeout: 3), !friendsSection.isSelected {
+            friendsSection.tap()
+        }
     }
 
     func tapBackButton() {
         let backButton = app.navigationBars.buttons.firstMatch
         if backButton.exists, backButton.isHittable {
             backButton.tap()
+        }
+    }
+
+    func tapPostOptionsMenu() {
+        let optionsButton = app.buttons["PostOptionsMenuButton"]
+        XCTAssertTrue(optionsButton.waitForExistence(timeout: 5), "Post options menu should exist")
+        tap(optionsButton)
+    }
+
+    func tap(_ element: XCUIElement) {
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
     }
 

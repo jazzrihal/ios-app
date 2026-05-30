@@ -11,6 +11,7 @@ struct PostPreviewView: View {
 
     private let mode: Mode
     let onDone: () -> Void
+    let onPosted: (() -> Void)?
     let onSaved: (() -> Void)?
 
     @Environment(AuthManager.self) private var authManager
@@ -27,9 +28,14 @@ struct PostPreviewView: View {
     @State private var isSavingEdits = false
     @FocusState private var captionFocused: Bool
 
-    init(image: UIImage, onDone: @escaping () -> Void) {
+    init(
+        image: UIImage,
+        onDone: @escaping () -> Void,
+        onPosted: (() -> Void)? = nil
+    ) {
         mode = .create(image: image)
         self.onDone = onDone
+        self.onPosted = onPosted
         onSaved = nil
         _caption = State(initialValue: "")
         _captureDate = State(initialValue: Date())
@@ -44,6 +50,7 @@ struct PostPreviewView: View {
     ) {
         mode = .edit(existingPost: editingPost)
         self.onDone = onDone
+        onPosted = nil
         self.onSaved = onSaved
         _caption = State(initialValue: editingPost.caption)
         _captureDate = State(initialValue: editingPost.timestamp)
@@ -355,7 +362,7 @@ struct PostPreviewView: View {
             userId: userId
         )
         uploadManager.enqueue(input)
-        onDone()
+        finishPosting()
     }
 
     private func saveDraft() {
@@ -401,7 +408,7 @@ struct PostPreviewView: View {
             userId: userId
         )
         uploadManager.enqueue(input)
-        onDone()
+        finishPosting()
     }
 
     @MainActor
@@ -448,6 +455,14 @@ struct PostPreviewView: View {
     private var isCreateMode: Bool {
         if case .create = mode { return true }
         return false
+    }
+
+    private func finishPosting() {
+        if let onPosted {
+            onPosted()
+        } else {
+            onDone()
+        }
     }
 
     private var createImage: UIImage? {
