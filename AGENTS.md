@@ -13,7 +13,9 @@
 | `make format-check` | Yes (SwiftFormat binary) | Yes |
 | `make lint`, `make build`, `make run`, `make test*` | No — requires Xcode + Simulator | Yes |
 
-CI lint/format runs on `macos-15` (`.github/workflows/ci.yml`). On Linux, backend hello-world (auth + RPC) is validated in `ios-app-backend`; the app itself cannot be launched here.
+CI on `macos-15` (`.github/workflows/ci.yml`): **lint/format → build + unit tests → UI tests** (UI job checks out `ios-app-backend`, starts Supabase, writes `Secrets.plist`). Cloud Agents on Linux should **push a branch and rely on these checks** instead of `make build` / `make test` locally.
+
+On Linux: backend hello-world (auth + RPC) in `ios-app-backend`; `make format-check` here; app Simulator runs require macOS or CI.
 
 ### Backend dependency
 
@@ -38,8 +40,15 @@ cp Secrets.example.plist CameraApp/Secrets.plist
 
 After adding/moving `.swift` files: `make generate` (see `.cursor/rules/xcodegen.mdc`).
 
+### CI helpers (macOS / GitHub Actions)
+
+- `scripts/ci-resolve-simulator.sh` — picks an available iPhone simulator (`DEVICE` overrides).
+- `scripts/ci-write-secrets.sh placeholder` — dummy `Secrets.plist` for build/unit tests.
+- `scripts/ci-write-secrets.sh local` — requires `API_URL` and `ANON_KEY` from `supabase status -o env` (UI tests).
+
 ### Gotchas
 
 - SwiftLint on Linux may crash (SourceKitten); run `make lint` on macOS or in CI.
 - Pre-commit hook expects Homebrew tools (`scripts/install-hooks.sh`).
 - Simulator uses local networking for `http://127.0.0.1:54321` (see `project.yml`); physical devices need a reachable host IP, not localhost.
+- CI UI tests pin backend checkout to `main`; coordinated breaking API changes need both repos updated or a temporary workflow `ref`.
