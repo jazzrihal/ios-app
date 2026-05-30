@@ -118,8 +118,9 @@ jobs:
           docker info
 
       - name: Start Supabase
+        timeout-minutes: 15
         working-directory: ios-app-backend
-        run: supabase start -x ${{ env.SUPABASE_EXCLUDE }}
+        run: supabase start -x ${{ env.SUPABASE_EXCLUDE }} --debug
 
       - name: Reset database (migrations + seed)
         working-directory: ios-app-backend
