@@ -72,7 +72,7 @@ jobs:
 
   ui-tests:
     name: UI Smoke Tests (Simulator + Supabase)
-    runs-on: macos-15
+    runs-on: macos-15-intel
     needs: build-and-unit-test
     steps:
       - name: Checkout ios-app
