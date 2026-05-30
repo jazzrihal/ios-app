@@ -79,67 +79,59 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check backend repository access
-        id: backend-access
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.IOS_APP_BACKEND_READ_TOKEN }}
         run: |
-          if gh repo view "${BACKEND_REPO}" >/dev/null 2>&1; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::Skipping UI smoke tests because ${BACKEND_REPO} is not accessible to this workflow token."
-            echo "available=false" >> "$GITHUB_OUTPUT"
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::warning::UI smoke tests were not run because IOS_APP_BACKEND_READ_TOKEN is not configured."
+            echo "::error::Configure IOS_APP_BACKEND_READ_TOKEN with read access to ${BACKEND_REPO}."
+            exit 1
           fi
 
-      - name: Skip UI smoke tests
-        if: steps.backend-access.outputs.available != 'true'
-        run: echo "Backend repository unavailable; skipping Supabase-backed UI smoke tests."
+          if ! gh repo view "${BACKEND_REPO}" >/dev/null 2>&1; then
+            echo "::warning::UI smoke tests were not run because ${BACKEND_REPO} is not accessible to IOS_APP_BACKEND_READ_TOKEN."
+            echo "::error::Grant the token Contents: Read access to ${BACKEND_REPO}, or update BACKEND_REPO."
+            exit 1
+          fi
 
       - name: Checkout ios-app-backend
-        if: steps.backend-access.outputs.available == 'true'
         uses: actions/checkout@v4
         with:
           repository: ${{ env.BACKEND_REPO }}
           path: ios-app-backend
           ref: main
+          token: ${{ secrets.IOS_APP_BACKEND_READ_TOKEN }}
 
       - name: Install tools
-        if: steps.backend-access.outputs.available == 'true'
         run: brew install swiftlint swiftformat xcodegen
 
       - name: Setup Supabase CLI
-        if: steps.backend-access.outputs.available == 'true'
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
       - name: Start Supabase
-        if: steps.backend-access.outputs.available == 'true'
         working-directory: ios-app-backend
         run: supabase start -x ${{ env.SUPABASE_EXCLUDE }}
 
       - name: Reset database (migrations + seed)
-        if: steps.backend-access.outputs.available == 'true'
         working-directory: ios-app-backend
         run: supabase db reset
 
       - name: Write Secrets.plist from local Supabase
-        if: steps.backend-access.outputs.available == 'true'
         run: |
           eval "$(cd ios-app-backend && supabase status -o env)"
           chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh
           ./scripts/ci-write-secrets.sh local
 
       - name: Generate Xcode project
-        if: steps.backend-access.outputs.available == 'true'
         run: make generate
 
       - name: Resolve simulator
-        if: steps.backend-access.outputs.available == 'true'
         id: sim
         run: echo "device=$(./scripts/ci-resolve-simulator.sh)" >> "$GITHUB_OUTPUT"
 
       - name: Run UI smoke tests
-        if: steps.backend-access.outputs.available == 'true'
         run: |
           ONLY_FLAGS=()
           for test_id in ${{ env.CI_UI_SMOKE_TESTS }}; do
