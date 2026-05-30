@@ -94,10 +94,7 @@ final class PostInteractionUITests: XCTestCase {
             tapBackButton()
 
             navigateToProfileTab()
-            pullToRefresh()
-            sleep(3)
-            let adjustedCount = postCellCount()
-            initialCount = adjustedCount
+            initialCount = waitForProfilePostCount(lessThan: initialCount)
 
             navigateToFriendFirstPost()
         }
@@ -110,11 +107,8 @@ final class PostInteractionUITests: XCTestCase {
 
         // Refresh profile and verify count increased
         navigateToProfileTab()
-        pullToRefresh()
-        sleep(3)
-        let countAfterPin = postCellCount()
-        XCTAssertEqual(
-            countAfterPin, initialCount + 1,
+        XCTAssertTrue(
+            waitForProfilePostCount(initialCount + 1),
             "Profile should have one more post after pinning a friend's post"
         )
 
@@ -131,11 +125,8 @@ final class PostInteractionUITests: XCTestCase {
 
         // Verify profile count is restored
         navigateToProfileTab()
-        pullToRefresh()
-        sleep(3)
-        let countAfterUnpin = postCellCount()
-        XCTAssertEqual(
-            countAfterUnpin, initialCount,
+        XCTAssertTrue(
+            waitForProfilePostCount(initialCount),
             "Profile should return to original count after unpinning"
         )
     }
@@ -417,6 +408,34 @@ private extension PostInteractionUITests {
         app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH 'PostCell_'")
         ).count
+    }
+
+    func waitForProfilePostCount(_ expectedCount: Int, timeout: TimeInterval = 20) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            pullToRefresh()
+            sleep(2)
+            if postCellCount() == expectedCount {
+                return true
+            }
+        } while Date() < deadline
+
+        return postCellCount() == expectedCount
+    }
+
+    func waitForProfilePostCount(lessThan count: Int, timeout: TimeInterval = 20) -> Int {
+        let deadline = Date().addingTimeInterval(timeout)
+        var currentCount = postCellCount()
+        repeat {
+            pullToRefresh()
+            sleep(2)
+            currentCount = postCellCount()
+            if currentCount < count {
+                return currentCount
+            }
+        } while Date() < deadline
+
+        return currentCount
     }
 
     func waitForActionBar() {
