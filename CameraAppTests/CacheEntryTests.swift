@@ -1,5 +1,5 @@
-@testable import Pinstoria
 import Foundation
+@testable import Pinstoria
 import SwiftData
 import Testing
 
