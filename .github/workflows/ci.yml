@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  BACKEND_REPO: jazzrihal/ios-app-backend
   # Fast PR feedback: auth + tab shell only. Run `make test` locally for full UI suite.
   CI_UI_SMOKE_TESTS: >-
     CameraAppUITests/CameraAppUITests/testExploreTabIsSelectedOnLaunch
@@ -41,15 +42,23 @@ jobs:
       - name: Checkout ios-app
         uses: actions/checkout@v4
 
+      - name: Checkout ios-app-backend seed data
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BACKEND_REPO }}
+          path: ios-app-backend
+          ref: main
+          token: ${{ secrets.IOS_APP_BACKEND_READ_TOKEN }}
+
       - name: Install tools
-        run: brew install swiftlint swiftformat xcodegen
+        run: brew install swiftlint swiftformat xcodegen libpq
 
       - name: Write Secrets.plist from hosted Supabase
         env:
           CI_SUPABASE_URL: ${{ secrets.CI_SUPABASE_URL }}
           CI_SUPABASE_ANON_KEY: ${{ secrets.CI_SUPABASE_ANON_KEY }}
         run: |
-          chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh
+          chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh scripts/ci-reset-hosted-supabase.sh
           ./scripts/ci-write-secrets.sh hosted
 
       - name: Generate Xcode project
@@ -79,6 +88,11 @@ jobs:
             -derivedDataPath build/DerivedData \
             -only-testing CameraAppTests \
             -resultBundlePath build/test-results/unit-tests.xcresult
+
+      - name: Reset hosted Supabase test data
+        env:
+          CI_SUPABASE_DB_URL: ${{ secrets.CI_SUPABASE_DB_URL }}
+        run: ./scripts/ci-reset-hosted-supabase.sh
 
       - name: Run UI smoke tests without rebuilding
         run: |

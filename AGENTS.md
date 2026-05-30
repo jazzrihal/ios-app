@@ -13,7 +13,7 @@
 | `make format-check` | Yes (SwiftFormat binary) | Yes |
 | `make lint`, `make build`, `make run`, `make test*` | No — requires Xcode + Simulator | Yes |
 
-CI on `macos-15` (`.github/workflows/ci.yml`): **lint/format → one build-for-testing → unit tests + UI smoke tests without rebuilding** (two XCTest UI cases: sign-in + Explore tab + tab bar; not the full `CameraAppUITests` / `PostInteractionUITests` suites). UI smoke tests use a hosted Supabase test project via `CI_SUPABASE_URL` and `CI_SUPABASE_ANON_KEY` GitHub Actions secrets. Cloud Agents on Linux should **push a branch and rely on these checks**; run `make test` on macOS before large UI changes.
+CI on `macos-15` (`.github/workflows/ci.yml`): **lint/format → one build-for-testing → unit tests + UI smoke tests without rebuilding** (two XCTest UI cases: sign-in + Explore tab + tab bar; not the full `CameraAppUITests` / `PostInteractionUITests` suites). UI smoke tests use a hosted Supabase test project via `CI_SUPABASE_URL` and `CI_SUPABASE_ANON_KEY` GitHub Actions secrets, then reset that test project with `CI_SUPABASE_DB_URL` and apply `ios-app-backend/supabase/seed.sql` before launching UI tests. Cloud Agents on Linux should **push a branch and rely on these checks**; run `make test` on macOS before large UI changes.
 
 On Linux: backend hello-world (auth + RPC) in `ios-app-backend`; `make format-check` here; app Simulator runs require macOS or CI.
 
@@ -46,10 +46,11 @@ After adding/moving `.swift` files: `make generate` (see `.cursor/rules/xcodegen
 - `scripts/ci-write-secrets.sh placeholder` — dummy `Secrets.plist` for build/unit tests.
 - `scripts/ci-write-secrets.sh local` — requires `API_URL` and `ANON_KEY` from `supabase status -o env` (UI tests).
 - `scripts/ci-write-secrets.sh hosted` — requires `CI_SUPABASE_URL` and `CI_SUPABASE_ANON_KEY` from GitHub Actions secrets (UI smoke tests).
+- `scripts/ci-reset-hosted-supabase.sh` — requires `CI_SUPABASE_DB_URL` and `ios-app-backend/supabase/seed.sql`; resets hosted UI smoke-test data before applying the backend seed.
 
 ### Gotchas
 
 - SwiftLint on Linux may crash (SourceKitten); run `make lint` on macOS or in CI.
 - Pre-commit hook expects Homebrew tools (`scripts/install-hooks.sh`).
 - Simulator uses local networking for `http://127.0.0.1:54321` (see `project.yml`); physical devices need a reachable host IP, not localhost.
-- CI UI smoke tests require the hosted Supabase test project to keep `alice@test.com` / `password123` seeded.
+- CI UI smoke tests assume the hosted Supabase project is dedicated to CI because reset removes app-owned data and auth users before applying the backend seed.
