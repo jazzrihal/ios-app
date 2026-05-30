@@ -1,55 +1,69 @@
 # AGENTS.md
 
-## Cursor Cloud specific instructions
+## Product
 
-### Product
+Pinstoria is a SwiftUI iOS app for location-based photo sharing. It talks directly to Supabase; schema, seed data, storage setup, and database tests live in the sibling `ios-app-backend` repo.
 
-**Pinstoria** — location-based photo-sharing iOS app (SwiftUI). Talks directly to Supabase; backend schema/tests are in the sibling repo `ios-app-backend` (`repos/ios-app-backend` in this workspace). See that repo’s `AGENTS.md` for Supabase startup (full vs trimmed stack).
+## Environment
 
-### Linux cloud VM vs macOS
+| Task | Linux Cloud VM | macOS |
+| --- | --- | --- |
+| `make format-check` | Supported when SwiftFormat is installed | Supported |
+| `make lint` | Not reliable; SwiftLint/SourceKit usually require macOS tooling | Supported |
+| `make build`, `make run`, `make test*` | Not supported; requires Xcode and Simulator | Supported |
 
-| Capability | Linux VM | macOS |
-|------------|----------|-------|
-| `make format-check` | Yes (SwiftFormat binary) | Yes |
-| `make lint`, `make build`, `make run`, `make test*` | No — requires Xcode + Simulator | Yes |
+CI (`.github/workflows/ci.yml`) runs on `macos-15`: format check, strict SwiftLint, one build-for-testing, unit tests, then UI tests against a hosted Supabase test project. Linux agents should run the checks available in their environment, push the branch, and use CI for macOS-only validation.
 
-CI on `macos-15` (`.github/workflows/ci.yml`): **lint/format → one build-for-testing → unit tests + UI tests without rebuilding**. UI tests use a hosted Supabase test project via `CI_SUPABASE_URL` and `CI_SUPABASE_ANON_KEY` GitHub Actions variables, then run `supabase db reset --linked` from the checked-out `ios-app-backend` repo using `CI_SUPABASE_PAT`, `CI_SUPABASE_PROJECT_REF`, and `CI_SUPABASE_DB_PASSWORD` so backend migrations and `seed.sql` are the source of truth. The hosted Supabase E2E job has global concurrency `1` across branches/agents. Cloud Agents on Linux should **push a branch and rely on these checks**; run `make test` on macOS before large UI changes.
+## Agent workflow
 
-On Linux: backend hello-world (auth + RPC) in `ios-app-backend`; `make format-check` here; app Simulator runs require macOS or CI.
+1. Prefer existing SwiftUI patterns, repositories, stores, and style tokens in `CameraApp/Styles`.
+2. Do not edit `CameraApp/Models/SupabaseTypes.swift`; it is generated from the backend schema.
+3. If files are added, removed, moved, renamed, or `project.yml` changes, run `make generate`.
+4. Before committing frontend changes, run lint and format checks:
+   - macOS: `make format-check && make lint`
+   - Linux Cloud VM: run `make format-check` if SwiftFormat is installed; note any missing tool and rely on macOS/CI for `make lint`.
+5. Pick the smallest useful test scope. Use targeted tests or `make test-unit` for non-UI changes; use `make test` only when unit coverage is insufficient or the change affects UI/E2E behavior.
 
-### Backend dependency
-
-Required for `make run` and UI tests; not for `make test-unit` (mocks).
-
-1. Start Supabase in `ios-app-backend` (see its `AGENTS.md`).
-2. Create git-ignored `CameraApp/Secrets.plist`:
+## Common commands
 
 ```bash
-cd ../ios-app-backend && supabase status -o env
-cd ../ios-app
-cp Secrets.example.plist CameraApp/Secrets.plist
-# SUPABASE_URL=http://127.0.0.1:54321
-# SUPABASE_ANON_KEY=<ANON_KEY from supabase status -o env>
+make setup          # macOS: install tools, hooks, and generate the Xcode project
+make generate       # regenerate CameraApp.xcodeproj from project.yml
+make format         # apply SwiftFormat
+make format-check   # verify formatting
+make lint           # strict SwiftLint
+make test-unit      # unit tests only
+make test           # unit + UI tests
+make run            # build and launch in Simulator
 ```
 
-**UI / E2E sign-in:** `alice@test.com` / `password123` (`CameraAppUITests/XCTestCase+Auth.swift`).
+## Backend dependency
 
-### macOS setup
+`make run` and UI tests require Supabase; unit tests use mocks. Start/reset the backend in `../ios-app-backend`, then create a git-ignored secrets file:
 
-`make setup` — installs swiftlint, swiftformat, xcodegen via Homebrew, git hooks, and runs `xcodegen generate`.
+```bash
+cd ../ios-app-backend
+supabase start -x studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor
+make reset
+supabase status -o env
 
-After adding/moving `.swift` files: `make generate` (see `.cursor/rules/xcodegen.mdc`).
+cd ../ios-app
+cp Secrets.example.plist CameraApp/Secrets.plist
+# Set SUPABASE_URL=http://127.0.0.1:54321
+# Set SUPABASE_ANON_KEY=<ANON_KEY from supabase status -o env>
+```
 
-### CI helpers (macOS / GitHub Actions)
+Seed UI/E2E users: `alice@test.com`, `bob@test.com`, `carol@test.com`; password `password123`.
 
-- `scripts/ci-resolve-simulator.sh` — picks an available iPhone simulator (`DEVICE` overrides).
-- `scripts/ci-write-secrets.sh placeholder` — dummy `Secrets.plist` for build/unit tests.
-- `scripts/ci-write-secrets.sh local` — requires `API_URL` and `ANON_KEY` from `supabase status -o env` (UI tests).
-- `scripts/ci-write-secrets.sh hosted` — requires `CI_SUPABASE_URL` and `CI_SUPABASE_ANON_KEY` from GitHub Actions variables (UI tests).
+## CI helpers
 
-### Gotchas
+- `scripts/ci-resolve-simulator.sh` chooses an available iPhone simulator (`DEVICE` overrides).
+- `scripts/ci-write-secrets.sh placeholder` writes dummy secrets for build/unit tests.
+- `scripts/ci-write-secrets.sh local` uses `API_URL` and `ANON_KEY` from `supabase status -o env`.
+- `scripts/ci-write-secrets.sh hosted` uses GitHub Actions `CI_SUPABASE_URL` and `CI_SUPABASE_ANON_KEY`.
 
-- SwiftLint on Linux may crash (SourceKitten); run `make lint` on macOS or in CI.
-- Pre-commit hook expects Homebrew tools (`scripts/install-hooks.sh`).
-- Simulator uses local networking for `http://127.0.0.1:54321` (see `project.yml`); physical devices need a reachable host IP, not localhost.
-- CI UI tests assume the hosted Supabase project is dedicated to CI because `supabase db reset --linked` is destructive.
+## Notes
+
+- `CameraApp.xcodeproj` is generated by XcodeGen; do not edit it manually.
+- The local Supabase URL `http://127.0.0.1:54321` works for Simulator, not physical devices.
+- Hosted CI UI tests reset the linked Supabase database; that project must be dedicated to CI.
