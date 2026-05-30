@@ -98,8 +98,15 @@ jobs:
       - name: Reset hosted Supabase test database
         working-directory: ios-app-backend
         env:
-          CI_SUPABASE_DB_URL: ${{ secrets.CI_SUPABASE_DB_URL }}
-        run: supabase db reset --db-url "$CI_SUPABASE_DB_URL"
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.CI_SUPABASE_PAT }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.CI_SUPABASE_DB_PASSWORD }}
+          CI_SUPABASE_PROJECT_REF: ${{ vars.CI_SUPABASE_PROJECT_REF }}
+        run: |
+          : "${SUPABASE_ACCESS_TOKEN:?CI_SUPABASE_PAT must be set}"
+          : "${SUPABASE_DB_PASSWORD:?CI_SUPABASE_DB_PASSWORD must be set}"
+          : "${CI_SUPABASE_PROJECT_REF:?CI_SUPABASE_PROJECT_REF must be set}"
+          supabase link --project-ref "$CI_SUPABASE_PROJECT_REF"
+          supabase db reset --linked <<< 'y'
 
       - name: Run UI smoke tests without rebuilding
         run: |
