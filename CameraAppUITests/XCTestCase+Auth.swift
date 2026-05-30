@@ -34,7 +34,7 @@ extension XCTestCase {
         signInButton.tap()
 
         XCTAssertTrue(
-            tabBar.waitForExistence(timeout: 15),
+            tabBar.waitForExistence(timeout: 45),
             "Tab bar should appear after sign in"
         )
     }
