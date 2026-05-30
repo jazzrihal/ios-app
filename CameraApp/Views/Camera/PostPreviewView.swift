@@ -65,7 +65,9 @@ struct PostPreviewView: View {
                     imageSection
                     if isCreateMode {
                         quickActionsSection
-                        offlineBanner
+                        if !networkMonitor.isConnected {
+                            PostPreviewOfflineBanner()
+                        }
                     }
                     captionSection
                     dateTimeSection
@@ -152,36 +154,6 @@ struct PostPreviewView: View {
         }
         .buttonStyle(.appText)
         .padding(.horizontal, AppStyle.Padding.screenHorizontal)
-    }
-
-    // MARK: - Offline Banner
-
-    @ViewBuilder private var offlineBanner: some View {
-        if !networkMonitor.isConnected {
-            HStack(spacing: AppStyle.Spacing.row) {
-                Image(systemName: "wifi.slash")
-                    .font(.title3)
-                    .foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("You are offline")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Save your photo and upload when you're back online.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            .padding(AppStyle.Padding.cardInner)
-            .background(
-                Color.orange.opacity(0.1),
-                in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
-                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-            )
-            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
-        }
     }
 
     // MARK: - Caption
@@ -468,6 +440,36 @@ struct PostPreviewView: View {
     private var createImage: UIImage? {
         guard case let .create(image) = mode else { return nil }
         return image
+    }
+}
+
+private struct PostPreviewOfflineBanner: View {
+    var body: some View {
+        HStack(spacing: AppStyle.Spacing.row) {
+            Image(systemName: "wifi.slash")
+                .font(.title3)
+                .foregroundStyle(.orange)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("You are offline")
+                    .font(.subheadline.weight(.semibold))
+                Text("Save your photo and upload when you're back online.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(AppStyle.Padding.cardInner)
+        .background(
+            Color.orange.opacity(0.1),
+            in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+        )
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 }
 
