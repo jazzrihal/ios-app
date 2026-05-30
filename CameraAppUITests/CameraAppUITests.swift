@@ -101,7 +101,7 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertTrue(cameraCloseButton.waitForExistence(timeout: 5))
 
         // Dismiss camera
-        cameraCloseButton.tap()
+        tapElement(cameraCloseButton)
 
         // Should return to Explore
         XCTAssertTrue(

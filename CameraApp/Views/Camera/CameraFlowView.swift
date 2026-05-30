@@ -22,7 +22,11 @@ struct CameraFlowView: View {
         .fullScreenCover(item: $capturedPhoto) { photo in
             PostPreviewView(
                 image: photo.image,
-                onDone: { capturedPhoto = nil }
+                onDone: { capturedPhoto = nil },
+                onPosted: {
+                    capturedPhoto = nil
+                    dismiss()
+                }
             )
         }
     }

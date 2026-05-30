@@ -23,19 +23,31 @@ extension XCTestCase {
             "Auth screen should appear"
         )
 
-        emailField.tap()
-        emailField.typeText(email)
+        typeText(email, into: emailField)
 
         let passwordField = app.secureTextFields["Password"]
-        passwordField.tap()
-        passwordField.typeText(password)
+        typeText(password, into: passwordField)
 
         let signInButton = app.buttons["AuthActionButton"]
-        signInButton.tap()
+        tapElement(signInButton)
 
         XCTAssertTrue(
             tabBar.waitForExistence(timeout: 45),
             "Tab bar should appear after sign in"
         )
+    }
+
+    func tapElement(_ element: XCUIElement) {
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+    }
+
+    func typeText(_ text: String, into element: XCUIElement) {
+        XCTAssertTrue(element.waitForExistence(timeout: 5), "Text input should exist")
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        element.typeText(text)
     }
 }

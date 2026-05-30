@@ -96,8 +96,10 @@ class PostMutationStore {
                         .execute()
                     await cacheInvalidator?.postMutated(postId: postId, userId: userId)
                 } catch {
-                    pinnedPostIDs.insert(postId)
-                    print("[PostMutationStore] Unpin failed: \(error)")
+                    await loadPinsAndLikes(for: [postId])
+                    if isPinned(postId) {
+                        print("[PostMutationStore] Unpin failed: \(error)")
+                    }
                 }
             }
         } else {
@@ -113,8 +115,10 @@ class PostMutationStore {
                         .execute()
                     await cacheInvalidator?.postMutated(postId: postId, userId: userId)
                 } catch {
-                    pinnedPostIDs.remove(postId)
-                    print("[PostMutationStore] Pin failed: \(error)")
+                    await loadPinsAndLikes(for: [postId])
+                    if !isPinned(postId) {
+                        print("[PostMutationStore] Pin failed: \(error)")
+                    }
                 }
             }
         }
@@ -136,8 +140,10 @@ class PostMutationStore {
                         .execute()
                     await cacheInvalidator?.postMutated(postId: postId, userId: userId)
                 } catch {
-                    likedPostIDs.insert(postId)
-                    print("[PostMutationStore] Unlike failed: \(error)")
+                    await loadPinsAndLikes(for: [postId])
+                    if isLiked(postId) {
+                        print("[PostMutationStore] Unlike failed: \(error)")
+                    }
                 }
             }
         } else {
@@ -153,8 +159,10 @@ class PostMutationStore {
                         .execute()
                     await cacheInvalidator?.postMutated(postId: postId, userId: userId)
                 } catch {
-                    likedPostIDs.remove(postId)
-                    print("[PostMutationStore] Like failed: \(error)")
+                    await loadPinsAndLikes(for: [postId])
+                    if !isLiked(postId) {
+                        print("[PostMutationStore] Like failed: \(error)")
+                    }
                 }
             }
         }

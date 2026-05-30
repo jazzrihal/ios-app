@@ -112,6 +112,11 @@ struct PostDetailView: View {
                         Image(systemName: "ellipsis")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .frame(
+                                width: AppStyle.IconSize.tapTarget,
+                                height: AppStyle.IconSize.tapTarget
+                            )
+                            .contentShape(Rectangle())
                     }
                     .accessibilityIdentifier("PostOptionsMenuButton")
                 }

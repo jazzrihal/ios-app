@@ -11,6 +11,7 @@ struct PostPreviewView: View {
 
     private let mode: Mode
     let onDone: () -> Void
+    let onPosted: (() -> Void)?
     let onSaved: (() -> Void)?
 
     @Environment(AuthManager.self) private var authManager
@@ -27,9 +28,14 @@ struct PostPreviewView: View {
     @State private var isSavingEdits = false
     @FocusState private var captionFocused: Bool
 
-    init(image: UIImage, onDone: @escaping () -> Void) {
+    init(
+        image: UIImage,
+        onDone: @escaping () -> Void,
+        onPosted: (() -> Void)? = nil
+    ) {
         mode = .create(image: image)
         self.onDone = onDone
+        self.onPosted = onPosted
         onSaved = nil
         _caption = State(initialValue: "")
         _captureDate = State(initialValue: Date())
@@ -44,6 +50,7 @@ struct PostPreviewView: View {
     ) {
         mode = .edit(existingPost: editingPost)
         self.onDone = onDone
+        onPosted = nil
         self.onSaved = onSaved
         _caption = State(initialValue: editingPost.caption)
         _captureDate = State(initialValue: editingPost.timestamp)
@@ -58,7 +65,9 @@ struct PostPreviewView: View {
                     imageSection
                     if isCreateMode {
                         quickActionsSection
-                        offlineBanner
+                        if !networkMonitor.isConnected {
+                            PostPreviewOfflineBanner()
+                        }
                     }
                     captionSection
                     dateTimeSection
@@ -145,36 +154,6 @@ struct PostPreviewView: View {
         }
         .buttonStyle(.appText)
         .padding(.horizontal, AppStyle.Padding.screenHorizontal)
-    }
-
-    // MARK: - Offline Banner
-
-    @ViewBuilder private var offlineBanner: some View {
-        if !networkMonitor.isConnected {
-            HStack(spacing: AppStyle.Spacing.row) {
-                Image(systemName: "wifi.slash")
-                    .font(.title3)
-                    .foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("You are offline")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Save your photo and upload when you're back online.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            .padding(AppStyle.Padding.cardInner)
-            .background(
-                Color.orange.opacity(0.1),
-                in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
-                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-            )
-            .padding(.horizontal, AppStyle.Padding.screenHorizontal)
-        }
     }
 
     // MARK: - Caption
@@ -355,7 +334,7 @@ struct PostPreviewView: View {
             userId: userId
         )
         uploadManager.enqueue(input)
-        onDone()
+        finishPosting()
     }
 
     private func saveDraft() {
@@ -401,7 +380,7 @@ struct PostPreviewView: View {
             userId: userId
         )
         uploadManager.enqueue(input)
-        onDone()
+        finishPosting()
     }
 
     @MainActor
@@ -450,9 +429,47 @@ struct PostPreviewView: View {
         return false
     }
 
+    private func finishPosting() {
+        if let onPosted {
+            onPosted()
+        } else {
+            onDone()
+        }
+    }
+
     private var createImage: UIImage? {
         guard case let .create(image) = mode else { return nil }
         return image
+    }
+}
+
+private struct PostPreviewOfflineBanner: View {
+    var body: some View {
+        HStack(spacing: AppStyle.Spacing.row) {
+            Image(systemName: "wifi.slash")
+                .font(.title3)
+                .foregroundStyle(.orange)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("You are offline")
+                    .font(.subheadline.weight(.semibold))
+                Text("Save your photo and upload when you're back online.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(AppStyle.Padding.cardInner)
+        .background(
+            Color.orange.opacity(0.1),
+            in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.CornerRadius.control)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+        )
+        .padding(.horizontal, AppStyle.Padding.screenHorizontal)
     }
 }
 
