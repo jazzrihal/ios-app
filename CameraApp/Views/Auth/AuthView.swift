@@ -69,10 +69,32 @@ struct AuthView: View {
                     .multilineTextAlignment(.center)
             }
 
+            if let info = auth.infoMessage {
+                Label {
+                    Text(info)
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                } icon: {
+                    Image(systemName: "envelope")
+                }
+                .foregroundStyle(.secondary)
+                .padding(AppStyle.Padding.cardInner)
+                .frame(maxWidth: .infinity)
+                .background(
+                    Color(.secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: AppStyle.CornerRadius.card)
+                )
+            }
+
             Button {
                 Task {
                     if isSignUp {
-                        await auth.signUp(email: email, password: password, username: username)
+                        let didSignUp = await auth.signUp(email: email, password: password, username: username)
+                        if didSignUp {
+                            isSignUp = false
+                            username = ""
+                            password = ""
+                        }
                     } else {
                         await auth.signIn(email: email, password: password)
                     }
@@ -96,6 +118,7 @@ struct AuthView: View {
                     isSignUp.toggle()
                     username = ""
                     auth.errorMessage = nil
+                    auth.infoMessage = nil
                 }
             } label: {
                 Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")

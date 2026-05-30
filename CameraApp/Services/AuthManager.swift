@@ -28,6 +28,9 @@ final class AuthManager {
     /// The last auth error message, if any. Views may clear this.
     var errorMessage: String?
 
+    /// The last non-error auth message, if any. Views may clear this.
+    var infoMessage: String?
+
     /// Convenience: `true` when a valid session exists.
     var isAuthenticated: Bool {
         currentSession != nil
@@ -39,6 +42,10 @@ final class AuthManager {
     }
 
     // MARK: - Private
+
+    private static let signUpConfirmationMessage =
+        "Account request received. Check your email for a confirmation link, " +
+        "then confirm your email before signing in."
 
     private var authStateTask: Task<Void, Never>?
 
@@ -147,9 +154,13 @@ final class AuthManager {
     ///
     /// The username is passed as user metadata so the server-side trigger
     /// can populate the `profiles` row (which requires a non-null username).
-    func signUp(email: String, password: String, username: String) async {
+    @discardableResult
+    func signUp(email: String, password: String, username: String) async -> Bool {
         isLoading = true
         errorMessage = nil
+        infoMessage = nil
+        defer { isLoading = false }
+
         do {
             let response = try await SupabaseManager.client.auth.signUp(
                 email: email,
@@ -161,10 +172,12 @@ final class AuthManager {
             )
             currentSession = response.session
             currentUser = response.session?.user
+            infoMessage = Self.signUpConfirmationMessage
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
-        isLoading = false
     }
 
     // MARK: - Sign In
@@ -173,6 +186,7 @@ final class AuthManager {
     func signIn(email: String, password: String) async {
         isLoading = true
         errorMessage = nil
+        infoMessage = nil
         do {
             let session = try await SupabaseManager.client.auth.signIn(
                 email: email,
