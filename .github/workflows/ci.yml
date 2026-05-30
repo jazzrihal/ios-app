@@ -51,14 +51,20 @@ jobs:
           token: ${{ secrets.IOS_APP_BACKEND_READ_TOKEN }}
 
       - name: Install tools
-        run: brew install swiftlint swiftformat xcodegen libpq
+        run: brew install swiftlint swiftformat xcodegen
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          github-token: ${{ github.token }}
 
       - name: Write Secrets.plist from hosted Supabase
         env:
           CI_SUPABASE_URL: ${{ vars.CI_SUPABASE_URL }}
           CI_SUPABASE_ANON_KEY: ${{ vars.CI_SUPABASE_ANON_KEY }}
         run: |
-          chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh scripts/ci-reset-hosted-supabase.sh
+          chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh
           ./scripts/ci-write-secrets.sh hosted
 
       - name: Generate Xcode project
@@ -89,10 +95,11 @@ jobs:
             -only-testing CameraAppTests \
             -resultBundlePath build/test-results/unit-tests.xcresult
 
-      - name: Reset hosted Supabase test data
+      - name: Reset hosted Supabase test database
+        working-directory: ios-app-backend
         env:
           CI_SUPABASE_DB_URL: ${{ secrets.CI_SUPABASE_DB_URL }}
-        run: ./scripts/ci-reset-hosted-supabase.sh
+        run: supabase db reset --db-url "$CI_SUPABASE_DB_URL"
 
       - name: Run UI smoke tests without rebuilding
         run: |
