@@ -33,45 +33,10 @@ jobs:
       - name: Run SwiftLint (strict)
         run: make lint
 
-  build-and-unit-test:
-    name: Build & Unit Tests
+  build-and-test:
+    name: Build, Unit & UI Smoke Tests
     runs-on: macos-15
     needs: lint
-    steps:
-      - name: Checkout ios-app
-        uses: actions/checkout@v4
-
-      - name: Install tools
-        run: brew install swiftlint swiftformat xcodegen
-
-      - name: Write placeholder Secrets.plist
-        run: chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh && ./scripts/ci-write-secrets.sh placeholder
-
-      - name: Generate Xcode project
-        run: make generate
-
-      - name: Resolve simulator
-        id: sim
-        run: echo "device=$(./scripts/ci-resolve-simulator.sh)" >> "$GITHUB_OUTPUT"
-
-      - name: Build app
-        run: make build DEVICE="${{ steps.sim.outputs.device }}"
-
-      - name: Run unit tests
-        run: make test-unit DEVICE="${{ steps.sim.outputs.device }}"
-
-      - name: Upload unit test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-results
-          path: build/test-results/unit-tests.xcresult
-          if-no-files-found: ignore
-
-  ui-tests:
-    name: UI Smoke Tests (Simulator + Hosted Supabase)
-    runs-on: macos-15
-    needs: build-and-unit-test
     steps:
       - name: Checkout ios-app
         uses: actions/checkout@v4
@@ -94,17 +59,47 @@ jobs:
         id: sim
         run: echo "device=$(./scripts/ci-resolve-simulator.sh)" >> "$GITHUB_OUTPUT"
 
-      - name: Run UI smoke tests
+      - name: Prepare test output
+        run: |
+          mkdir -p build/test-results
+          rm -rf build/test-results/unit-tests.xcresult build/test-results/ui-smoke-tests.xcresult
+
+      - name: Build for testing
+        run: |
+          xcodebuild build-for-testing \
+            -scheme Pinstoria \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
+            -derivedDataPath build/DerivedData
+
+      - name: Run unit tests without rebuilding
+        run: |
+          xcodebuild test-without-building \
+            -scheme Pinstoria \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
+            -derivedDataPath build/DerivedData \
+            -only-testing CameraAppTests \
+            -resultBundlePath build/test-results/unit-tests.xcresult
+
+      - name: Run UI smoke tests without rebuilding
         run: |
           ONLY_FLAGS=()
           for test_id in ${{ env.CI_UI_SMOKE_TESTS }}; do
             ONLY_FLAGS+=(-only-testing "$test_id")
           done
-          xcodebuild test \
+          xcodebuild test-without-building \
             -scheme Pinstoria \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
+            -derivedDataPath build/DerivedData \
             "${ONLY_FLAGS[@]}" \
             -resultBundlePath build/test-results/ui-smoke-tests.xcresult
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: build/test-results/unit-tests.xcresult
+          if-no-files-found: ignore
 
       - name: Upload UI test results
         if: always()
