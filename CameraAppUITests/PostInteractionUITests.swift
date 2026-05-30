@@ -84,6 +84,7 @@ final class PostInteractionUITests: XCTestCase {
         var initialCount = postCellCount()
 
         navigateToFriendFirstPost()
+        var targetPostId = currentPostId()
 
         // Ensure the post starts unpinned so we can test the pin flow
         let pinButton = app.buttons["PinButton"]
@@ -97,6 +98,7 @@ final class PostInteractionUITests: XCTestCase {
             initialCount = waitForProfilePostCount(lessThan: initialCount)
 
             navigateToFriendFirstPost()
+            targetPostId = currentPostId()
         }
 
         app.buttons["PinButton"].tap()
@@ -112,15 +114,16 @@ final class PostInteractionUITests: XCTestCase {
             "Profile should have one more post after pinning a friend's post"
         )
 
-        navigateToFriendFirstPost()
-
+        XCTAssertTrue(
+            findPostOnProfile(postId: targetPostId),
+            "Pinned friend post should be visible on Profile before cleanup"
+        )
         let pinButtonAgain = app.buttons["PinButton"]
-        if pinButtonAgain.label == "Unpin" {
-            pinButtonAgain.tap()
-            assertButtonLabel(pinButtonAgain, expected: "Pin")
-        }
+        XCTAssertTrue(pinButtonAgain.waitForExistence(timeout: 3), "PinButton should exist")
+        XCTAssertEqual(pinButtonAgain.label, "Unpin", "Pinned profile post should be removable")
+        pinButtonAgain.tap()
+        assertButtonLabel(pinButtonAgain, expected: "Pin")
 
-        tapBackButton()
         tapBackButton()
 
         // Verify profile count is restored
@@ -446,6 +449,17 @@ private extension PostInteractionUITests {
             actionBar.waitForExistence(timeout: 5),
             "Post action bar should appear"
         )
+    }
+
+    func currentPostId() -> String {
+        let actionBar = app.otherElements.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'PostActionBar_'")
+        ).firstMatch
+        XCTAssertTrue(actionBar.waitForExistence(timeout: 5), "Action bar should exist")
+
+        let postId = actionBar.identifier.replacingOccurrences(of: "PostActionBar_", with: "")
+        XCTAssertFalse(postId.isEmpty, "Should extract a post UUID")
+        return postId
     }
 
     func assertOwnerMenuHidden() {
