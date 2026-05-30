@@ -12,10 +12,6 @@ concurrency:
 
 env:
   BACKEND_REPO: jazzrihal/ios-app-backend
-  # Fast PR feedback: auth + tab shell only. Run `make test` locally for full UI suite.
-  CI_UI_SMOKE_TESTS: >-
-    CameraAppUITests/CameraAppUITests/testExploreTabIsSelectedOnLaunch
-    CameraAppUITests/CameraAppUITests/testAllTabsExist
 
 jobs:
   lint:
@@ -35,9 +31,12 @@ jobs:
         run: make lint
 
   build-and-test:
-    name: Build, Unit & UI Smoke Tests
+    name: Build, Unit & UI Tests
     runs-on: macos-15
     needs: lint
+    concurrency:
+      group: hosted-supabase-e2e
+      cancel-in-progress: false
     steps:
       - name: Checkout ios-app
         uses: actions/checkout@v4
@@ -77,7 +76,7 @@ jobs:
       - name: Prepare test output
         run: |
           mkdir -p build/test-results
-          rm -rf build/test-results/unit-tests.xcresult build/test-results/ui-smoke-tests.xcresult
+          rm -rf build/test-results/unit-tests.xcresult build/test-results/ui-tests.xcresult
 
       - name: Build for testing
         run: |
@@ -108,18 +107,14 @@ jobs:
           supabase link --project-ref "$CI_SUPABASE_PROJECT_REF"
           supabase db reset --linked <<< 'y'
 
-      - name: Run UI smoke tests without rebuilding
+      - name: Run UI tests without rebuilding
         run: |
-          ONLY_FLAGS=()
-          for test_id in ${{ env.CI_UI_SMOKE_TESTS }}; do
-            ONLY_FLAGS+=(-only-testing "$test_id")
-          done
           xcodebuild test-without-building \
             -scheme Pinstoria \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
             -derivedDataPath build/DerivedData \
-            "${ONLY_FLAGS[@]}" \
-            -resultBundlePath build/test-results/ui-smoke-tests.xcresult
+            -only-testing CameraAppUITests \
+            -resultBundlePath build/test-results/ui-tests.xcresult
 
       - name: Upload unit test results
         if: always()
@@ -133,6 +128,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-smoke-test-results
-          path: build/test-results/ui-smoke-tests.xcresult
+          name: ui-test-results
+          path: build/test-results/ui-tests.xcresult
           if-no-files-found: ignore
