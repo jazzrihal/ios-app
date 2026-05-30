@@ -3,10 +3,15 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
+env:
+  BACKEND_REPO: jazzrihal/ios-app-backend
 
 jobs:
   lint:
@@ -17,10 +22,112 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install tools
-        run: brew install swiftlint swiftformat
+        run: brew install swiftlint swiftformat xcodegen
 
       - name: Check formatting
         run: make format-check
 
       - name: Run SwiftLint (strict)
         run: make lint
+
+  build-and-test:
+    name: Build, Unit & UI Tests
+    runs-on: macos-15
+    needs: lint
+    concurrency:
+      group: hosted-supabase-e2e
+      cancel-in-progress: false
+    steps:
+      - name: Checkout ios-app
+        uses: actions/checkout@v4
+
+      - name: Checkout ios-app-backend seed data
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BACKEND_REPO }}
+          path: ios-app-backend
+          ref: main
+          token: ${{ secrets.IOS_APP_BACKEND_READ_TOKEN }}
+
+      - name: Install tools
+        run: brew install swiftlint swiftformat xcodegen
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          github-token: ${{ github.token }}
+
+      - name: Write Secrets.plist from hosted Supabase
+        env:
+          CI_SUPABASE_URL: ${{ vars.CI_SUPABASE_URL }}
+          CI_SUPABASE_ANON_KEY: ${{ vars.CI_SUPABASE_ANON_KEY }}
+        run: |
+          chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh
+          ./scripts/ci-write-secrets.sh hosted
+
+      - name: Generate Xcode project
+        run: make generate
+
+      - name: Resolve simulator
+        id: sim
+        run: echo "device=$(./scripts/ci-resolve-simulator.sh)" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare test output
+        run: |
+          mkdir -p build/test-results
+          rm -rf build/test-results/unit-tests.xcresult build/test-results/ui-tests.xcresult
+
+      - name: Build for testing
+        run: |
+          xcodebuild build-for-testing \
+            -scheme Pinstoria \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
+            -derivedDataPath build/DerivedData
+
+      - name: Run unit tests without rebuilding
+        run: |
+          xcodebuild test-without-building \
+            -scheme Pinstoria \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
+            -derivedDataPath build/DerivedData \
+            -only-testing CameraAppTests \
+            -resultBundlePath build/test-results/unit-tests.xcresult
+
+      - name: Reset hosted Supabase test database
+        working-directory: ios-app-backend
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.CI_SUPABASE_PAT }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.CI_SUPABASE_DB_PASSWORD }}
+          CI_SUPABASE_PROJECT_REF: ${{ vars.CI_SUPABASE_PROJECT_REF }}
+        run: |
+          : "${SUPABASE_ACCESS_TOKEN:?CI_SUPABASE_PAT must be set}"
+          : "${SUPABASE_DB_PASSWORD:?CI_SUPABASE_DB_PASSWORD must be set}"
+          : "${CI_SUPABASE_PROJECT_REF:?CI_SUPABASE_PROJECT_REF must be set}"
+          supabase link --project-ref "$CI_SUPABASE_PROJECT_REF"
+          supabase db reset --linked <<< 'y'
+
+      - name: Run UI tests without rebuilding
+        run: |
+          xcodebuild test-without-building \
+            -scheme Pinstoria \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
+            -derivedDataPath build/DerivedData \
+            -only-testing CameraAppUITests \
+            -resultBundlePath build/test-results/ui-tests.xcresult
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: build/test-results/unit-tests.xcresult
+          if-no-files-found: ignore
+
+      - name: Upload UI test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: build/test-results/ui-tests.xcresult
+          if-no-files-found: ignore

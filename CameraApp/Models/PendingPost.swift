@@ -26,7 +26,7 @@ struct PendingPost: Identifiable, Codable {
 // MARK: - Enqueue Input
 
 /// Input for creating a new pending post in the upload queue.
-struct PostEnqueueInput: Sendable {
+struct PostEnqueueInput {
     let image: UIImage
     let caption: String?
     let latitude: Double

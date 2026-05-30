@@ -4,7 +4,7 @@ import Foundation
 // MARK: - moments_with_nearby_posts RPC Types
 
 /// Parameters for the `moments_with_nearby_posts` Supabase RPC.
-struct MomentsWithNearbyPostsParams: Encodable, Sendable {
+struct MomentsWithNearbyPostsParams: Encodable {
     let radiusMeters: Double?
     let dateRangeDays: Int?
     let timeDecayHours: Double?
@@ -21,7 +21,7 @@ struct MomentsWithNearbyPostsParams: Encodable, Sendable {
 }
 
 /// Decoded row from the `moments_with_nearby_posts` Supabase RPC.
-struct MomentWithNearbyPostsRow: Decodable, Sendable {
+struct MomentWithNearbyPostsRow: Decodable {
     let momentId: UUID
     let longitude: Double
     let latitude: Double

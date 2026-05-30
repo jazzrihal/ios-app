@@ -1,6 +1,6 @@
-@testable import CameraApp
 import CoreLocation
 import Foundation
+@testable import Pinstoria
 import SwiftData
 import Testing
 

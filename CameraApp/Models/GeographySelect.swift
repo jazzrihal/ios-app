@@ -2,7 +2,7 @@ import Foundation
 
 /// GeoJSON Point representation for PostGIS geography columns.
 /// Referenced by the generated Supabase types but not included in codegen output.
-struct GeographySelect: Codable, Hashable, Sendable {
+struct GeographySelect: Codable, Hashable {
     let type: String
     let coordinates: [Double]
 
