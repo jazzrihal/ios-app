@@ -11,8 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BACKEND_REPO: jazzrihal/ios-app-backend
-  SUPABASE_EXCLUDE: studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor
   # Fast PR feedback: auth + tab shell only. Run `make test` locally for full UI suite.
   CI_UI_SMOKE_TESTS: >-
     CameraAppUITests/CameraAppUITests/testExploreTabIsSelectedOnLaunch
@@ -71,66 +69,23 @@ jobs:
           if-no-files-found: ignore
 
   ui-tests:
-    name: UI Smoke Tests (Simulator + Supabase)
-    runs-on: macos-15-intel
+    name: UI Smoke Tests (Simulator + Hosted Supabase)
+    runs-on: macos-15
     needs: build-and-unit-test
     steps:
       - name: Checkout ios-app
         uses: actions/checkout@v4
 
-      - name: Check backend repository access
-        env:
-          GH_TOKEN: ${{ secrets.IOS_APP_BACKEND_READ_TOKEN }}
-        run: |
-          if [ -z "${GH_TOKEN}" ]; then
-            echo "::warning::UI smoke tests were not run because IOS_APP_BACKEND_READ_TOKEN is not configured."
-            echo "::error::Configure IOS_APP_BACKEND_READ_TOKEN with read access to ${BACKEND_REPO}."
-            exit 1
-          fi
-
-          if ! gh repo view "${BACKEND_REPO}" >/dev/null 2>&1; then
-            echo "::warning::UI smoke tests were not run because ${BACKEND_REPO} is not accessible to IOS_APP_BACKEND_READ_TOKEN."
-            echo "::error::Grant the token Contents: Read access to ${BACKEND_REPO}, or update BACKEND_REPO."
-            exit 1
-          fi
-
-      - name: Checkout ios-app-backend
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.BACKEND_REPO }}
-          path: ios-app-backend
-          ref: main
-          token: ${{ secrets.IOS_APP_BACKEND_READ_TOKEN }}
-
       - name: Install tools
-        run: brew install swiftlint swiftformat xcodegen colima docker
+        run: brew install swiftlint swiftformat xcodegen
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v2
-        with:
-          version: 2.102.0
-          github-token: ${{ github.token }}
-
-      - name: Start Docker
+      - name: Write Secrets.plist from hosted Supabase
+        env:
+          CI_SUPABASE_URL: ${{ secrets.CI_SUPABASE_URL }}
+          CI_SUPABASE_ANON_KEY: ${{ secrets.CI_SUPABASE_ANON_KEY }}
         run: |
-          colima start --cpu 2 --memory 6 --disk 20
-          docker context use colima || true
-          docker info
-
-      - name: Start Supabase
-        timeout-minutes: 15
-        working-directory: ios-app-backend
-        run: supabase start -x ${{ env.SUPABASE_EXCLUDE }} --debug
-
-      - name: Reset database (migrations + seed)
-        working-directory: ios-app-backend
-        run: supabase db reset
-
-      - name: Write Secrets.plist from local Supabase
-        run: |
-          eval "$(cd ios-app-backend && supabase status -o env)"
           chmod +x scripts/ci-write-secrets.sh scripts/ci-resolve-simulator.sh
-          ./scripts/ci-write-secrets.sh local
+          ./scripts/ci-write-secrets.sh hosted
 
       - name: Generate Xcode project
         run: make generate
