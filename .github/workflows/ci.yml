@@ -106,9 +106,10 @@ jobs:
         run: brew install swiftlint swiftformat xcodegen
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v2
         with:
-          version: latest
+          version: 2.102.0
+          github-token: ${{ github.token }}
 
       - name: Start Supabase
         working-directory: ios-app-backend
