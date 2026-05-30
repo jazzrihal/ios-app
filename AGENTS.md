@@ -8,11 +8,11 @@ Pinstoria is a SwiftUI iOS app for location-based photo sharing. It talks direct
 
 | Task | Linux Cloud VM | macOS |
 | --- | --- | --- |
-| `make format-check` | Supported | Supported |
-| `make lint` | Not reliable; SwiftLint/SourceKit require macOS tooling | Supported |
+| `make format-check` | Supported when SwiftFormat is installed | Supported |
+| `make lint` | Not reliable; SwiftLint/SourceKit usually require macOS tooling | Supported |
 | `make build`, `make run`, `make test*` | Not supported; requires Xcode and Simulator | Supported |
 
-CI (`.github/workflows/ci.yml`) runs on `macos-15`: format check, strict SwiftLint, one build-for-testing, unit tests, then UI tests against a hosted Supabase test project. Linux agents should run the checks they can, push the branch, and use CI for the macOS-only validation.
+CI (`.github/workflows/ci.yml`) runs on `macos-15`: format check, strict SwiftLint, one build-for-testing, unit tests, then UI tests against a hosted Supabase test project. Linux agents should run the checks available in their environment, push the branch, and use CI for macOS-only validation.
 
 ## Agent workflow
 
@@ -21,7 +21,7 @@ CI (`.github/workflows/ci.yml`) runs on `macos-15`: format check, strict SwiftLi
 3. If files are added, removed, moved, renamed, or `project.yml` changes, run `make generate`.
 4. Before committing frontend changes, run lint and format checks:
    - macOS: `make format-check && make lint`
-   - Linux Cloud VM: run `make format-check`; note that `make lint` must run on macOS/CI.
+   - Linux Cloud VM: run `make format-check` if SwiftFormat is installed; note any missing tool and rely on macOS/CI for `make lint`.
 5. Pick the smallest useful test scope. Use targeted tests or `make test-unit` for non-UI changes; use `make test` only when unit coverage is insufficient or the change affects UI/E2E behavior.
 
 ## Common commands

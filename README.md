@@ -8,7 +8,7 @@ SwiftUI iOS client for Pinstoria, a location-based photo-sharing app. The app ta
 - Homebrew for `swiftlint`, `swiftformat`, and `xcodegen`
 - Local or hosted Supabase credentials in `CameraApp/Secrets.plist`
 
-Linux cloud agents can run `make format-check`, but Xcode, Simulator, and reliable SwiftLint validation require macOS or CI.
+Linux cloud agents can run `make format-check` when SwiftFormat is installed, but Xcode, Simulator, and reliable SwiftLint validation require macOS or CI.
 
 ## Setup
 
@@ -39,7 +39,7 @@ Before committing frontend changes, run:
 make format-check && make lint
 ```
 
-On Linux, run `make format-check` and rely on macOS/CI for `make lint`.
+On Linux, run `make format-check` if SwiftFormat is installed and rely on macOS/CI for `make lint`.
 
 ## Project notes
 
