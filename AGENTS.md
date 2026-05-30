@@ -13,7 +13,7 @@
 | `make format-check` | Yes (SwiftFormat binary) | Yes |
 | `make lint`, `make build`, `make run`, `make test*` | No — requires Xcode + Simulator | Yes |
 
-CI on `macos-15` (`.github/workflows/ci.yml`): **lint/format → build + unit tests → UI tests** (UI job checks out `ios-app-backend`, starts Supabase, writes `Secrets.plist`). Cloud Agents on Linux should **push a branch and rely on these checks** instead of `make build` / `make test` locally.
+CI on `macos-15` (`.github/workflows/ci.yml`): **lint/format → build + unit tests → UI smoke tests** (two XCTest cases: sign-in + Explore tab + tab bar; not the full `CameraAppUITests` / `PostInteractionUITests` suites). UI job checks out `ios-app-backend`, starts Supabase, writes `Secrets.plist`. Cloud Agents on Linux should **push a branch and rely on these checks**; run `make test` on macOS before large UI changes.
 
 On Linux: backend hello-world (auth + RPC) in `ios-app-backend`; `make format-check` here; app Simulator runs require macOS or CI.
 

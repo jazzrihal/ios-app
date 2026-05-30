@@ -13,6 +13,10 @@ concurrency:
 env:
   BACKEND_REPO: jazzrihal/ios-app-backend
   SUPABASE_EXCLUDE: studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor
+  # Fast PR feedback: auth + tab shell only. Run `make test` locally for full UI suite.
+  CI_UI_SMOKE_TESTS: >-
+    CameraAppUITests/CameraAppUITests/testExploreTabIsSelectedOnLaunch
+    CameraAppUITests/CameraAppUITests/testAllTabsExist
 
 jobs:
   lint:
@@ -67,7 +71,7 @@ jobs:
           if-no-files-found: ignore
 
   ui-tests:
-    name: UI Tests (Simulator + Supabase)
+    name: UI Smoke Tests (Simulator + Supabase)
     runs-on: macos-15
     needs: build-and-unit-test
     steps:
@@ -110,18 +114,22 @@ jobs:
         id: sim
         run: echo "device=$(./scripts/ci-resolve-simulator.sh)" >> "$GITHUB_OUTPUT"
 
-      - name: Run UI tests
+      - name: Run UI smoke tests
         run: |
+          ONLY_FLAGS=()
+          for test_id in ${{ env.CI_UI_SMOKE_TESTS }}; do
+            ONLY_FLAGS+=(-only-testing "$test_id")
+          done
           xcodebuild test \
             -scheme Pinstoria \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
-            -only-testing CameraAppUITests \
-            -resultBundlePath build/test-results/ui-tests.xcresult
+            "${ONLY_FLAGS[@]}" \
+            -resultBundlePath build/test-results/ui-smoke-tests.xcresult
 
       - name: Upload UI test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-test-results
-          path: build/test-results/ui-tests.xcresult
+          name: ui-smoke-test-results
+          path: build/test-results/ui-smoke-tests.xcresult
           if-no-files-found: ignore
