@@ -6,7 +6,7 @@ enum PostAction: CaseIterable, Hashable {
     case jump, share, pinToProfile, like
 
     static func availableActions(for scope: PostScope) -> [PostAction] {
-        allCases.filter { action in
+        Self.allCases.filter { action in
             action != .share || scope == .public
         }
     }

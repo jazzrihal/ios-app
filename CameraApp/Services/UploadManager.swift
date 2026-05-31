@@ -141,81 +141,93 @@ final class UploadManager {
         defer { isProcessing = false }
 
         let postIds = pendingPosts.map(\.id)
-
         for postId in postIds {
-            let currentUserId = activeSessionUserId()
-            guard let index = pendingPosts.firstIndex(where: { $0.id == postId }) else { continue }
-            let post = pendingPosts[index]
-
-            guard post.status == .queued
-                || (post.status == .failed && post.retryCount < Self.maxRetries)
-            else {
-                continue
-            }
-
-            guard Self.canProcessUpload(postUserId: post.userId, currentUserId: currentUserId) else {
-                continue
-            }
-
-            pendingPosts[index].status = .uploading
-            persistQueue()
-
-            do {
-                let imageData = loadImage(fileName: post.localImageFileName)
-                guard let imageData else {
-                    removePost(post)
-                    continue
-                }
-
-                guard Self.canProcessUpload(postUserId: post.userId, currentUserId: activeSessionUserId()) else {
-                    pendingPosts[index].status = .queued
-                    persistQueue()
-                    continue
-                }
-
-                let storagePath = "\(post.userId)/\(post.id).jpg"
-                try await SupabaseManager.client.storage
-                    .from("post-images")
-                    .upload(storagePath, data: imageData, options: .init(contentType: "image/jpeg"))
-
-                guard Self.canProcessUpload(postUserId: post.userId, currentUserId: activeSessionUserId()) else {
-                    try? await SupabaseManager.client.storage
-                        .from("post-images")
-                        .remove(paths: [storagePath])
-                    if let currentIndex = pendingPosts.firstIndex(where: { $0.id == post.id }) {
-                        pendingPosts[currentIndex].status = .queued
-                        persistQueue()
-                    }
-                    continue
-                }
-
-                let insert = PublicSchema.PostsInsert(
-                    caption: post.caption,
-                    createdAt: nil,
-                    id: post.id,
-                    imagePath: storagePath,
-                    latitude: post.latitude,
-                    location: nil,
-                    locationName: post.locationName,
-                    longitude: post.longitude,
-                    scope: post.scope,
-                    userId: post.userId
-                )
-                try await SupabaseManager.client.from("posts").insert(insert).execute()
-
-                deleteImage(fileName: post.localImageFileName)
-                pendingPosts.removeAll { $0.id == post.id }
-                persistQueue()
-                completedUploadCount += 1
-            } catch {
-                logger.error("Upload failed for post \(post.id.uuidString, privacy: .private): \(String(describing: error), privacy: .private)")
-                if let idx = pendingPosts.firstIndex(where: { $0.id == post.id }) {
-                    pendingPosts[idx].status = .failed
-                    pendingPosts[idx].retryCount += 1
-                    persistQueue()
-                }
-            }
+            await processUpload(postId: postId)
         }
+    }
+
+    private func processUpload(postId: UUID) async {
+        guard let index = pendingPosts.firstIndex(where: { $0.id == postId }) else { return }
+        let post = pendingPosts[index]
+
+        guard shouldAttemptUpload(post),
+              Self.canProcessUpload(postUserId: post.userId, currentUserId: activeSessionUserId())
+        else {
+            return
+        }
+
+        pendingPosts[index].status = .uploading
+        persistQueue()
+
+        do {
+            try await upload(post)
+        } catch {
+            markUploadFailed(post, error: error)
+        }
+    }
+
+    private func shouldAttemptUpload(_ post: PendingPost) -> Bool {
+        post.status == .queued || (post.status == .failed && post.retryCount < Self.maxRetries)
+    }
+
+    private func upload(_ post: PendingPost) async throws {
+        guard let imageData = loadImage(fileName: post.localImageFileName) else {
+            removePost(post)
+            return
+        }
+        guard Self.canProcessUpload(postUserId: post.userId, currentUserId: activeSessionUserId()) else {
+            resetPostToQueued(post.id)
+            return
+        }
+
+        let storagePath = "\(post.userId)/\(post.id).jpg"
+        try await SupabaseManager.client.storage
+            .from("post-images")
+            .upload(storagePath, data: imageData, options: .init(contentType: "image/jpeg"))
+
+        guard Self.canProcessUpload(postUserId: post.userId, currentUserId: activeSessionUserId()) else {
+            try? await SupabaseManager.client.storage
+                .from("post-images")
+                .remove(paths: [storagePath])
+            resetPostToQueued(post.id)
+            return
+        }
+
+        try await insertPost(post, storagePath: storagePath)
+        deleteImage(fileName: post.localImageFileName)
+        pendingPosts.removeAll { $0.id == post.id }
+        persistQueue()
+        completedUploadCount += 1
+    }
+
+    private func insertPost(_ post: PendingPost, storagePath: String) async throws {
+        let insert = PublicSchema.PostsInsert(
+            caption: post.caption,
+            createdAt: nil,
+            id: post.id,
+            imagePath: storagePath,
+            latitude: post.latitude,
+            location: nil,
+            locationName: post.locationName,
+            longitude: post.longitude,
+            scope: post.scope,
+            userId: post.userId
+        )
+        try await SupabaseManager.client.from("posts").insert(insert).execute()
+    }
+
+    private func resetPostToQueued(_ postId: UUID) {
+        guard let index = pendingPosts.firstIndex(where: { $0.id == postId }) else { return }
+        pendingPosts[index].status = .queued
+        persistQueue()
+    }
+
+    private func markUploadFailed(_ post: PendingPost, error: Error) {
+        logger.error("Upload failed for post \(post.id.uuidString, privacy: .private): \(String(describing: error), privacy: .private)")
+        guard let index = pendingPosts.firstIndex(where: { $0.id == post.id }) else { return }
+        pendingPosts[index].status = .failed
+        pendingPosts[index].retryCount += 1
+        persistQueue()
     }
 
     /// Manually retry a specific failed post.
