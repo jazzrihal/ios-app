@@ -173,14 +173,14 @@ struct CachedPostTests {
     }
 
     @Test("PostRowWithoutLocation maps to ImagePost with supplied user")
-    func postRowWithoutLocationImagePostMapping() {
+    func postRowWithoutLocationImagePostMapping() throws {
         let user = makeUser(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000101")!,
+            id: UUID(),
             username: "feed_friend",
             displayName: "Feed Friend"
         )
         let row = PostRowWithoutLocation(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000202")!,
+            id: UUID(),
             userId: user.id,
             imagePath: "feed/photo.jpg",
             caption: "Feed post",
@@ -190,7 +190,7 @@ struct CachedPostTests {
             scope: "friends",
             createdAt: "2025-03-20T15:00:00.000Z"
         )
-        let expectedTimestamp = ISO8601DateFormatter.flexibleParse(row.createdAt)!
+        let expectedTimestamp = try #require(ISO8601DateFormatter.flexibleParse(row.createdAt))
 
         let post = ImagePost(from: row, user: user)
 
@@ -240,7 +240,7 @@ struct CachedPostTests {
     }
 
     private func makeUser(
-        id: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000303")!,
+        id: UUID = UUID(),
         username: String = "friend",
         displayName: String = "Friend User"
     ) -> User {
