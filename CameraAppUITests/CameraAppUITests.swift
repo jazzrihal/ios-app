@@ -210,6 +210,32 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertFalse(datePicker.waitForExistence(timeout: 2), "Date picker should collapse when tapped again")
     }
 
+    func testExploreSearchCanBeSavedAsMomentAndRestored() {
+        searchSanFranciscoInExplore()
+
+        let saveButton = app.buttons["SaveMomentButton"]
+        XCTAssertTrue(
+            saveButton.waitForExistence(timeout: 5),
+            "Save Moment button should appear after results load"
+        )
+        tapElement(saveButton)
+
+        app.tabBars.buttons["Moments"].tap()
+        XCTAssertTrue(app.navigationBars["Moments"].waitForExistence(timeout: 5))
+
+        let momentCard = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'MomentCard_'")
+        ).firstMatch
+        XCTAssertTrue(momentCard.waitForExistence(timeout: 20), "Saved moment should appear in Moments")
+        tapElement(momentCard)
+
+        XCTAssertTrue(app.tabBars.buttons["Explore"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.buttons["ExplorePostCell_0"].waitForExistence(timeout: 15),
+            "Restoring a saved moment should rerun the Explore search"
+        )
+    }
+
     // MARK: - Moments View Tests
 
     func testMomentsViewShowsSeededData() {
@@ -222,6 +248,22 @@ final class CameraAppUITests: XCTestCase {
         XCTAssertTrue(
             emptyState.waitForExistence(timeout: 5) || anyMomentCell.waitForExistence(timeout: 5),
             "Moments tab should render either empty state or at least one list row"
+        )
+    }
+
+    // MARK: - Profile View Tests
+
+    func testProfileViewShowsCurrentUserSummaryAndPostsState() {
+        app.tabBars.buttons["Profile"].tap()
+
+        XCTAssertTrue(app.staticTexts["Posts"].waitForExistence(timeout: 8), "Profile stats should load")
+        XCTAssertTrue(app.staticTexts["Friends"].exists, "Profile should show friend count")
+
+        let firstPost = app.buttons["PostCell_0"]
+        let emptyState = app.staticTexts["No photos yet"]
+        XCTAssertTrue(
+            firstPost.waitForExistence(timeout: 8) || emptyState.waitForExistence(timeout: 8),
+            "Profile should render either the user's post grid or an empty state"
         )
     }
 
@@ -257,5 +299,61 @@ final class CameraAppUITests: XCTestCase {
             app.staticTexts["Add a Friend"].waitForExistence(timeout: 3),
             "Add Friend prompt title should appear"
         )
+    }
+}
+
+private extension CameraAppUITests {
+    // MARK: - Explore Search Helper
+
+    func searchSanFranciscoInExplore() {
+        let exploreTab = app.tabBars.buttons["Explore"]
+        exploreTab.tap()
+        XCTAssertTrue(exploreTab.isSelected, "Explore tab should be selected after tapping")
+
+        let locationHeader = app.buttons["LocationPickerButton"]
+        XCTAssertTrue(locationHeader.waitForExistence(timeout: 5), "Location picker button should exist")
+        tapElement(locationHeader)
+
+        let placeSearchField = app.textFields["Search for a place…"]
+        XCTAssertTrue(
+            placeSearchField.waitForExistence(timeout: 5),
+            "Place search field should appear after expanding map"
+        )
+        typeText("San Francisco", into: placeSearchField)
+
+        let firstCompletion = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS 'San Francisco'")
+        ).firstMatch
+        XCTAssertTrue(
+            firstCompletion.waitForExistence(timeout: 8),
+            "San Francisco search completion should appear"
+        )
+        tapElement(firstCompletion)
+
+        let searchButton = app.buttons["FindNearbyPostsButton"]
+        XCTAssertTrue(searchButton.waitForExistence(timeout: 5), "Search button should exist")
+        XCTAssertTrue(
+            waitForEnabled(searchButton, timeout: 8),
+            "Search button should be enabled after choosing a place"
+        )
+        tapElement(searchButton)
+
+        let firstResult = app.buttons["ExplorePostCell_0"]
+        XCTAssertTrue(
+            firstResult.waitForExistence(timeout: 15),
+            "Explore search results should appear"
+        )
+    }
+
+    func waitForEnabled(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if element.exists, element.isEnabled {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        } while Date() < deadline
+
+        return element.exists && element.isEnabled
     }
 }
