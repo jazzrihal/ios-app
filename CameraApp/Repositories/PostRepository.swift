@@ -211,7 +211,7 @@ final class DefaultPostRepository: PostRepository {
 
     nonisolated static func makePostUpdate(caption: String?, scope: PostScope) -> PublicSchema.PostsUpdate {
         PublicSchema.PostsUpdate(
-            caption: Self.normalizedCaption(caption),
+            caption: normalizedCaption(caption),
             createdAt: nil,
             id: nil,
             imagePath: nil,

@@ -66,7 +66,7 @@ final class AuthManager {
     }
 
     static func signUpValidationError(email: String, password: String, username: String) -> String? {
-        if let signInError = Self.signInValidationError(email: email, password: password) {
+        if let signInError = signInValidationError(email: email, password: password) {
             return signInError
         }
         guard password.count >= 8 else {

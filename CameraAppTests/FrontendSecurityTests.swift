@@ -18,15 +18,15 @@ struct FrontendSecurityTests {
     }
 
     @Test("post and moment cache keys are scoped to the signed-in viewer")
-    func viewerScopedCacheKeys() {
-        let viewerA = UUID(uuidString: "00000000-0000-0000-0000-0000000000AA")!
-        let viewerB = UUID(uuidString: "00000000-0000-0000-0000-0000000000BB")!
-        let targetUser = UUID(uuidString: "00000000-0000-0000-0000-0000000000CC")!
+    func viewerScopedCacheKeys() throws {
+        let viewerA = try #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000AA"))
+        let viewerB = try #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000BB"))
+        let targetUser = try #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000CC"))
         let params = NearbyPostsParams(
             lng: -122.4194,
             lat: 37.7749,
             searchDate: "2026-05-31T08:00:00.000Z",
-            radiusMeters: 5_000
+            radiusMeters: 5000
         )
 
         #expect(DefaultPostRepository.nearbyPostsCacheKey(params, viewerId: viewerA) !=
@@ -124,9 +124,9 @@ struct FrontendSecurityTests {
     }
 
     @Test("upload processing requires the matching authenticated user")
-    func uploadProcessingRequiresAuthenticatedOwner() {
-        let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000111")!
-        let otherUser = UUID(uuidString: "00000000-0000-0000-0000-000000000222")!
+    func uploadProcessingRequiresAuthenticatedOwner() throws {
+        let owner = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000111"))
+        let otherUser = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000222"))
 
         #expect(UploadManager.canProcessUpload(postUserId: owner, currentUserId: owner))
         #expect(!UploadManager.canProcessUpload(postUserId: owner, currentUserId: nil))
@@ -157,9 +157,9 @@ struct FrontendSecurityTests {
     }
 
     @Test("post owner mutations require the active viewer to own the post")
-    func postOwnerMutationsRequireActiveOwner() {
-        let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000333")!
-        let otherUser = UUID(uuidString: "00000000-0000-0000-0000-000000000444")!
+    func postOwnerMutationsRequireActiveOwner() throws {
+        let owner = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000333"))
+        let otherUser = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000444"))
 
         #expect(DefaultPostRepository.canMutatePost(ownerId: owner, viewerId: owner))
         #expect(!DefaultPostRepository.canMutatePost(ownerId: owner, viewerId: nil))
