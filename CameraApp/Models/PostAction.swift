@@ -5,8 +5,8 @@ import Foundation
 enum PostAction: CaseIterable, Hashable {
     case jump, share, pinToProfile, like
 
-    static func availableActions(for scope: PostScope) -> [PostAction] {
-        Self.allCases.filter { action in
+    static func availableActions(for scope: PostScope) -> [Self] {
+        allCases.filter { action in
             action != .share || scope == .public
         }
     }
