@@ -2,6 +2,7 @@ import CoreLocation
 import Foundation
 @testable import Pinstoria
 import SwiftData
+import SwiftUI
 import Testing
 
 @Suite("CachedPost round-trip conversions")
@@ -169,5 +170,90 @@ struct CachedPostTests {
         #expect(cached.gradientColorHexes.isEmpty)
         #expect(cached.distanceMeters == 0)
         #expect(cached.caption == "Feed post")
+    }
+
+    @Test("PostRowWithoutLocation maps to ImagePost with supplied user")
+    func postRowWithoutLocationImagePostMapping() throws {
+        let user = makeUser(
+            id: UUID(),
+            username: "feed_friend",
+            displayName: "Feed Friend"
+        )
+        let row = PostRowWithoutLocation(
+            id: UUID(),
+            userId: user.id,
+            imagePath: "feed/photo.jpg",
+            caption: "Feed post",
+            latitude: 51.5074,
+            longitude: -0.1278,
+            locationName: "London",
+            scope: "friends",
+            createdAt: "2025-03-20T15:00:00.000Z"
+        )
+        let expectedTimestamp = try #require(ISO8601DateFormatter.flexibleParse(row.createdAt))
+
+        let post = ImagePost(from: row, user: user)
+
+        #expect(post.id == row.id)
+        #expect(post.imagePath == row.imagePath)
+        #expect(post.user == user)
+        #expect(post.caption == "Feed post")
+        #expect(post.coordinate.latitude == 51.5074)
+        #expect(post.coordinate.longitude == -0.1278)
+        #expect(post.locationName == "London")
+        #expect(post.timestamp == expectedTimestamp)
+        #expect(post.distanceMeters == 0)
+        #expect(post.scope == .friends)
+        #expect(post.isPinnedByUser == false)
+        #expect(post.isOwnPost == false)
+        #expect(post.isLikedByViewer == false)
+        #expect(post.isPinnedByViewer == false)
+        #expect(post.pinnedByUsername == nil)
+        #expect(post.hasViewerState == false)
+    }
+
+    @Test("PostRowWithoutLocation ImagePost mapping applies existing defaults")
+    func postRowWithoutLocationImagePostMappingDefaults() {
+        let user = makeUser()
+        let row = PostRowWithoutLocation(
+            id: UUID(),
+            userId: user.id,
+            imagePath: "feed/defaults.jpg",
+            caption: nil,
+            latitude: 0,
+            longitude: 0,
+            locationName: nil,
+            scope: "unexpected",
+            createdAt: nil
+        )
+        let beforeMapping = Date()
+
+        let post = ImagePost(from: row, user: user)
+        let afterMapping = Date()
+
+        #expect(post.caption.isEmpty)
+        #expect(post.locationName.isEmpty)
+        #expect(post.scope == .public)
+        #expect(post.timestamp >= beforeMapping)
+        #expect(post.timestamp <= afterMapping)
+        #expect(post.distanceMeters == 0)
+    }
+
+    private func makeUser(
+        id: UUID = UUID(),
+        username: String = "friend",
+        displayName: String = "Friend User"
+    ) -> User {
+        User(
+            id: id,
+            username: username,
+            displayName: displayName,
+            bio: "",
+            gradientColors: [.gray, Color(.systemGray3)],
+            joinDate: Date(),
+            postCount: 0,
+            friendCount: 0,
+            mutualFriendCount: 0
+        )
     }
 }
