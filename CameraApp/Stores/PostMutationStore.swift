@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 import SwiftUI
 
 @Observable
@@ -12,6 +13,8 @@ class PostMutationStore {
 
     /// Cache invalidator for notifying the cache layer of like/pin changes.
     var cacheInvalidator: CacheInvalidator?
+
+    private let logger = Logger(subsystem: "com.jazzrihal.pinstoria", category: "PostMutations")
 
     // MARK: - Query
 
@@ -43,7 +46,7 @@ class PostMutationStore {
             likedPostIDs.formUnion(fetchedLikeIDs)
             likedPostIDs.subtract(Set(postIds).subtracting(fetchedLikeIDs))
         } catch {
-            print("[PostMutationStore] Failed to load likes: \(error)")
+            logger.error("Failed to load likes: \(String(describing: error), privacy: .private)")
         }
 
         do {
@@ -59,7 +62,7 @@ class PostMutationStore {
             pinnedPostIDs.formUnion(fetchedPinIDs)
             pinnedPostIDs.subtract(Set(postIds).subtracting(fetchedPinIDs))
         } catch {
-            print("[PostMutationStore] Failed to load pins: \(error)")
+            logger.error("Failed to load pins: \(String(describing: error), privacy: .private)")
         }
     }
 
@@ -98,7 +101,7 @@ class PostMutationStore {
                 } catch {
                     await loadPinsAndLikes(for: [postId])
                     if isPinned(postId) {
-                        print("[PostMutationStore] Unpin failed: \(error)")
+                        self.logger.error("Unpin failed: \(String(describing: error), privacy: .private)")
                     }
                 }
             }
@@ -117,7 +120,7 @@ class PostMutationStore {
                 } catch {
                     await loadPinsAndLikes(for: [postId])
                     if !isPinned(postId) {
-                        print("[PostMutationStore] Pin failed: \(error)")
+                        self.logger.error("Pin failed: \(String(describing: error), privacy: .private)")
                     }
                 }
             }
@@ -142,7 +145,7 @@ class PostMutationStore {
                 } catch {
                     await loadPinsAndLikes(for: [postId])
                     if isLiked(postId) {
-                        print("[PostMutationStore] Unlike failed: \(error)")
+                        self.logger.error("Unlike failed: \(String(describing: error), privacy: .private)")
                     }
                 }
             }
@@ -161,7 +164,7 @@ class PostMutationStore {
                 } catch {
                     await loadPinsAndLikes(for: [postId])
                     if !isLiked(postId) {
-                        print("[PostMutationStore] Like failed: \(error)")
+                        self.logger.error("Like failed: \(String(describing: error), privacy: .private)")
                     }
                 }
             }

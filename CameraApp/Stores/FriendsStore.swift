@@ -138,7 +138,7 @@ class FriendsStore {
 
     private func applyNonCancellationError(_ error: Error) {
         guard !(error is CancellationError) else { return }
-        let message = error.localizedDescription
+        let message = AuthManager.userFacingServiceErrorMessage(for: error)
         errorMessage = message
         lastRefreshError = message
     }
@@ -169,7 +169,7 @@ class FriendsStore {
             } catch {
                 pendingSentRequests.remove(user.id)
                 suggestedUsers.append(user)
-                errorMessage = error.localizedDescription
+                errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
             }
         }
     }
@@ -189,7 +189,7 @@ class FriendsStore {
                 cacheInvalidator?.friendshipChanged(userId: userId)
             } catch {
                 pendingSentRequests.insert(user.id)
-                errorMessage = error.localizedDescription
+                errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
             }
         }
     }
@@ -215,7 +215,7 @@ class FriendsStore {
             } catch {
                 friends.removeAll { $0.id == user.id }
                 incomingRequests.append(user)
-                errorMessage = error.localizedDescription
+                errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
             }
         }
     }
@@ -236,7 +236,7 @@ class FriendsStore {
                 cacheInvalidator?.friendshipChanged(userId: userId)
             } catch {
                 if let removed { incomingRequests.append(removed) }
-                errorMessage = error.localizedDescription
+                errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
             }
         }
     }
@@ -256,7 +256,7 @@ class FriendsStore {
                 cacheInvalidator?.friendshipChanged(userId: userId)
             } catch {
                 if let removed { friends.append(removed) }
-                errorMessage = error.localizedDescription
+                errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
             }
         }
     }
@@ -292,7 +292,7 @@ class FriendsStore {
         } catch {
             if Task.isCancelled { return }
             searchResults = []
-            errorMessage = error.localizedDescription
+            errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
         }
 
         if !Task.isCancelled {

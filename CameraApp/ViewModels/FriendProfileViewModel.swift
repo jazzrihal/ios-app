@@ -1,4 +1,5 @@
 import Observation
+import OSLog
 import SwiftUI
 
 // MARK: - Friend Profile View Model
@@ -22,6 +23,7 @@ final class FriendProfileViewModel {
     var postsError: String?
 
     private let pageSize = 20
+    private let logger = Logger(subsystem: "com.jazzrihal.pinstoria", category: "FriendProfile")
 
     private var profilePinnedUsername: String {
         user.username
@@ -66,7 +68,7 @@ final class FriendProfileViewModel {
                     user = User(from: profile)
                 }
             } catch {
-                print("[FriendProfile] Failed to load full profile: \(error)")
+                self.logger.error("Failed to load full profile: \(String(describing: error), privacy: .private)")
             }
         }
     }
@@ -105,7 +107,7 @@ final class FriendProfileViewModel {
             userPosts = applyPinnedUserContext(to: userPosts)
             hasMorePages = userPosts.count == pageSize
         } catch {
-            postsError = error.localizedDescription
+            postsError = AuthManager.userFacingServiceErrorMessage(for: error)
         }
 
         isLoadingPosts = false
@@ -144,7 +146,7 @@ final class FriendProfileViewModel {
             userPosts.append(contentsOf: normalizedPosts)
             hasMorePages = normalizedPosts.count == pageSize
         } catch {
-            postsError = error.localizedDescription
+            postsError = AuthManager.userFacingServiceErrorMessage(for: error)
         }
 
         isLoadingMore = false

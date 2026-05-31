@@ -182,8 +182,10 @@ final class UploadManager {
                     try? await SupabaseManager.client.storage
                         .from("post-images")
                         .remove(paths: [storagePath])
-                    pendingPosts[index].status = .queued
-                    persistQueue()
+                    if let currentIndex = pendingPosts.firstIndex(where: { $0.id == post.id }) {
+                        pendingPosts[currentIndex].status = .queued
+                        persistQueue()
+                    }
                     continue
                 }
 

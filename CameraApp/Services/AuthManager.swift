@@ -55,8 +55,8 @@ final class AuthManager {
     }
 
     static func signInValidationError(email: String, password: String) -> String? {
-        let email = normalizedEmail(email)
-        guard isValidEmail(email) else {
+        let email = Self.normalizedEmail(email)
+        guard Self.isValidEmail(email) else {
             return "Enter a valid email address."
         }
         guard !password.isEmpty else {
@@ -66,14 +66,14 @@ final class AuthManager {
     }
 
     static func signUpValidationError(email: String, password: String, username: String) -> String? {
-        if let signInError = signInValidationError(email: email, password: password) {
+        if let signInError = Self.signInValidationError(email: email, password: password) {
             return signInError
         }
         guard password.count >= 8 else {
             return "Password must be at least 8 characters."
         }
 
-        let username = normalizedUsername(username)
+        let username = Self.normalizedUsername(username)
         let pattern = #"^[A-Za-z0-9._-]{3,30}$"#
         guard username.range(of: pattern, options: .regularExpression) != nil else {
             return "Username must be 3-30 characters and use only letters, numbers, '.', '_' or '-'."
@@ -87,6 +87,14 @@ final class AuthManager {
             return "Check your connection and try again."
         }
         return "We couldn't complete that request. Please try again."
+    }
+
+    static func userFacingServiceErrorMessage(for error: Error) -> String {
+        let description = error.localizedDescription.lowercased()
+        if description.contains("network") || description.contains("offline") {
+            return "Check your connection and try again."
+        }
+        return "Something went wrong. Please try again."
     }
 
     private static func isValidEmail(_ email: String) -> Bool {
