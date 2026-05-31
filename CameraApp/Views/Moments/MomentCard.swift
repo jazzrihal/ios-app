@@ -49,6 +49,7 @@ struct MomentCard: View {
             .cardShadow()
         }
         .buttonStyle(.momentCard)
+        .accessibilityIdentifier("MomentCard_\(moment.id.uuidString)")
     }
 
     // MARK: - Photo Mosaic
