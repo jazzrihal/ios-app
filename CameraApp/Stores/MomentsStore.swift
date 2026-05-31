@@ -116,6 +116,19 @@ class MomentsStore: TabRefreshable {
         await refreshMoments()
     }
 
+    // MARK: - Session Reset
+
+    func resetSessionState() {
+        moments = []
+        nearbyPosts = [:]
+        isLoading = false
+        isRefreshing = false
+        lastRefreshError = nil
+        pendingMoment = nil
+        errorMessage = nil
+        currentUserId = nil
+    }
+
     // MARK: - Add
 
     func addMoment(date: Date, locationName: String, coordinate: CLLocationCoordinate2D) {

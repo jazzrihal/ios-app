@@ -34,9 +34,11 @@ final class DefaultPostRepository: PostRepository {
     // MARK: - Nearby Posts
 
     func nearbyPosts(params: NearbyPostsParams) async throws -> [ImagePost] {
-        let key = Self.nearbyPostsCacheKey(params)
+        let key = currentViewerId().map { Self.nearbyPostsCacheKey(params, viewerId: $0) }
 
-        if let entry = fetchCacheEntry(key: key), entry.isFresh(ttl: Self.nearbyPostsTTL) {
+        if let key,
+           let entry = fetchCacheEntry(key: key),
+           entry.isFresh(ttl: Self.nearbyPostsTTL) {
             let cached = fetchCachedPosts(cacheKey: key)
             if !cached.isEmpty {
                 return cached.map { $0.toImagePost() }
@@ -49,14 +51,18 @@ final class DefaultPostRepository: PostRepository {
                 .execute()
                 .value
 
-            saveCachedPosts(rows.enumerated().map { index, row in
-                CachedPost(from: row, cacheKey: key, sortOrder: index)
-            }, cacheKey: key)
+            if let key {
+                saveCachedPosts(rows.enumerated().map { index, row in
+                    CachedPost(from: row, cacheKey: key, sortOrder: index)
+                }, cacheKey: key)
+            }
 
             return rows.map { ImagePost(from: $0) }
         } catch {
-            let cached = fetchCachedPosts(cacheKey: key)
-            if !cached.isEmpty { return cached.map { $0.toImagePost() } }
+            if let key {
+                let cached = fetchCachedPosts(cacheKey: key)
+                if !cached.isEmpty { return cached.map { $0.toImagePost() } }
+            }
             throw error
         }
     }
@@ -72,9 +78,10 @@ final class DefaultPostRepository: PostRepository {
     // MARK: - User Posts & Pins
 
     func userPostsAndPins(userId: UUID, pageSize: Int, pageOffset: Int) async throws -> [ImagePost] {
-        let key = Self.userPostsCacheKey(userId)
+        let key = currentViewerId().map { Self.userPostsCacheKey(userId, viewerId: $0) }
 
         if pageOffset == 0,
+           let key,
            let entry = fetchCacheEntry(key: key),
            entry.isFresh(ttl: Self.userPostsTTL) {
             let cached = fetchCachedPosts(cacheKey: key)
@@ -93,7 +100,7 @@ final class DefaultPostRepository: PostRepository {
                 .execute()
                 .value
 
-            if pageOffset == 0 {
+            if pageOffset == 0, let key {
                 saveCachedPosts(rows.enumerated().map { index, row in
                     CachedPost(from: row, cacheKey: key, sortOrder: index)
                 }, cacheKey: key)
@@ -107,7 +114,7 @@ final class DefaultPostRepository: PostRepository {
                 return post
             }
         } catch {
-            if pageOffset == 0 {
+            if pageOffset == 0, let key {
                 let cached = fetchCachedPosts(cacheKey: key)
                 if !cached.isEmpty { return cached.map { $0.toImagePost() } }
             }
@@ -118,10 +125,11 @@ final class DefaultPostRepository: PostRepository {
     // MARK: - Friend Feed
 
     func friendFeedPosts(friendIds: [UUID], friends: [User], pageSize: Int, from: Int) async throws -> [ImagePost] {
-        let key = "friend_feed"
+        let key = currentViewerId().map { Self.friendFeedCacheKey(viewerId: $0) }
         let userLookup = Dictionary(uniqueKeysWithValues: friends.map { ($0.id, $0) })
 
         if from == 0,
+           let key,
            let entry = fetchCacheEntry(key: key),
            entry.isFresh(ttl: Self.friendFeedTTL) {
             let cached = fetchCachedPosts(cacheKey: key)
@@ -140,7 +148,7 @@ final class DefaultPostRepository: PostRepository {
                 .execute()
                 .value
 
-            if from == 0 {
+            if from == 0, let key {
                 saveCachedPosts(rows.enumerated().compactMap { index, row -> CachedPost? in
                     guard let user = userLookup[row.userId] else { return nil }
                     let cached = CachedPost(from: row, cacheKey: key, sortOrder: index)
@@ -168,7 +176,7 @@ final class DefaultPostRepository: PostRepository {
                 )
             }
         } catch {
-            if from == 0 {
+            if from == 0, let key {
                 let cached = fetchCachedPosts(cacheKey: key)
                 if !cached.isEmpty { return cached.map { $0.toImagePost() } }
             }
@@ -222,42 +230,51 @@ final class DefaultPostRepository: PostRepository {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    nonisolated static func canMutatePost(ownerId: UUID, viewerId: UUID?) -> Bool {
+        ownerId == viewerId
+    }
+
     // MARK: - Invalidation
 
     func invalidateUserPosts(_ userId: UUID) {
-        let key = Self.userPostsCacheKey(userId)
-        deleteCacheEntry(key: key)
+        deleteCacheEntries { $0.contains("user_posts:\(userId.uuidString)") }
     }
 
     func invalidateNearbyPosts() {
-        let descriptor = FetchDescriptor<CacheEntry>(
-            predicate: #Predicate { $0.key.contains("nearby_posts:") }
-        )
-        if let entries = try? modelContext.fetch(descriptor) {
-            for entry in entries {
-                modelContext.delete(entry)
-            }
-        }
-        try? modelContext.save()
+        deleteCacheEntries { $0.contains("nearby_posts:") }
     }
 
     func invalidateFriendFeed() {
-        deleteCacheEntry(key: "friend_feed")
+        deleteCacheEntries { $0.contains("friend_feed") }
+    }
+
+    func purgeAllCachedData() {
+        deleteAll(CacheEntry.self)
+        deleteAll(CachedPost.self)
+        try? modelContext.save()
     }
 
     // MARK: - Cache Key Builders
 
-    private static func nearbyPostsCacheKey(_ params: NearbyPostsParams) -> String {
+    nonisolated static func nearbyPostsCacheKey(_ params: NearbyPostsParams, viewerId: UUID) -> String {
         let lat = String(format: "%.3f", params.lat)
         let lng = String(format: "%.3f", params.lng)
-        return "nearby_posts:\(lat):\(lng):\(params.searchDate)"
+        return "viewer:\(viewerId.uuidString):nearby_posts:\(lat):\(lng):\(params.searchDate)"
     }
 
-    private static func userPostsCacheKey(_ userId: UUID) -> String {
-        "user_posts:\(userId.uuidString)"
+    nonisolated static func userPostsCacheKey(_ userId: UUID, viewerId: UUID) -> String {
+        "viewer:\(viewerId.uuidString):user_posts:\(userId.uuidString)"
+    }
+
+    nonisolated static func friendFeedCacheKey(viewerId: UUID) -> String {
+        "viewer:\(viewerId.uuidString):friend_feed"
     }
 
     // MARK: - SwiftData Helpers
+
+    private func currentViewerId() -> UUID? {
+        SupabaseManager.client.auth.currentSession?.user.id
+    }
 
     private func fetchCacheEntry(key: String) -> CacheEntry? {
         let descriptor = FetchDescriptor<CacheEntry>(
@@ -308,5 +325,32 @@ final class DefaultPostRepository: PostRepository {
         }
         deleteCachedPosts(cacheKey: key)
         try? modelContext.save()
+    }
+
+    private func deleteCacheEntries(where shouldDelete: (String) -> Bool) {
+        let entryDescriptor = FetchDescriptor<CacheEntry>()
+        if let entries = try? modelContext.fetch(entryDescriptor) {
+            for entry in entries where shouldDelete(entry.key) {
+                modelContext.delete(entry)
+            }
+        }
+
+        let postDescriptor = FetchDescriptor<CachedPost>()
+        if let posts = try? modelContext.fetch(postDescriptor) {
+            for post in posts where shouldDelete(post.cacheKey) {
+                modelContext.delete(post)
+            }
+        }
+
+        try? modelContext.save()
+    }
+
+    private func deleteAll<T: PersistentModel>(_: T.Type) {
+        let descriptor = FetchDescriptor<T>()
+        if let values = try? modelContext.fetch(descriptor) {
+            for value in values {
+                modelContext.delete(value)
+            }
+        }
     }
 }

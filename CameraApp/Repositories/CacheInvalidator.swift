@@ -64,4 +64,12 @@ final class CacheInvalidator {
     func profileChanged(userId: UUID) {
         profileRepository?.invalidate(userId: userId)
     }
+
+    /// Clear every locally cached model when the authenticated session changes.
+    func clearAllCachedData() {
+        (postRepository as? DefaultPostRepository)?.purgeAllCachedData()
+        (friendRepository as? DefaultFriendRepository)?.purgeAllCachedData()
+        (momentRepository as? DefaultMomentRepository)?.purgeAllCachedData()
+        (profileRepository as? DefaultProfileRepository)?.purgeAllCachedData()
+    }
 }

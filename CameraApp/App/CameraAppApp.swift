@@ -99,9 +99,14 @@ struct CameraAppApp: App {
                         }
                     }
                     Task { await momentsStore.loadMoments() }
-                } else {
+                } else if !authManager.isInitializing {
                     friendsBootstrapTask?.cancel()
                     friendsBootstrapTask = nil
+                    friendsStore.resetSessionState()
+                    momentsStore.resetSessionState()
+                    postMutationStore.reset()
+                    uploadManager.resetSessionState()
+                    cacheInvalidator.clearAllCachedData()
                     Task { await friendRealtimeService.stop() }
                 }
             }

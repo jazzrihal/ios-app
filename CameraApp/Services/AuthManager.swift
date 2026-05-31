@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 import Supabase
 
 /// Manages authentication state using Supabase Auth (GoTrue).
@@ -41,6 +42,57 @@ final class AuthManager {
     // MARK: - Private
 
     private var authStateTask: Task<Void, Never>?
+    private let logger = Logger(subsystem: "com.jazzrihal.pinstoria", category: "Auth")
+
+    // MARK: - Input Validation
+
+    static func normalizedEmail(_ email: String) -> String {
+        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    static func normalizedUsername(_ username: String) -> String {
+        username.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func signInValidationError(email: String, password: String) -> String? {
+        let email = normalizedEmail(email)
+        guard isValidEmail(email) else {
+            return "Enter a valid email address."
+        }
+        guard !password.isEmpty else {
+            return "Enter your password."
+        }
+        return nil
+    }
+
+    static func signUpValidationError(email: String, password: String, username: String) -> String? {
+        if let signInError = signInValidationError(email: email, password: password) {
+            return signInError
+        }
+        guard password.count >= 8 else {
+            return "Password must be at least 8 characters."
+        }
+
+        let username = normalizedUsername(username)
+        let pattern = #"^[A-Za-z0-9._-]{3,30}$"#
+        guard username.range(of: pattern, options: .regularExpression) != nil else {
+            return "Username must be 3-30 characters and use only letters, numbers, '.', '_' or '-'."
+        }
+        return nil
+    }
+
+    static func userFacingAuthErrorMessage(for error: Error) -> String {
+        let description = error.localizedDescription.lowercased()
+        if description.contains("network") || description.contains("offline") {
+            return "Check your connection and try again."
+        }
+        return "We couldn't complete that request. Please try again."
+    }
+
+    private static func isValidEmail(_ email: String) -> Bool {
+        let pattern = #"^[^\s@]+@[^\s@]+\.[^\s@]+$"#
+        return email.range(of: pattern, options: .regularExpression) != nil
+    }
 
     // MARK: - Profile Loading
 
@@ -57,7 +109,7 @@ final class AuthManager {
 
             currentProfile = User(from: profile)
         } catch {
-            print("[AuthManager] Failed to load profile: \(error)")
+            logger.error("Failed to load profile: \(String(describing: error), privacy: .private)")
             currentProfile = nil
         }
     }
@@ -92,7 +144,7 @@ final class AuthManager {
                 await loadProfile(for: session.user.id)
             } catch {
                 // Auth error — user deleted or token revoked.
-                print("[AuthManager] Session invalid: \(error)")
+                logger.error("Session invalid: \(String(describing: error), privacy: .private)")
                 try? await SupabaseManager.client.auth
                     .signOut(scope: .local)
                 currentSession = nil
@@ -150,6 +202,15 @@ final class AuthManager {
     func signUp(email: String, password: String, username: String) async {
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
+
+        let email = Self.normalizedEmail(email)
+        let username = Self.normalizedUsername(username)
+        if let validationError = Self.signUpValidationError(email: email, password: password, username: username) {
+            errorMessage = validationError
+            return
+        }
+
         do {
             let response = try await SupabaseManager.client.auth.signUp(
                 email: email,
@@ -162,9 +223,9 @@ final class AuthManager {
             currentSession = response.session
             currentUser = response.session?.user
         } catch {
-            errorMessage = error.localizedDescription
+            logger.error("Sign-up failed: \(String(describing: error), privacy: .private)")
+            errorMessage = Self.userFacingAuthErrorMessage(for: error)
         }
-        isLoading = false
     }
 
     // MARK: - Sign In
@@ -173,6 +234,14 @@ final class AuthManager {
     func signIn(email: String, password: String) async {
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
+
+        let email = Self.normalizedEmail(email)
+        if let validationError = Self.signInValidationError(email: email, password: password) {
+            errorMessage = validationError
+            return
+        }
+
         do {
             let session = try await SupabaseManager.client.auth.signIn(
                 email: email,
@@ -181,9 +250,9 @@ final class AuthManager {
             currentSession = session
             currentUser = session.user
         } catch {
-            errorMessage = error.localizedDescription
+            logger.error("Sign-in failed: \(String(describing: error), privacy: .private)")
+            errorMessage = Self.userFacingAuthErrorMessage(for: error)
         }
-        isLoading = false
     }
 
     // MARK: - Sign Out
@@ -196,7 +265,8 @@ final class AuthManager {
             currentUser = nil
             currentProfile = nil
         } catch {
-            errorMessage = error.localizedDescription
+            logger.error("Sign-out failed: \(String(describing: error), privacy: .private)")
+            errorMessage = "We couldn't sign you out. Please try again."
         }
     }
 }

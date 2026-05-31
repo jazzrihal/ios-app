@@ -315,6 +315,22 @@ class FriendsStore {
         }
     }
 
+    // MARK: - Session Reset
+
+    func resetSessionState() {
+        friends = []
+        suggestedUsers = []
+        incomingRequests = []
+        pendingSentRequests = []
+        searchResults = []
+        isLoading = false
+        isRefreshing = false
+        isSearching = false
+        errorMessage = nil
+        lastRefreshError = nil
+        currentUserId = nil
+    }
+
     // MARK: - Direct Supabase Helpers (fallback when no repository)
 
     private func loadFriendsDirectly(userId: UUID) async throws -> [User] {

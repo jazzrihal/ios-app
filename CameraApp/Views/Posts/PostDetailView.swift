@@ -278,7 +278,7 @@ struct PostDetailView: View {
 
     private func actionBar(viewModel: PostDetailViewModel) -> some View {
         HStack(spacing: 0) {
-            ForEach(PostAction.allCases, id: \.self) { action in
+            ForEach(PostAction.availableActions(for: viewModel.post.scope), id: \.self) { action in
                 actionButton(for: action, viewModel: viewModel)
             }
         }
