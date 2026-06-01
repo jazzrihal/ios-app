@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 struct ProfileView: View {
@@ -21,6 +22,7 @@ struct ProfileView: View {
     @State private var showActivity = false
 
     private let pageSize = 20
+    private let logger = Logger(subsystem: "com.jazzrihal.pinstoria", category: "Profile")
 
     private var currentUsername: String? {
         authManager.currentProfile?.username
@@ -195,7 +197,7 @@ struct ProfileView: View {
             postMutationStore.seedFromPosts(userPosts)
             hasMorePages = userPosts.count == pageSize
         } catch {
-            print("[ProfileView] Failed to load posts: \(error)")
+            logger.error("Failed to load profile posts: \(String(describing: error), privacy: .private)")
         }
         isLoadingPosts = false
     }
@@ -204,7 +206,7 @@ struct ProfileView: View {
         do {
             unreadCount = try await notificationRepository.getUnreadCount()
         } catch {
-            print("[ProfileView] Failed to load unread count: \(error)")
+            logger.error("Failed to load unread count: \(String(describing: error), privacy: .private)")
         }
     }
 
@@ -220,7 +222,7 @@ struct ProfileView: View {
             userPosts.append(contentsOf: newPosts)
             hasMorePages = newPosts.count == pageSize
         } catch {
-            print("[ProfileView] Failed to load more posts: \(error)")
+            logger.error("Failed to load more profile posts: \(String(describing: error), privacy: .private)")
         }
         isLoadingMore = false
     }

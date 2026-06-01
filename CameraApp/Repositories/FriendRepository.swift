@@ -167,6 +167,11 @@ final class DefaultFriendRepository: FriendRepository {
         deleteCacheEntry(key: key)
     }
 
+    func purgeAllCachedData() {
+        deleteAll(CachedUser.self)
+        try? modelContext.save()
+    }
+
     // MARK: - SwiftData Helpers
 
     private func fetchCacheEntry(key: String) -> CacheEntry? {
@@ -221,5 +226,14 @@ final class DefaultFriendRepository: FriendRepository {
             }
         }
         try? modelContext.save()
+    }
+
+    private func deleteAll<T: PersistentModel>(_: T.Type) {
+        let descriptor = FetchDescriptor<T>()
+        if let values = try? modelContext.fetch(descriptor) {
+            for value in values {
+                modelContext.delete(value)
+            }
+        }
     }
 }

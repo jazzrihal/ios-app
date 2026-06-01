@@ -5,6 +5,12 @@ import Foundation
 enum PostAction: CaseIterable, Hashable {
     case jump, share, pinToProfile, like
 
+    static func availableActions(for scope: PostScope) -> [Self] {
+        allCases.filter { action in
+            action != .share || scope == .public
+        }
+    }
+
     var iconName: String {
         switch self {
         case .like: "heart"

@@ -371,7 +371,7 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate, TabRefreshabl
             }
         } catch {
             withAnimation(.spring(duration: 0.4)) {
-                searchError = error.localizedDescription
+                searchError = AuthManager.userFacingServiceErrorMessage(for: error)
                 hasSearched = true
                 isSearching = false
             }
@@ -436,7 +436,7 @@ final class ExploreViewModel: NSObject, CLLocationManagerDelegate, TabRefreshabl
             posts.append(contentsOf: newPosts)
             hasMorePages = newPosts.count == pageSize
         } catch {
-            searchError = error.localizedDescription
+            searchError = AuthManager.userFacingServiceErrorMessage(for: error)
         }
 
         isLoadingMore = false

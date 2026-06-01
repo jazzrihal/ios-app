@@ -32,7 +32,7 @@ final class ActivityViewModel {
             unreadCount = try await count
             hasMorePages = notifications.count == pageSize
         } catch {
-            self.error = error.localizedDescription
+            self.error = AuthManager.userFacingServiceErrorMessage(for: error)
         }
         isLoading = false
     }
@@ -51,7 +51,7 @@ final class ActivityViewModel {
             notifications.append(contentsOf: newNotifs)
             hasMorePages = newNotifs.count == pageSize
         } catch {
-            self.error = error.localizedDescription
+            self.error = AuthManager.userFacingServiceErrorMessage(for: error)
         }
         isLoadingMore = false
     }
@@ -68,7 +68,7 @@ final class ActivityViewModel {
             unreadCount = try await count
             hasMorePages = notifications.count == pageSize
         } catch {
-            self.error = error.localizedDescription
+            self.error = AuthManager.userFacingServiceErrorMessage(for: error)
         }
     }
 

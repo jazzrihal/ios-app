@@ -81,7 +81,7 @@ class MomentsStore: TabRefreshable {
                 moments = rows.map { Moment(from: $0) }
             }
         } catch {
-            let message = error.localizedDescription
+            let message = AuthManager.userFacingServiceErrorMessage(for: error)
             errorMessage = message
             lastRefreshError = message
         }
@@ -101,7 +101,7 @@ class MomentsStore: TabRefreshable {
                 .execute()
             cacheInvalidator?.momentsChanged()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
             await loadMoments()
         }
     }
@@ -114,6 +114,19 @@ class MomentsStore: TabRefreshable {
 
     func refresh() async {
         await refreshMoments()
+    }
+
+    // MARK: - Session Reset
+
+    func resetSessionState() {
+        moments = []
+        nearbyPosts = [:]
+        isLoading = false
+        isRefreshing = false
+        lastRefreshError = nil
+        pendingMoment = nil
+        errorMessage = nil
+        currentUserId = nil
     }
 
     // MARK: - Add
@@ -145,7 +158,7 @@ class MomentsStore: TabRefreshable {
                 cacheInvalidator?.momentsChanged()
                 await loadMoments()
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
             }
         }
     }

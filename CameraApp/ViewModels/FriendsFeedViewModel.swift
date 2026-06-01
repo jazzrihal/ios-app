@@ -86,7 +86,7 @@ final class FriendsFeedViewModel: TabRefreshable {
             }
             hasMorePages = posts.count == pageSize
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
         }
 
         isLoading = false
@@ -164,7 +164,7 @@ final class FriendsFeedViewModel: TabRefreshable {
             posts.append(contentsOf: newPosts)
             hasMorePages = newPosts.count == pageSize
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AuthManager.userFacingServiceErrorMessage(for: error)
         }
 
         isLoadingMore = false

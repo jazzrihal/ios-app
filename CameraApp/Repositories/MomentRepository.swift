@@ -25,9 +25,11 @@ final class DefaultMomentRepository: MomentRepository {
     // MARK: - Load
 
     func loadMomentsWithPosts() async throws -> ([Moment], [UUID: [ImagePost]]) {
-        let key = "moments"
+        let key = currentViewerId().map { Self.momentsCacheKey(viewerId: $0) }
 
-        if let entry = fetchCacheEntry(key: key), entry.isFresh(ttl: Self.momentsTTL) {
+        if let key,
+           let entry = fetchCacheEntry(key: key),
+           entry.isFresh(ttl: Self.momentsTTL) {
             let cached = fetchCachedMoments(cacheKey: key)
             if !cached.isEmpty {
                 let moments = cached.map { $0.toMoment() }
@@ -52,12 +54,14 @@ final class DefaultMomentRepository: MomentRepository {
                 .execute()
                 .value
 
-            saveCachedMoments(
-                rows.enumerated().map { i, row in
-                    CachedMoment(from: row, cacheKey: key, sortOrder: i)
-                },
-                cacheKey: key
-            )
+            if let key {
+                saveCachedMoments(
+                    rows.enumerated().map { i, row in
+                        CachedMoment(from: row, cacheKey: key, sortOrder: i)
+                    },
+                    cacheKey: key
+                )
+            }
 
             let nearbyPosts = Dictionary(
                 uniqueKeysWithValues: rows.map { row in
@@ -67,13 +71,15 @@ final class DefaultMomentRepository: MomentRepository {
             let moments = rows.map { Moment(from: $0) }
             return (moments, nearbyPosts)
         } catch {
-            let cached = fetchCachedMoments(cacheKey: key)
-            if !cached.isEmpty {
-                let moments = cached.map { $0.toMoment() }
-                let nearbyPosts = Dictionary(
-                    uniqueKeysWithValues: cached.map { ($0.momentId, $0.toNearbyImagePosts()) }
-                )
-                return (moments, nearbyPosts)
+            if let key {
+                let cached = fetchCachedMoments(cacheKey: key)
+                if !cached.isEmpty {
+                    let moments = cached.map { $0.toMoment() }
+                    let nearbyPosts = Dictionary(
+                        uniqueKeysWithValues: cached.map { ($0.momentId, $0.toNearbyImagePosts()) }
+                    )
+                    return (moments, nearbyPosts)
+                }
             }
             throw error
         }
@@ -82,10 +88,23 @@ final class DefaultMomentRepository: MomentRepository {
     // MARK: - Invalidation
 
     func invalidate() {
-        deleteCacheEntry(key: "moments")
+        deleteCacheEntries { $0.contains("moments") }
+    }
+
+    func purgeAllCachedData() {
+        deleteAll(CachedMoment.self)
+        try? modelContext.save()
+    }
+
+    nonisolated static func momentsCacheKey(viewerId: UUID) -> String {
+        "viewer:\(viewerId.uuidString):moments"
     }
 
     // MARK: - SwiftData Helpers
+
+    private func currentViewerId() -> UUID? {
+        SupabaseManager.client.auth.currentSession?.user.id
+    }
 
     private func fetchCacheEntry(key: String) -> CacheEntry? {
         let descriptor = FetchDescriptor<CacheEntry>(
@@ -139,5 +158,32 @@ final class DefaultMomentRepository: MomentRepository {
             }
         }
         try? modelContext.save()
+    }
+
+    private func deleteCacheEntries(where shouldDelete: (String) -> Bool) {
+        let entryDescriptor = FetchDescriptor<CacheEntry>()
+        if let entries = try? modelContext.fetch(entryDescriptor) {
+            for entry in entries where shouldDelete(entry.key) {
+                modelContext.delete(entry)
+            }
+        }
+
+        let momentDescriptor = FetchDescriptor<CachedMoment>()
+        if let moments = try? modelContext.fetch(momentDescriptor) {
+            for moment in moments where shouldDelete(moment.cacheKey) {
+                modelContext.delete(moment)
+            }
+        }
+
+        try? modelContext.save()
+    }
+
+    private func deleteAll<T: PersistentModel>(_: T.Type) {
+        let descriptor = FetchDescriptor<T>()
+        if let values = try? modelContext.fetch(descriptor) {
+            for value in values {
+                modelContext.delete(value)
+            }
+        }
     }
 }

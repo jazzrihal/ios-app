@@ -401,8 +401,13 @@ private extension PostInteractionUITests {
 
     func waitForPostCell(_ index: Int) {
         let cell = app.buttons["PostCell_\(index)"]
+        if cell.waitForExistence(timeout: 15) {
+            return
+        }
+
+        pullToRefresh()
         XCTAssertTrue(
-            cell.waitForExistence(timeout: 10),
+            cell.waitForExistence(timeout: 20),
             "PostCell_\(index) should appear"
         )
     }

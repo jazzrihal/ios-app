@@ -390,6 +390,10 @@ struct PostPreviewView: View {
             enqueueError = "Not signed in."
             return
         }
+        guard DefaultPostRepository.canMutatePost(ownerId: existingPost.user.id, viewerId: authManager.userId) else {
+            enqueueError = "You can only edit your own posts."
+            return
+        }
 
         enqueueError = nil
         isSavingEdits = true

@@ -10,7 +10,10 @@ struct AuthView: View {
     @State private var isSignUp = false
 
     private var authDisabled: Bool {
-        email.isEmpty || password.isEmpty || (isSignUp && username.isEmpty) || auth.isLoading
+        let validationError = isSignUp
+            ? AuthManager.signUpValidationError(email: email, password: password, username: username)
+            : AuthManager.signInValidationError(email: email, password: password)
+        return validationError != nil || auth.isLoading
     }
 
     var body: some View {
