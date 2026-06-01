@@ -1,8 +1,10 @@
 # Pinstoria — run `make help` for available targets
 
 SCHEME      := Pinstoria
-DEVICE      := iPhone 16e
-DESTINATION := platform=iOS Simulator,name=$(DEVICE)
+DEVICE      := iPhone 17
+OS_VERSION  := 26.5
+RUNTIME     := iOS $(OS_VERSION)
+DESTINATION := platform=iOS Simulator,name=$(DEVICE),OS=$(OS_VERSION)
 RUN_DEVICE  := $(DEVICE)
 TEST_RESULTS_DIR := build/test-results
 
@@ -68,9 +70,15 @@ test-unit: ## Run unit tests only (no UI tests)
 	fi
 
 .PHONY: run
-run: ## Build and run the app in the simulator (iPhone 16e)
-	@UDID=$$(xcrun simctl list devices available | grep '$(RUN_DEVICE)' | tail -1 | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}') && \
-	echo "Using $(RUN_DEVICE) ($$UDID)" && \
+run: ## Build and run the app in the simulator ($(DEVICE), $(RUNTIME))
+	@UDID=$$(xcrun simctl list devices available | awk -v device='$(RUN_DEVICE)' -v runtime='$(RUNTIME)' '\
+		$$0 == "-- " runtime " --" { in_runtime = 1; next } \
+		/^-- / { in_runtime = 0 } \
+		in_runtime && index($$0, device " (") { \
+			if (match($$0, /[0-9A-F-]{36}/)) { print substr($$0, RSTART, RLENGTH); exit } \
+		} \
+	') && \
+	echo "Using $(RUN_DEVICE) ($(RUNTIME), $$UDID)" && \
 	(xcrun simctl boot "$$UDID" 2>/dev/null || true) && \
 	open -a Simulator && \
 	xcodebuild build -scheme $(SCHEME) -destination "id=$$UDID" -quiet && \
