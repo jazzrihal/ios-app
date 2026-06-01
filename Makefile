@@ -4,14 +4,8 @@ SCHEME      := Pinstoria
 DEVICE      := iPhone 17
 OS_VERSION  := 26.5
 RUNTIME     := iOS $(OS_VERSION)
-SIMULATOR_UDID = $(shell xcrun simctl list devices available 2>/dev/null | awk -v device='$(DEVICE)' -v runtime='$(RUNTIME)' '\
-	$$0 == "-- " runtime " --" { in_runtime = 1; next } \
-	/^-- / { in_runtime = 0 } \
-	in_runtime && index($$0, device " (") { \
-		if (match($$0, /[0-9A-F-]{36}/)) { print substr($$0, RSTART, RLENGTH); exit } \
-	} \
-')
-DESTINATION = platform=iOS Simulator,id=$(SIMULATOR_UDID)
+SIMULATOR_UDID_COMMAND = xcrun simctl list devices available 2>/dev/null | awk -v device='$(DEVICE)' -v runtime='$(RUNTIME)' '$$0 == "-- " runtime " --" { in_runtime = 1; next } /^-- / { in_runtime = 0 } in_runtime && index($$0, device " (") { if (match($$0, /[0-9A-F-]{36}/)) { print substr($$0, RSTART, RLENGTH); exit } }'
+DESTINATION = platform=iOS Simulator,id=$$UDID
 TEST_RESULTS_DIR := build/test-results
 
 .DEFAULT_GOAL := help
@@ -53,40 +47,43 @@ setup: ## One-time setup: install tools, hooks, generate project
 
 .PHONY: build
 build: ## Build the app
-	@test -n "$(SIMULATOR_UDID)" || (echo "No available $(DEVICE) simulator found for $(RUNTIME)." >&2; exit 1)
-	xcodebuild build -scheme $(SCHEME) -destination '$(DESTINATION)' -quiet
+	@UDID=$$($(SIMULATOR_UDID_COMMAND)); \
+	test -n "$$UDID" || { echo "No available $(DEVICE) simulator found for $(RUNTIME)." >&2; exit 1; }; \
+	xcodebuild build -scheme $(SCHEME) -destination "$(DESTINATION)" -quiet
 
 .PHONY: test
 test: ## Run all tests (unit + UI)
-	@test -n "$(SIMULATOR_UDID)" || (echo "No available $(DEVICE) simulator found for $(RUNTIME)." >&2; exit 1)
 	@mkdir -p "$(TEST_RESULTS_DIR)"
 	@rm -rf "$(TEST_RESULTS_DIR)/all-tests.xcresult"
-	@if command -v xcbeautify >/dev/null 2>&1; then \
-		bash -o pipefail -c "xcodebuild test -scheme '$(SCHEME)' -destination '$(DESTINATION)' -resultBundlePath '$(TEST_RESULTS_DIR)/all-tests.xcresult' | xcbeautify"; \
+	@UDID=$$($(SIMULATOR_UDID_COMMAND)); \
+	test -n "$$UDID" || { echo "No available $(DEVICE) simulator found for $(RUNTIME)." >&2; exit 1; }; \
+	if command -v xcbeautify >/dev/null 2>&1; then \
+		bash -o pipefail -c "xcodebuild test -scheme '$(SCHEME)' -destination \"$(DESTINATION)\" -resultBundlePath '$(TEST_RESULTS_DIR)/all-tests.xcresult' | xcbeautify"; \
 	else \
-		xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -resultBundlePath '$(TEST_RESULTS_DIR)/all-tests.xcresult'; \
+		xcodebuild test -scheme $(SCHEME) -destination "$(DESTINATION)" -resultBundlePath '$(TEST_RESULTS_DIR)/all-tests.xcresult'; \
 	fi
 
 .PHONY: test-unit
 test-unit: ## Run unit tests only (no UI tests)
-	@test -n "$(SIMULATOR_UDID)" || (echo "No available $(DEVICE) simulator found for $(RUNTIME)." >&2; exit 1)
 	@mkdir -p "$(TEST_RESULTS_DIR)"
 	@rm -rf "$(TEST_RESULTS_DIR)/unit-tests.xcresult"
-	@if command -v xcbeautify >/dev/null 2>&1; then \
-		bash -o pipefail -c "xcodebuild test -scheme '$(SCHEME)' -destination '$(DESTINATION)' -only-testing CameraAppTests -resultBundlePath '$(TEST_RESULTS_DIR)/unit-tests.xcresult' | xcbeautify"; \
+	@UDID=$$($(SIMULATOR_UDID_COMMAND)); \
+	test -n "$$UDID" || { echo "No available $(DEVICE) simulator found for $(RUNTIME)." >&2; exit 1; }; \
+	if command -v xcbeautify >/dev/null 2>&1; then \
+		bash -o pipefail -c "xcodebuild test -scheme '$(SCHEME)' -destination \"$(DESTINATION)\" -only-testing CameraAppTests -resultBundlePath '$(TEST_RESULTS_DIR)/unit-tests.xcresult' | xcbeautify"; \
 	else \
-		xcodebuild test -scheme $(SCHEME) -destination '$(DESTINATION)' -only-testing CameraAppTests -resultBundlePath '$(TEST_RESULTS_DIR)/unit-tests.xcresult'; \
+		xcodebuild test -scheme $(SCHEME) -destination "$(DESTINATION)" -only-testing CameraAppTests -resultBundlePath '$(TEST_RESULTS_DIR)/unit-tests.xcresult'; \
 	fi
 
 .PHONY: run
 run: ## Build and run the app in the simulator ($(DEVICE), $(RUNTIME))
-	@test -n "$(SIMULATOR_UDID)" || (echo "No available $(DEVICE) simulator found for $(RUNTIME)." >&2; exit 1)
-	@UDID="$(SIMULATOR_UDID)" && \
+	@UDID=$$($(SIMULATOR_UDID_COMMAND)); \
+	test -n "$$UDID" || { echo "No available $(DEVICE) simulator found for $(RUNTIME)." >&2; exit 1; }; \
 	echo "Using $(DEVICE) ($(RUNTIME), $$UDID)" && \
 	(xcrun simctl boot "$$UDID" 2>/dev/null || true) && \
 	open -a Simulator && \
-	xcodebuild build -scheme $(SCHEME) -destination '$(DESTINATION)' -quiet && \
-	APP=$$(xcodebuild -scheme $(SCHEME) -destination '$(DESTINATION)' -showBuildSettings 2>/dev/null | \
+	xcodebuild build -scheme $(SCHEME) -destination "$(DESTINATION)" -quiet && \
+	APP=$$(xcodebuild -scheme $(SCHEME) -destination "$(DESTINATION)" -showBuildSettings 2>/dev/null | \
 		awk '$$1=="BUILT_PRODUCTS_DIR" {dir=$$3} $$1=="FULL_PRODUCT_NAME" {name=$$3} END {print dir "/" name}') && \
 	xcrun simctl install "$$UDID" "$$APP" && \
 	xcrun simctl launch "$$UDID" com.jazzrihal.pinstoria
